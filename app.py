@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import mysql.connector
 from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 
@@ -18,7 +19,7 @@ def conectar_db():
 
 @app.route('/')
 def index():
-    # ¡Lista OFICIAL de áreas sincronizada con el programa de PC!
+    # Lista oficial de áreas sincronizada con el PC
     areas = [
         "ABASTECIMIENTO", "ADMINISTRACION", "ASEO", "BAÑOS PLANTA", "BODEGA", 
         "BODEGA AGRICOLA LIBERTAD (TAMBO)", "BODEGA AGRICOLA QUINAHUE", 
@@ -61,13 +62,15 @@ def registrar_salida():
         item_data = cursor.fetchone()
 
         if not item_data:
-            return jsonify({"success": False, "message": "El QR escaneado no existe en el inventario."})
+            return jsonify({"success": False, "message": "El código escaneado no existe."})
         
         if item_data[0] <= 0:
             return jsonify({"success": False, "message": f"¡Sin stock de: {item_data[1]}!"})
 
-        # Registrar salida
-        ahora_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Registrar salida con la zona horaria exacta de Chile
+        zona_chile = pytz.timezone('America/Santiago')
+        ahora_local = datetime.now(zona_chile).strftime("%Y-%m-%d %H:%M:%S")
+        
         cursor.execute("INSERT INTO transacciones (articulo_id, rut, trabajador, area, hora_salida) VALUES (%s, %s, %s, %s, %s)", 
                        (articulo_id, rut, trabajador, area, ahora_local))
         cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible - 1 WHERE id = %s", (articulo_id,))
@@ -80,8 +83,7 @@ def registrar_salida():
         return jsonify({"success": True, "message": mensaje_exito})
 
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error de conexión: {str(e)}"})
+        return jsonify({"success": False, "message": f"Error de red o base de datos."})
 
 if __name__ == '__main__':
-    # ssl_context='adhoc' fuerza HTTPS (necesario para que Chrome permita encender la cámara del celular)
     app.run(host='0.0.0.0', port=5000, ssl_context='adhoc', debug=True)
