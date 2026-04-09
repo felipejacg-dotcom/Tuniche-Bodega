@@ -3,272 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#2c3e50">
-    <title>Bodega Tuniche</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>SGB Móvil - Tuniche Fruits</title>
+    
     <style>
-        body { background-color: #f4f6f7; }
-        .navbar { background-color: #2c3e50; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 15px;}
-        .laser-box { border: 3px dashed #3498db; background-color: #ebf5fb; font-weight: bold; font-size: 1.2rem;}
-        .laser-box:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); background-color: #fff; outline: none;}
-        .btn-check:checked + .btn-outline-primary { background-color: #2c3e50; border-color: #2c3e50; color: white;}
-        .btn-outline-primary { color: #2c3e50; border-color: #2c3e50;}
-        .historial-caja { background-color: #fff; border-radius: 8px; padding: 10px; font-size: 0.9rem; border: 1px solid #ddd; }
+        :root {
+            --color-salida: #d35400; /* Naranjo */
+            --color-devolucion: #27ae60; /* Verde */
+            --bg-color: #ecf0f1;
+            --text-dark: #2c3e50;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { background-color: var(--bg-color); color: var(--text-dark); display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+
+        /* Cabecera Corporativa */
+        .header { background-color: var(--text-dark); color: white; width: 100%; padding: 20px; text-align: center; font-size: 1.5rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+
+        /* Contenedor Principal */
+        .main-container { width: 100%; max-width: 500px; padding: 20px; display: flex; flex-direction: column; gap: 20px; margin-top: 10px; }
+
+        /* Panel del Switch */
+        .panel-switch { display: flex; align-items: center; justify-content: center; gap: 15px; background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 8px solid var(--color-salida); transition: border-color 0.3s; }
+        .panel-switch.modo-dev { border-left-color: var(--color-devolucion); }
+
+        #textoModo { font-size: 1.4rem; font-weight: 900; transition: color 0.3s ease; letter-spacing: 1px; }
+        .modo-salida { color: var(--color-salida); }
+        .modo-devolucion { color: var(--color-devolucion); }
+
+        /* Switch iOS */
+        .switch-ios { position: relative; display: inline-block; width: 70px; height: 38px; }
+        .switch-ios input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--color-salida); transition: .4s; border-radius: 38px; }
+        .slider:before { position: absolute; content: ""; height: 30px; width: 30px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        input:checked + .slider { background-color: var(--color-devolucion); }
+        input:checked + .slider:before { transform: translateX(32px); }
+
+        /* Tarjeta de Escaneo */
+        .card-scan { background-color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-weight: bold; font-size: 1.1rem; color: #7f8c8d; }
+        
+        input[type="text"] { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #bdc3c7; border-radius: 8px; transition: border-color 0.3s; text-align: center; font-weight: bold; }
+        input[type="text"]:focus { outline: none; border-color: #3498db; box-shadow: 0 0 8px rgba(52, 152, 219, 0.3); }
+        
+        /* Input especial para la Zebra */
+        #codigoArticulo { border-color: var(--text-dark); background-color: #f8f9fa; font-size: 1.4rem; letter-spacing: 2px; }
+        #codigoArticulo:focus { border-color: var(--color-salida); background-color: #fff; }
+        .card-scan.modo-dev #codigoArticulo:focus { border-color: var(--color-devolucion); }
+
+        /* Mensajes de Alerta */
+        .alerta { display: none; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1rem; margin-top: 10px; animation: fadeIn 0.3s; }
+        .alerta.exito { display: block; background-color: #d5f5e3; color: #27ae60; border: 1px solid #27ae60; }
+        .alerta.error { display: block; background-color: #fadbd8; color: #c0392b; border: 1px solid #c0392b; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark mb-3 shadow-sm">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">⚙️ Tuniche Móvil</span>
+    <div class="header">
+        📦 SGB Móvil - Tuniche
     </div>
-</nav>
 
-<div class="container">
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <h5 class="card-title text-primary">1. Datos del Trabajador</h5>
-            <div class="mb-2">
-                <input type="text" id="rut" class="form-control form-control-lg" placeholder="RUT (Ej: 12345678-9)">
+    <div class="main-container">
+        
+        <div class="panel-switch" id="panelSwitch">
+            <label class="switch-ios">
+                <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
+                <span class="slider"></span>
+            </label>
+            <div id="textoModo" class="modo-salida">📤 SALIDA</div>
+        </div>
+
+        <div class="card-scan" id="tarjetaScan">
+            <div class="input-group">
+                <label for="rutTrabajador">1. RUT Trabajador (Opcional en Devolución):</label>
+                <input type="text" id="rutTrabajador" placeholder="Ej: 12345678-9" autocomplete="off">
             </div>
-            <div class="mb-2">
-                <input type="text" id="trabajador" class="form-control form-control-lg" placeholder="Nombre completo">
-            </div>
-            <div class="mb-2">
-                <select id="area" class="form-select form-select-lg">
-                    <option value="" disabled selected>Seleccione Área...</option>
-                    {% for area in areas %}
-                    <option value="{{ area }}">{{ area }}</option>
-                    {% endfor %}
-                </select>
+
+            <div class="input-group" style="margin-top: 15px;">
+                <label for="codigoArticulo">2. Pistolear Código QR:</label>
+                <input type="text" id="codigoArticulo" placeholder="Escanear aquí..." autofocus autocomplete="off">
             </div>
         </div>
+
+        <div id="mensajeAlerta" class="alerta"></div>
+
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body text-center">
-            <h5 class="card-title mb-3">2. Método de Escaneo</h5>
+    <script>
+        // 1. Lógica del Switch de Modo
+        function cambiarModo() {
+            const toggle = document.getElementById("toggleModo");
+            const texto = document.getElementById("textoModo");
+            const panel = document.getElementById("panelSwitch");
+            const tarjeta = document.getElementById("tarjetaScan");
+            const inputCodigo = document.getElementById("codigoArticulo");
+
+            if (toggle.checked) {
+                // Modo Devolución
+                texto.innerText = "📥 DEVOLUCIÓN";
+                texto.className = "modo-devolucion";
+                panel.classList.add("modo-dev");
+                tarjeta.classList.add("modo-dev");
+            } else {
+                // Modo Salida
+                texto.innerText = "📤 SALIDA";
+                texto.className = "modo-salida";
+                panel.classList.remove("modo-dev");
+                tarjeta.classList.remove("modo-dev");
+            }
             
-            <div class="btn-group w-100 mb-3" role="group">
-                <input type="radio" class="btn-check" name="btnradio" id="btn_laser" autocomplete="off" checked onclick="activarLaser()">
-                <label class="btn btn-outline-primary btn-sm" for="btn_laser">🔫 Láser</label>
-              
-                <input type="radio" class="btn-check" name="btnradio" id="btn_cam_trasera" autocomplete="off" onclick="activarCamara('environment')">
-                <label class="btn btn-outline-primary btn-sm" for="btn_cam_trasera">📸 Trasera</label>
-              
-                <input type="radio" class="btn-check" name="btnradio" id="btn_cam_frontal" autocomplete="off" onclick="activarCamara('user')">
-                <label class="btn btn-outline-primary btn-sm" for="btn_cam_frontal">🤳 Frontal</label>
-            </div>
-
-            <div id="laser_section">
-                <p class="text-muted small mb-2">Pon el cursor aquí y dispara el gatillo</p>
-                <input type="number" inputmode="numeric" id="laser_input" class="form-control text-center py-3 laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off">
-            </div>
-
-            <div id="camara_section" style="display: none;">
-                <p class="text-muted small mb-2">Apunta al código QR con la cámara</p>
-                <div id="reader"></div>
-            </div>
-            
-            <div id="resultado" class="alert alert-secondary mt-3 p-2" style="display:none;">
-                Esperando escaneo...
-            </div>
-
-            <div class="historial-caja mt-3 text-start text-muted" id="historial">
-                <strong>📌 Últimos movimientos:</strong><br>
-                <span class="small">Aún no hay escaneos en esta sesión.</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    let isProcessing = false;
-    let lastScannedCode = "";
-    let html5QrCode; 
-    let historialArray = [];
-
-    // --- GENERADOR DE SONIDOS (BEEP) ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function reproducirSonido(tipo) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        if (tipo === 'exito') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Tono agudo y rápido
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        } else {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(200, audioCtx.currentTime); // Tono grave y de alerta
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.3);
-        }
-    }
-
-    // --- ACTUALIZAR MINI HISTORIAL ---
-    function actualizarHistorial(mensaje, exito) {
-        const icono = exito ? "✅" : "❌";
-        const color = exito ? "text-success" : "text-danger";
-        const hora = new Date().toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        
-        const nuevoItem = `<div class="${color} border-bottom py-1" style="font-size:0.85rem">${icono} [${hora}] ${mensaje}</div>`;
-        historialArray.unshift(nuevoItem);
-        
-        if(historialArray.length > 3) historialArray.pop(); // Solo guarda los últimos 3
-        
-        document.getElementById('historial').innerHTML = "<strong>📌 Últimos movimientos:</strong><br>" + historialArray.join('');
-    }
-
-    window.onload = () => {
-        html5QrCode = new Html5Qrcode("reader");
-        activarLaser(); 
-    };
-
-    // --- AUTOFORMATO DE RUT ---
-    const inputRut = document.getElementById('rut');
-    inputRut.addEventListener('input', function(e) {
-        let valorLimpio = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
-        if (valorLimpio.length === 0) { e.target.value = ''; return; }
-        if (valorLimpio.length > 1) {
-            let cuerpo = valorLimpio.slice(0, -1);
-            let dv = valorLimpio.slice(-1);
-            cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-            e.target.value = cuerpo + '-' + dv;
-        } else {
-            e.target.value = valorLimpio;
-        }
-    });
-
-    // --- PROCESADOR PRINCIPAL A LA BASE DE DATOS ---
-    function procesarEscaneo(codigoLeido) {
-        if (isProcessing) return;
-        
-        const rut = document.getElementById('rut').value;
-        const trabajador = document.getElementById('trabajador').value;
-        const area = document.getElementById('area').value;
-        const resDiv = document.getElementById('resultado');
-
-        if(!rut || !trabajador || !area) {
-            reproducirSonido('error');
-            resDiv.style.display = "block";
-            resDiv.className = "alert alert-danger mt-3 p-2 font-weight-bold";
-            resDiv.innerText = "⚠️ Completa RUT, Nombre y Área primero.";
-            return;
+            // Regresar el foco al escáner para no perder tiempo
+            inputCodigo.focus();
         }
 
-        isProcessing = true;
-        resDiv.style.display = "block";
-        resDiv.className = "alert alert-warning mt-3 p-2";
-        resDiv.innerText = "⏳ Registrando salida...";
+        // 2. Lógica del Escáner (Zebra o Teclado)
+        const inputCodigo = document.getElementById("codigoArticulo");
+        const inputRut = document.getElementById("rutTrabajador");
+        const mensajeAlerta = document.getElementById("mensajeAlerta");
 
-        fetch('/registrar_salida', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rut: rut,
-                trabajador: trabajador,
-                area: area,
-                articulo_id: codigoLeido
+        // Escuchamos cuando la Zebra presiona "Enter" automáticamente después de leer el QR
+        inputCodigo.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Evitamos que la página se recargue
+                procesarEscaneo();
+            }
+        });
+
+        function procesarEscaneo() {
+            const codigo = inputCodigo.value.trim();
+            const rut = inputRut.value.trim();
+            const esDevolucion = document.getElementById("toggleModo").checked;
+            const accion = esDevolucion ? "DEVOLUCION" : "SALIDA";
+
+            // Validaciones rápidas
+            if (codigo === "") return;
+            if (!esDevolucion && rut === "") {
+                mostrarAlerta("❌ Debe ingresar el RUT para registrar una salida.", "error");
+                vibrarCelular([300, 100, 300]); // Vibración de error doble
+                return;
+            }
+
+            mostrarAlerta("⏳ Procesando...", "");
+
+            // Preparamos los datos para enviarlos al servidor Python en Render
+            const datos = {
+                accion: accion,
+                codigo_qr: codigo,
+                rut: rut
+            };
+
+            // AQUÍ LLAMAS A TU SERVIDOR RENDER (Ajusta la URL '/api/escanear' por la tuya)
+            fetch('/api/escanear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                reproducirSonido('exito');
-                resDiv.className = "alert alert-success mt-3 p-2";
-                resDiv.innerHTML = "<strong>✅ " + data.message + "</strong>";
-                actualizarHistorial(data.message, true);
-            } else {
-                reproducirSonido('error');
-                resDiv.className = "alert alert-danger mt-3 p-2";
-                resDiv.innerHTML = "<strong>❌ " + data.message + "</strong>";
-                actualizarHistorial(data.message, false);
-            }
-            
-            setTimeout(() => { 
-                isProcessing = false; 
-                resDiv.className = "alert alert-secondary mt-3 p-2";
-                resDiv.innerText = "Listo para el siguiente...";
-            }, 1000); // 1 segundo de cooldown
-        })
-        .catch(error => {
-            reproducirSonido('error');
-            resDiv.className = "alert alert-danger mt-3 p-2";
-            resDiv.innerText = "❌ Error de conexión al servidor.";
-            isProcessing = false;
-        });
-    }
-
-    // --- LÓGICA DE INTERFAZ Y CÁMARA ---
-    function apagarCamara() {
-        return new Promise((resolve) => {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => resolve()).catch(() => resolve());
-            } else {
-                resolve();
-            }
-        });
-    }
-
-    function activarLaser() {
-        apagarCamara().then(() => {
-            document.getElementById('camara_section').style.display = 'none';
-            document.getElementById('laser_section').style.display = 'block';
-            setTimeout(() => document.getElementById('laser_input').focus(), 100);
-        });
-    }
-
-    function activarCamara(modo_lente) {
-        apagarCamara().then(() => {
-            document.getElementById('laser_section').style.display = 'none';
-            document.getElementById('camara_section').style.display = 'block';
-            
-            html5QrCode.start(
-                { facingMode: modo_lente },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    if (decodedText !== lastScannedCode) {
-                        lastScannedCode = decodedText;
-                        procesarEscaneo(decodedText);
-                        setTimeout(() => { lastScannedCode = ""; }, 2000);
-                    }
-                },
-                (errorMessage) => { /* Ignorar errores de lectura */ }
-            ).catch((err) => {
-                alert("Error al iniciar la cámara. Revisa los permisos.");
-                activarLaser(); 
-                document.getElementById('btn_laser').checked = true;
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === "success") {
+                    mostrarAlerta(`✅ ¡Éxito! ${accion} registrada.`, "exito");
+                    vibrarCelular([100]); // Vibración corta de éxito
+                    inputCodigo.value = ""; // Limpiamos para el siguiente escaneo
+                } else {
+                    mostrarAlerta(`❌ Error: ${data.message}`, "error");
+                    vibrarCelular([300, 100, 300]); 
+                    inputCodigo.value = "";
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarAlerta("⚠️ Problema de conexión. Revise su internet.", "error");
+                vibrarCelular([500]); // Vibración larga de falla técnica
             });
-        });
-    }
 
-    // --- CAPTURA DEL DISPARO LÁSER ---
-    const laserInput = document.getElementById('laser_input');
-    laserInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); 
-            const codigo = laserInput.value.trim();
-            if(codigo) {
-                // Al tocar o disparar por primera vez, el navegador permite liberar el audio
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                procesarEscaneo(codigo);
-                laserInput.value = ''; 
-                laserInput.focus();    
+            // Forzar el foco de vuelta al escáner siempre
+            setTimeout(() => inputCodigo.focus(), 100);
+        }
+
+        // 3. Funciones de Apoyo (Feedback Táctil y Visual)
+        function mostrarAlerta(texto, tipo) {
+            mensajeAlerta.className = "alerta"; // Reset
+            mensajeAlerta.innerText = texto;
+            if (tipo) {
+                mensajeAlerta.classList.add(tipo);
             }
         }
-    });
-</script>
+
+        function vibrarCelular(patron) {
+            // Verifica si el celular soporta vibración nativa
+            if ("vibrate" in navigator) {
+                navigator.vibrate(patron);
+            }
+        }
+
+        // Mantener el cursor bloqueado en el input para que la Zebra nunca falle
+        document.addEventListener('click', function(e) {
+            if(e.target.id !== 'rutTrabajador' && e.target.id !== 'toggleModo') {
+                inputCodigo.focus();
+            }
+        });
+    </script>
 </body>
 </html>
