@@ -518,6 +518,109 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
 
+        /* === History section === */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 20px 16px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-subtle);
+            animation: slideUp 0.3s ease-out;
+            transition: border-color 0.3s ease;
+        }
+
+        .history-item:hover {
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        .history-item.salida-item {
+            border-left: 3px solid var(--accent-amber);
+        }
+
+        .history-item.devolucion-item {
+            border-left: 3px solid var(--accent-emerald);
+        }
+
+        .history-item.error-item {
+            border-left: 3px solid var(--accent-red);
+            opacity: 0.7;
+        }
+
+        .history-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-msg {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .history-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .history-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+
+        .badge-salida {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-amber);
+        }
+
+        .badge-devolucion {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+        }
+
         /* === Misc animations === */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(12px); }
@@ -640,6 +743,19 @@
         </div>
     </div>
 
+    <!-- Últimos 3 registros -->
+    <div class="glass-card">
+        <div class="card-inner">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <span class="section-title">Últimos Registros</span>
+            </div>
+            <div id="historyList" class="history-list">
+                <div class="history-empty">📋 Aún no hay registros en esta sesión</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Status bar -->
@@ -740,11 +856,13 @@
             if(data.success) {
                 resDiv.className = "result-box result-success";
                 resDiv.innerHTML = "<strong>✅ " + data.message + "</strong>";
-                vibrarCelular([100]); // Vibración de éxito
+                vibrarCelular([100]);
+                agregarRegistro(accion, data.message, true);
             } else {
                 resDiv.className = "result-box result-error";
                 resDiv.innerHTML = "<strong>❌ " + data.message + "</strong>";
-                vibrarCelular([300, 100, 300]); // Vibración de error
+                vibrarCelular([300, 100, 300]);
+                agregarRegistro(accion, data.message, false);
             }
             
             setTimeout(() => { 
@@ -757,6 +875,7 @@
             console.error('Error:', error);
             resDiv.className = "result-box result-error";
             resDiv.innerText = "❌ Error de red.";
+            agregarRegistro('ERROR', 'Error de red', false);
             isProcessing = false;
         });
     }
@@ -836,6 +955,62 @@
             }
         }
     });
+
+    // --- HISTORIAL DE ÚLTIMOS 3 REGISTROS ---
+    let historialRegistros = [];
+
+    function agregarRegistro(accion, mensaje, exito) {
+        const ahora = new Date();
+        const hora = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const registro = { accion, mensaje, exito, hora };
+        historialRegistros.unshift(registro);
+        if (historialRegistros.length > 3) historialRegistros.pop();
+
+        renderHistorial();
+    }
+
+    function renderHistorial() {
+        const container = document.getElementById('historyList');
+        if (historialRegistros.length === 0) {
+            container.innerHTML = '<div class="history-empty">📋 Aún no hay registros en esta sesión</div>';
+            return;
+        }
+
+        container.innerHTML = historialRegistros.map(r => {
+            let icon, itemClass, badgeClass, badgeText;
+
+            if (!r.exito) {
+                icon = '❌';
+                itemClass = 'error-item';
+                badgeClass = 'badge-error';
+                badgeText = 'Error';
+            } else if (r.accion === 'DEVOLUCION') {
+                icon = '📥';
+                itemClass = 'devolucion-item';
+                badgeClass = 'badge-devolucion';
+                badgeText = 'Devolución';
+            } else {
+                icon = '📤';
+                itemClass = 'salida-item';
+                badgeClass = 'badge-salida';
+                badgeText = 'Salida';
+            }
+
+            return `
+                <div class="history-item ${itemClass}">
+                    <span class="history-icon">${icon}</span>
+                    <div class="history-info">
+                        <div class="history-msg">${r.mensaje}</div>
+                        <div class="history-meta">
+                            <span class="history-badge ${badgeClass}">${badgeText}</span>
+                            <span class="history-time">🕐 ${r.hora}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 </script>
 
 </body>
