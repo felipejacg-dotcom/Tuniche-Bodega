@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 
-# Tu lista oficial de áreas de Tuniche Fruits para enviar al celular
+# Tu lista oficial de áreas de Tuniche Fruits
 AREAS_COMUNES = [
     "ABASTECIMIENTO", "ADMINISTRACION", "ASEO", "BAÑOS PLANTA", "BODEGA", 
     "BODEGA AGRICOLA LIBERTAD (TAMBO)", "BODEGA AGRICOLA QUINAHUE", 
@@ -26,7 +28,6 @@ AREAS_COMUNES = [
     "TODAS LAS AREAS", "UNITEC"
 ]
 
-# Función para conectarse a TiDB Cloud
 def conectar_db():
     try:
         conexion = mysql.connector.connect(
@@ -44,38 +45,36 @@ def conectar_db():
         print(f"Error de conexión a BD: {e}")
         return None, None
 
-# Ruta Principal: Carga la página web en el celular
 @app.route('/')
 def index():
     return render_template('index.html', areas=AREAS_COMUNES)
 
-# Ruta API: El "cerebro" que procesa las lecturas de los códigos QR
 @app.route('/registrar_salida', methods=['POST'])
 def api_registrar_salida():
     data = request.json
     if not data:
         return jsonify({"success": False, "message": "No se recibieron datos."})
 
-    # Extraemos la orden del switch (Si el celular viejo no la manda, asume SALIDA por seguridad)
     accion = data.get('accion', 'SALIDA')
     id_prenda_bruto = data.get('articulo_id')
 
     if not id_prenda_bruto:
         return jsonify({"success": False, "message": "No se leyó el código QR correctamente."})
 
-    # Limpiamos el código por si la pistola leyó texto extra ("123 | Lentes...")
     id_limpio = str(id_prenda_bruto).split(" | ")[0].strip()
 
     conexion, cursor = conectar_db()
     if not conexion:
-        return jsonify({"success": False, "message": "Fallo la conexión con la nube (TiDB)."})
+        return jsonify({"success": False, "message": "Falló la conexión con la nube (TiDB)."})
+
+    # ====================================================
+    # NUEVO: OBTENER HORA EXACTA DE CHILE AUTOMÁTICAMENTE
+    # ====================================================
+    hora_chile = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        # ====================================================
-        # CAMINO 1: EL OPERARIO ESTÁ DEVOLVIENDO UNA HERRAMIENTA
-        # ====================================================
+        # CAMINO 1: DEVOLUCIÓN
         if accion == 'DEVOLUCION':
-            # 1. Buscamos a quién se le prestó esto que siga "EN TERRENO"
             cursor.execute("""
                 SELECT id FROM transacciones 
                 WHERE articulo_id = %s AND estado = 'EN TERRENO' 
@@ -89,18 +88,14 @@ def api_registrar_salida():
 
             id_registro = transaccion_abierta[0]
 
-            # 2. Cerramos la transacción poniendo hora y estado DEVUELTO
-            cursor.execute("UPDATE transacciones SET hora_entrada = CURRENT_TIMESTAMP, estado = 'DEVUELTO' WHERE id = %s", (id_registro,))
-            
-            # 3. Le sumamos +1 al inventario
+            # Reemplazamos CURRENT_TIMESTAMP por nuestra hora_chile
+            cursor.execute("UPDATE transacciones SET hora_entrada = %s, estado = 'DEVUELTO' WHERE id = %s", (hora_chile, id_registro))
             cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible + 1 WHERE id = %s", (id_limpio,))
             
             conexion.commit()
             return jsonify({"success": True, "message": "Devolución exitosa. Stock actualizado."})
 
-        # ====================================================
-        # CAMINO 2: EL OPERARIO ESTÁ ENTREGANDO UNA HERRAMIENTA
-        # ====================================================
+        # CAMINO 2: SALIDA
         else:
             rut = data.get('rut')
             trabajador = data.get('trabajador')
@@ -109,7 +104,6 @@ def api_registrar_salida():
             if not rut or not trabajador or not area:
                 return jsonify({"success": False, "message": "Faltan los datos del trabajador."})
 
-            # 1. Verificamos si existe la herramienta y si hay stock
             cursor.execute("SELECT stock_disponible, descripcion FROM articulos WHERE id = %s", (id_limpio,))
             item_data = cursor.fetchone()
 
@@ -122,11 +116,11 @@ def api_registrar_salida():
             if stock_actual <= 0:
                 return jsonify({"success": False, "message": f"Sin stock disponible para: {nombre_articulo}."})
 
-            # 2. Insertamos el préstamo y le restamos -1 al inventario
+            # Reemplazamos CURRENT_TIMESTAMP por nuestra hora_chile
             cursor.execute("""
                 INSERT INTO transacciones (articulo_id, rut, trabajador, area, hora_salida, estado) 
-                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, 'EN TERRENO')
-            """, (id_limpio, rut, trabajador, area))
+                VALUES (%s, %s, %s, %s, %s, 'EN TERRENO')
+            """, (id_limpio, rut, trabajador, area, hora_chile))
             
             cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible - 1 WHERE id = %s", (id_limpio,))
             
@@ -139,7 +133,6 @@ def api_registrar_salida():
         if cursor: cursor.close()
         if conexion: conexion.close()
 
-# Configuración obligatoria para subir a Render
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
