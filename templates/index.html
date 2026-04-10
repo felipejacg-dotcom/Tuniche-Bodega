@@ -518,6 +518,220 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
 
+        /* === Scan Carnet Button === */
+        .scan-carnet-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+            color: var(--accent-indigo-light);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        .scan-carnet-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.08), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .scan-carnet-btn:hover {
+            border-color: var(--accent-indigo);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .scan-carnet-btn:hover::before {
+            left: 100%;
+        }
+
+        .scan-carnet-btn:active {
+            transform: translateY(0) scale(0.99);
+        }
+
+        .scan-carnet-btn .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        .scan-carnet-btn .btn-badge {
+            background: var(--gradient-main);
+            color: white;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.06em;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* === Carnet Modal === */
+        .carnet-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .carnet-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .carnet-modal {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+            overflow: hidden;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .carnet-modal-overlay.active .carnet-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .carnet-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .carnet-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .modal-icon {
+            font-size: 1.5rem;
+        }
+
+        .carnet-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(239, 68, 68, 0.08);
+            color: var(--accent-red);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .carnet-modal-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .carnet-modal-body {
+            padding: 16px 20px 20px;
+        }
+
+        #carnetReader {
+            width: 100%;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .carnet-help {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            margin-bottom: 12px;
+        }
+
+        .carnet-help-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .carnet-help-text {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .carnet-result {
+            display: none;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .carnet-result.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: var(--accent-emerald);
+        }
+
+        .carnet-result.error {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* === Field filled pulse animation === */
+        @keyframes fieldPulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); border-color: var(--accent-emerald); }
+            50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); border-color: var(--border-subtle); }
+        }
+
+        .field-filled-pulse {
+            animation: fieldPulse 0.7s ease-out !important;
+        }
+
         /* === History section === */
         .history-list {
             display: flex;
@@ -682,6 +896,11 @@
                 <div class="section-number">1</div>
                 <span class="section-title">Datos del Trabajador</span>
             </div>
+            <button type="button" class="scan-carnet-btn" id="btnScanCarnet" onclick="abrirEscanerCarnet()">
+                <span class="btn-icon">🪪</span>
+                Escanear Carnet Chileno
+                <span class="btn-badge">QR</span>
+            </button>
             <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
             <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
             <select id="area" class="form-input">
@@ -758,6 +977,32 @@
 
 </div>
 
+<!-- Carnet Scanner Modal -->
+<div class="carnet-modal-overlay" id="carnetModalOverlay">
+    <div class="carnet-modal">
+        <div class="carnet-modal-header">
+            <div class="carnet-modal-title">
+                <div class="modal-icon">🪪</div>
+                <div>
+                    <div>Escanear Carnet</div>
+                    <div style="font-size:0.68rem; font-weight:500; color:var(--text-muted); margin-top:1px;">Cédula de Identidad Chilena</div>
+                </div>
+            </div>
+            <button class="carnet-modal-close" onclick="cerrarEscanerCarnet()" title="Cerrar">✕</button>
+        </div>
+        <div class="carnet-modal-body">
+            <div id="carnetReader"></div>
+            <div class="carnet-help">
+                <span class="carnet-help-icon">📱</span>
+                <div class="carnet-help-text">
+                    Apunta la cámara al <strong>código QR del reverso</strong> del carnet chileno. El RUT se llenará automáticamente.
+                </div>
+            </div>
+            <div id="carnetResult" class="carnet-result"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Status bar -->
 <div class="status-bar">
     <span class="status-dot"></span>
@@ -767,12 +1012,156 @@
 <script>
     let isProcessing = false;
     let lastScannedCode = "";
-    let html5QrCode; 
+    let html5QrCode;
+    let carnetQrScanner = null;
 
     window.onload = () => {
         html5QrCode = new Html5Qrcode("reader");
         activarLaser(); 
     };
+
+    // =====================================================
+    // === ESCANEO DE CARNET CHILENO (QR de cédula) ===
+    // =====================================================
+    function abrirEscanerCarnet() {
+        const overlay = document.getElementById('carnetModalOverlay');
+        const resultDiv = document.getElementById('carnetResult');
+        resultDiv.className = 'carnet-result';
+        resultDiv.style.display = 'none';
+        overlay.classList.add('active');
+
+        // Crear instancia del scanner si no existe
+        if (!carnetQrScanner) {
+            carnetQrScanner = new Html5Qrcode("carnetReader");
+        }
+
+        carnetQrScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+                procesarCarnetQR(decodedText);
+            },
+            (errorMessage) => { /* ignorar errores de lectura continua */ }
+        ).catch((err) => {
+            console.error('Error al iniciar cámara para carnet:', err);
+            resultDiv.className = 'carnet-result error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = '❌ No se pudo acceder a la cámara.';
+        });
+    }
+
+    function cerrarEscanerCarnet() {
+        const overlay = document.getElementById('carnetModalOverlay');
+        overlay.classList.remove('active');
+
+        if (carnetQrScanner && carnetQrScanner.isScanning) {
+            carnetQrScanner.stop().catch(() => {});
+        }
+    }
+
+    function procesarCarnetQR(data) {
+        const resultDiv = document.getElementById('carnetResult');
+        let rut = null;
+        let nombre = null;
+
+        // ── Formato 2013+: URL tipo query string ──
+        // Ejemplo: https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-9&type=CEDULA&serial=...
+        if (data.includes('RUN=') || data.includes('run=')) {
+            try {
+                let queryString = data;
+                if (data.includes('?')) {
+                    queryString = data.substring(data.indexOf('?') + 1);
+                }
+                const params = new URLSearchParams(queryString);
+                rut = params.get('RUN') || params.get('run');
+            } catch(e) {
+                console.error('Error parseando QR carnet:', e);
+            }
+        }
+
+        // ── Formato PDF417 (2002): datos posicionales ──
+        // Los primeros 9 chars contienen el RUN, posiciones 19-49 el apellido
+        if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            try {
+                let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
+                if (rawRut.length >= 7) {
+                    rut = rawRut;
+                    // Intentar extraer apellido (posiciones 19-49)
+                    let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
+                    if (rawApellido.length > 1) {
+                        nombre = rawApellido;
+                    }
+                }
+            } catch(e) {
+                console.error('Error parseando PDF417:', e);
+            }
+        }
+
+        // ── Formato genérico: buscar patrón de RUT en el texto ──
+        if (!rut) {
+            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
+            const match = data.match(rutRegex);
+            if (match) {
+                rut = match[1];
+            }
+        }
+
+        if (rut) {
+            // Formatear el RUT limpio
+            const rutFormateado = formatearRut(rut);
+            document.getElementById('rut').value = rutFormateado;
+            document.getElementById('rut').classList.add('field-filled-pulse');
+            setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
+
+            if (nombre) {
+                document.getElementById('trabajador').value = nombre;
+                document.getElementById('trabajador').classList.add('field-filled-pulse');
+                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
+            }
+
+            vibrarCelular([100, 50, 100]);
+
+            resultDiv.className = 'carnet-result success';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '✅ RUT detectado: <strong>' + rutFormateado + '</strong>' + 
+                (nombre ? '<br>👤 ' + nombre : '');
+
+            // Cerrar automáticamente tras 1.5 segundos
+            setTimeout(() => {
+                cerrarEscanerCarnet();
+                // Enfocar el campo nombre si no se llenó
+                if (!nombre) {
+                    document.getElementById('trabajador').focus();
+                } else {
+                    document.getElementById('area').focus();
+                }
+            }, 1500);
+        } else {
+            resultDiv.className = 'carnet-result error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = '⚠️ QR no reconocido como carnet chileno. Intenta de nuevo.';
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 2500);
+        }
+    }
+
+    function formatearRut(rut) {
+        // Limpiar todo excepto dígitos y K
+        let limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        if (limpio.length < 2) return limpio;
+        let cuerpo = limpio.slice(0, -1);
+        let dv = limpio.slice(-1);
+        cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return cuerpo + '-' + dv;
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'carnetModalOverlay') {
+            cerrarEscanerCarnet();
+        }
+    });
 
     // --- LÓGICA DEL SWITCH DE MODO ---
     function cambiarModo() {
