@@ -3,8 +3,30 @@ import mysql.connector
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from functools import wraps
 
 app = Flask(__name__)
+
+# Configuración de autenticación básica
+USUARIO = "bodega"
+CLAVE = "tuniche2026"
+
+def check_auth(username, password):
+    return username == USUARIO and password == CLAVE
+
+def authenticate():
+    from flask import make_response
+    response = make_response('No autorizado', 401, {'WWW-Authenticate': 'Basic realm="Login Requerido"'})
+    return response
+
+def requiere_login(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 # Tu lista oficial de áreas de Tuniche Fruits
 AREAS_COMUNES = [
@@ -46,6 +68,7 @@ def conectar_db():
         return None, None
 
 @app.route('/')
+@requiere_login
 def index():
     return render_template('index.html', areas=AREAS_COMUNES)
 
