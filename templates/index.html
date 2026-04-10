@@ -1096,6 +1096,13 @@
                 }
                 const params = new URLSearchParams(queryString);
                 rut = params.get('RUN') || params.get('run');
+                // Extraer nombre desde el parámetro 'name'
+                const nameParam = params.get('name');
+                if (nameParam) {
+                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
+                    // Limpiar caracteres especiales y espacios múltiples
+                    nombre = nombre.replace(/\s+/g, ' ').trim();
+                }
             } catch(e) {
                 console.error('Error parseando QR carnet:', e);
             }
@@ -1172,7 +1179,7 @@
         let nombre = null;
 
         // ── Formato 2013+: URL tipo query string ──
-        // Ejemplo: https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-9&type=CEDULA&serial=...
+        // Ejemplo: https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-9&type=CEDULA&serial=...&name=JUAN%20RAMON%20MENDOZA
         if (data.includes('RUN=') || data.includes('run=')) {
             try {
                 let queryString = data;
@@ -1181,6 +1188,13 @@
                 }
                 const params = new URLSearchParams(queryString);
                 rut = params.get('RUN') || params.get('run');
+                // Extraer nombre desde el parámetro 'name'
+                const nameParam = params.get('name');
+                if (nameParam) {
+                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
+                    // Limpiar caracteres especiales y espacios múltiples
+                    nombre = nombre.replace(/\s+/g, ' ').trim();
+                }
             } catch(e) {
                 console.error('Error parseando QR carnet:', e);
             }
