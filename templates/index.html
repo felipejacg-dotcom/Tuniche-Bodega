@@ -1059,6 +1059,113 @@
         }
     }
 
+    // --- DETECCIÓN INTELIGENTE: ¿Es un QR de carnet chileno? ---
+    function esCarnetChileno(data) {
+        // Formato 2013+: URL del Registro Civil
+        if (data.includes('registrocivil.cl') || data.includes('RUN=') || data.includes('run=')) {
+            return true;
+        }
+        // Formato PDF417 (2002)
+        if (data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            return true;
+        }
+        return false;
+    }
+
+    // Router: decide si el escaneo es carnet o producto
+    function routerEscaneo(codigo) {
+        if (esCarnetChileno(codigo)) {
+            procesarCarnetDesdeScanner(codigo);
+        } else {
+            procesarEscaneo(codigo);
+        }
+    }
+
+    // Procesar carnet escaneado desde láser/cámara (sin modal)
+    function procesarCarnetDesdeScanner(data) {
+        const resDiv = document.getElementById('resultado');
+        let rut = null;
+        let nombre = null;
+
+        // ── Formato 2013+: URL tipo query string ──
+        if (data.includes('RUN=') || data.includes('run=')) {
+            try {
+                let queryString = data;
+                if (data.includes('?')) {
+                    queryString = data.substring(data.indexOf('?') + 1);
+                }
+                const params = new URLSearchParams(queryString);
+                rut = params.get('RUN') || params.get('run');
+            } catch(e) {
+                console.error('Error parseando QR carnet:', e);
+            }
+        }
+
+        // ── Formato PDF417 (2002): datos posicionales ──
+        if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            try {
+                let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
+                if (rawRut.length >= 7) {
+                    rut = rawRut;
+                    let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
+                    if (rawApellido.length > 1) {
+                        nombre = rawApellido;
+                    }
+                }
+            } catch(e) {
+                console.error('Error parseando PDF417:', e);
+            }
+        }
+
+        // ── Fallback: buscar patrón de RUT en el texto ──
+        if (!rut) {
+            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
+            const match = data.match(rutRegex);
+            if (match) {
+                rut = match[1];
+            }
+        }
+
+        if (rut) {
+            const rutFormateado = formatearRut(rut);
+            document.getElementById('rut').value = rutFormateado;
+            document.getElementById('rut').classList.add('field-filled-pulse');
+            setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
+
+            if (nombre) {
+                document.getElementById('trabajador').value = nombre;
+                document.getElementById('trabajador').classList.add('field-filled-pulse');
+                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
+            }
+
+            vibrarCelular([100, 50, 100]);
+
+            // Mostrar resultado en el div principal
+            resDiv.style.display = 'block';
+            resDiv.className = 'result-box result-success';
+            resDiv.innerHTML = '🪪 <strong>Carnet detectado — RUT: ' + rutFormateado + '</strong>' +
+                (nombre ? ' — ' + nombre : '');
+
+            setTimeout(() => {
+                resDiv.className = 'result-box result-idle';
+                resDiv.innerText = 'Listo para escanear producto...';
+                if (!nombre) {
+                    document.getElementById('trabajador').focus();
+                } else {
+                    document.getElementById('area').focus();
+                }
+            }, 2000);
+        } else {
+            resDiv.style.display = 'block';
+            resDiv.className = 'result-box result-warning';
+            resDiv.innerText = '⚠️ QR no reconocido como carnet chileno.';
+            setTimeout(() => {
+                resDiv.className = 'result-box result-idle';
+                resDiv.innerText = 'Esperando escaneo...';
+            }, 2500);
+        }
+    }
+
     function procesarCarnetQR(data) {
         const resultDiv = document.getElementById('carnetResult');
         let rut = null;
@@ -1301,7 +1408,7 @@
                 (decodedText) => {
                     if (decodedText !== lastScannedCode) {
                         lastScannedCode = decodedText;
-                        procesarEscaneo(decodedText);
+                        routerEscaneo(decodedText);
                         setTimeout(() => { lastScannedCode = ""; }, 2000);
                     }
                 },
@@ -1324,7 +1431,7 @@
         const codigo = laserInput.value.trim();
         if (codigo.length > 0) {
             scanTimer = setTimeout(() => {
-                procesarEscaneo(codigo);
+                routerEscaneo(codigo);
                 laserInput.value = '';
                 laserInput.focus();
             }, 150); // 150ms de silencio = escaneo completo
@@ -1338,7 +1445,7 @@
             clearTimeout(scanTimer);
             const codigo = laserInput.value.trim();
             if(codigo) {
-                procesarEscaneo(codigo);
+                routerEscaneo(codigo);
                 laserInput.value = ''; 
                 laserInput.focus();    
             }
