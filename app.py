@@ -1,7 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import os
+import hashlib
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Cargamos la "caja fuerte" de variables (funciona en PC local y en Render)
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -27,28 +32,80 @@ AREAS_COMUNES = [
 ]
 
 # ====================================================
-# CREDENCIALES DE SEGURIDAD
+# 🛡️ MEJORA 1 y 2: VERIFICACIÓN CENTRALIZADA + SHA-256
 # ====================================================
-def check_auth(username, password):
-    if not username or not password:
+def _verificar_admin(req_data):
+    """
+    Toma los datos de la petición, hashea la contraseña entrante con SHA-256
+    y la compara con la contraseña real escondida en las variables de entorno.
+    """
+    user = req_data.get('username', '').strip().upper()
+    pwd = req_data.get('password', '').strip()
+    
+    if not user or not pwd:
         return False
-    credenciales_validas = {
-        "bodega": "tuniche2026",
-        "admin": "admin123"
-    }
-    return credenciales_validas.get(username) == password
+
+    # Encriptamos la clave que escribió el usuario en su celular
+    hash_intento = hashlib.sha256(pwd.encode('utf-8')).hexdigest()
+    
+    # Buscamos la clave real en la caja fuerte de Render (Ej: APP_PASS_BODEGA)
+    pwd_real = os.getenv(f"APP_PASS_{user}")
+    
+    if not pwd_real:
+        return False
+        
+    # Encriptamos la clave real y comparamos (Seguridad Nivel Bancario)
+    hash_real = hashlib.sha256(pwd_real.encode('utf-8')).hexdigest()
+    
+    return hash_intento == hash_real
 
 # ====================================================
-# CONEXIÓN DINÁMICA
+# 🛡️ MEJORA 3: ALGORITMO MÓDULO 11 (RUT CHILENO)
+# ====================================================
+def validar_rut_modulo11(rut):
+    """
+    Verifica matemáticamente que el RUT sea real. Bloquea dedazos y errores de escáner.
+    """
+    rut_limpio = rut.replace(".", "").replace("-", "").upper()
+    if len(rut_limpio) < 2: return False
+    
+    cuerpo = rut_limpio[:-1]
+    dv_esperado = rut_limpio[-1]
+    
+    if not cuerpo.isdigit(): return False
+    
+    suma = 0
+    multiplo = 2
+    for d in reversed(cuerpo):
+        suma += int(d) * multiplo
+        multiplo = multiplo + 1 if multiplo < 7 else 2
+        
+    dv_calculado = 11 - (suma % 11)
+    if dv_calculado == 11: dv_final = "0"
+    elif dv_calculado == 10: dv_final = "K"
+    else: dv_final = str(dv_calculado)
+    
+    return dv_final == dv_esperado
+
+# ====================================================
+# 🛡️ MEJORA 4: CREDENCIALES BD DESDE EL .ENV
 # ====================================================
 def conectar_db(planta):
     db_name = "bodega_puquillay_real" if planta == "PUQUILLAY" else "bodega_tuniche_real"
+    # Obtenemos usuario y clave desde las variables de entorno
+    db_usr = os.getenv("DB_USER")
+    db_pw = os.getenv("DB_PASS")
+    
+    if not db_usr or not db_pw:
+        print("CRÍTICO: No se encontraron credenciales de BD en el entorno.")
+        return None, None
+
     try:
         conexion = mysql.connector.connect(
             host="gateway01.us-east-1.prod.aws.tidbcloud.com",
             port=4000,
-            user="4K3HGsTvxGEKd2X.root",
-            password="4aJEglVrXOotgXhp",
+            user=db_usr,
+            password=db_pw,
             database=db_name,
             ssl_verify_cert=False,     
             ssl_verify_identity=False,
@@ -56,11 +113,10 @@ def conectar_db(planta):
         )
         return conexion, conexion.cursor()
     except Exception as e:
-        print(f"Error de conexión a BD: {e}")
+        print(f"Error de conexión a BD {db_name}: {e}")
         return None, None
 
 def obtener_hora_chile():
-    # Usamos matemáticas puras (UTC - 4 horas) para evitar problemas de compatibilidad en Render
     hora_utc = datetime.utcnow()
     hora_chile = hora_utc - timedelta(hours=4)
     return hora_chile.strftime("%Y-%m-%d %H:%M:%S")
@@ -69,17 +125,11 @@ def obtener_hora_chile():
 def index():
     return render_template('index.html', areas=AREAS_COMUNES)
 
-# Ruta de prueba para saber si Render está vivo
-@app.route('/ping', methods=['GET'])
-def ping():
-    return "PONG - El servidor está vivo y respondiendo."
-
 @app.route('/login', methods=['POST'])
 def api_login():
     try:
-        # force=True asegura que reciba los datos aunque el celular envíe mal los encabezados
         data = request.get_json(force=True, silent=True) or {}
-        if check_auth(data.get('username'), data.get('password')):
+        if _verificar_admin(data):
             return jsonify({"success": True})
         return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
     except Exception as e:
@@ -89,13 +139,13 @@ def api_login():
 def api_buscar_trabajador():
     data = request.get_json(force=True, silent=True) or {}
     
-    if not check_auth(data.get('username'), data.get('password')):
+    if not _verificar_admin(data):
         return jsonify({"success": False})
 
-    rut = data.get('rut')
+    rut = data.get('rut', '')
     planta = data.get('planta', 'TUNICHE')
     
-    if not rut:
+    if not rut or not validar_rut_modulo11(rut):
         return jsonify({"success": False})
 
     conexion, cursor = conectar_db(planta)
@@ -118,12 +168,17 @@ def api_buscar_trabajador():
 def api_registrar_salida():
     data = request.get_json(force=True, silent=True) or {}
     
-    if not check_auth(data.get('username'), data.get('password')):
-        return jsonify({"success": False, "message": "Acceso denegado. Reinicie sesión."})
+    if not _verificar_admin(data):
+        return jsonify({"success": False, "message": "Acceso denegado. Credenciales inválidas."})
 
     accion = data.get('accion', 'SALIDA')
     id_prenda_bruto = data.get('articulo_id')
     planta = data.get('planta', 'TUNICHE')
+    rut = data.get('rut', '')
+
+    # Validar RUT matemáticamente antes de tocar la base de datos
+    if accion == 'SALIDA' and not validar_rut_modulo11(rut):
+        return jsonify({"success": False, "message": "RUT Inválido. Revise los números digitados."})
 
     if not id_prenda_bruto:
         return jsonify({"success": False, "message": "Código QR inválido."})
@@ -155,7 +210,6 @@ def api_registrar_salida():
             return jsonify({"success": True, "message": "Devolución exitosa."})
 
         else:
-            rut = data.get('rut')
             trabajador = data.get('trabajador')
             area = data.get('area')
 
