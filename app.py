@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 
-# Tu lista oficial de áreas de Tuniche Fruits
 AREAS_COMUNES = [
     "ABASTECIMIENTO", "ADMINISTRACION", "ASEO", "BAÑOS PLANTA", "BODEGA", 
     "BODEGA AGRICOLA LIBERTAD (TAMBO)", "BODEGA AGRICOLA QUINAHUE", 
@@ -45,40 +44,44 @@ def require_auth():
     auth = request.authorization
     if not auth or not check_auth(auth.username, auth.password):
         return authenticate()
-# ====================================================
 
-def conectar_db():
+# ====================================================
+# CONEXIÓN DINÁMICA SEGÚN LA PLANTA
+# ====================================================
+def conectar_db(planta):
+    # Selecciona la base de datos según lo que envíe el celular
+    db_name = "bodega_puquillay_real" if planta == "PUQUILLAY" else "bodega_tuniche_real"
+    
     try:
         conexion = mysql.connector.connect(
             host="gateway01.us-east-1.prod.aws.tidbcloud.com",
             port=4000,
             user="4K3HGsTvxGEKd2X.root",
             password="4aJEglVrXOotgXhp",
-            database="bodega_tuniche_real",
+            database=db_name,
             ssl_verify_cert=False,     
             ssl_verify_identity=False,
             use_pure=True
         )
         return conexion, conexion.cursor()
     except Exception as e:
-        print(f"Error de conexión a BD: {e}")
+        print(f"Error de conexión a BD {db_name}: {e}")
         return None, None
 
 @app.route('/')
 def index():
     return render_template('index.html', areas=AREAS_COMUNES)
 
-# ====================================================
-# NUEVA RUTA: BUSCAR NOMBRE ESCANEANDO EL CARNET
-# ====================================================
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
     data = request.json
     rut = data.get('rut')
+    planta = data.get('planta', 'TUNICHE') # Recibe la planta del celular
+    
     if not rut:
         return jsonify({"success": False})
 
-    conexion, cursor = conectar_db()
+    conexion, cursor = conectar_db(planta)
     if not conexion:
         return jsonify({"success": False})
 
@@ -96,9 +99,6 @@ def api_buscar_trabajador():
         if cursor: cursor.close()
         if conexion: conexion.close()
 
-# ====================================================
-# RUTA PRINCIPAL: REGISTRAR ENTRADA Y SALIDA
-# ====================================================
 @app.route('/registrar_salida', methods=['POST'])
 def api_registrar_salida():
     data = request.json
@@ -107,15 +107,16 @@ def api_registrar_salida():
 
     accion = data.get('accion', 'SALIDA')
     id_prenda_bruto = data.get('articulo_id')
+    planta = data.get('planta', 'TUNICHE') # Recibe la planta del celular
 
     if not id_prenda_bruto:
         return jsonify({"success": False, "message": "No se leyó el código QR correctamente."})
 
     id_limpio = str(id_prenda_bruto).split(" | ")[0].strip()
 
-    conexion, cursor = conectar_db()
+    conexion, cursor = conectar_db(planta)
     if not conexion:
-        return jsonify({"success": False, "message": "Falló la conexión con la nube (TiDB)."})
+        return jsonify({"success": False, "message": f"Falló la conexión con la base de datos de {planta}."})
 
     hora_chile = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d %H:%M:%S")
 
