@@ -303,7 +303,6 @@
         })
         .then(async res => {
             const contentType = res.headers.get("content-type");
-            // Si Render choca, tira error 502 HTML en vez del JSON que esperamos
             if (!res.ok) {
                 let errTxt = await res.text();
                 throw new Error("HTTP " + res.status + " | " + errTxt.substring(0, 30));
@@ -327,15 +326,15 @@
         })
         .catch(err => {
             errorDiv.style.color = "var(--accent-red)";
-            // Ahora imprimirá exactamente de qué se está quejando el servidor
             errorDiv.innerText = "❌ Error Detallado: " + err.message;
             console.error(err);
         });
     }
 
     function desbloquearApp() {
-        document.getElementById('lockScreen').style.opacity = '0';
-        document.getElementById('lockScreen').style.visibility = 'hidden';
+        // CORRECCIÓN APLICADA AQUÍ: 'loginScreen' en vez de 'lockScreen'
+        document.getElementById('loginScreen').style.opacity = '0';
+        document.getElementById('loginScreen').style.visibility = 'hidden';
         document.getElementById('appContent').style.opacity = '1';
         document.getElementById('appContent').style.visibility = 'visible';
         document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
