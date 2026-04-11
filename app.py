@@ -60,7 +60,7 @@ def conectar_db(planta):
         return None, None
 
 def obtener_hora_chile():
-    # Matemática pura: Hora UTC menos 4 horas. No falla en ningún servidor.
+    # Usamos matemáticas puras (UTC - 4 horas) para evitar problemas de compatibilidad en Render
     hora_utc = datetime.utcnow()
     hora_chile = hora_utc - timedelta(hours=4)
     return hora_chile.strftime("%Y-%m-%d %H:%M:%S")
@@ -69,19 +69,25 @@ def obtener_hora_chile():
 def index():
     return render_template('index.html', areas=AREAS_COMUNES)
 
+# Ruta de prueba para saber si Render está vivo
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "PONG - El servidor está vivo y respondiendo."
+
 @app.route('/login', methods=['POST'])
 def api_login():
     try:
-        data = request.json or {}
+        # force=True asegura que reciba los datos aunque el celular envíe mal los encabezados
+        data = request.get_json(force=True, silent=True) or {}
         if check_auth(data.get('username'), data.get('password')):
             return jsonify({"success": True})
         return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": f"Error interno: {str(e)}"})
 
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False})
@@ -110,7 +116,7 @@ def api_buscar_trabajador():
 
 @app.route('/registrar_salida', methods=['POST'])
 def api_registrar_salida():
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False, "message": "Acceso denegado. Reinicie sesión."})
@@ -126,7 +132,7 @@ def api_registrar_salida():
 
     conexion, cursor = conectar_db(planta)
     if not conexion:
-        return jsonify({"success": False, "message": "Fallo de conexión con la BD."})
+        return jsonify({"success": False, "message": "Fallo de conexión con la Base de Datos."})
 
     hora_chile = obtener_hora_chile()
 
