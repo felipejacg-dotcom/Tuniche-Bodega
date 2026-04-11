@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -30,6 +30,8 @@ AREAS_COMUNES = [
 # CREDENCIALES DE SEGURIDAD
 # ====================================================
 def check_auth(username, password):
+    if not username or not password:
+        return False
     credenciales_validas = {
         "bodega": "tuniche2026",
         "admin": "admin123"
@@ -37,7 +39,7 @@ def check_auth(username, password):
     return credenciales_validas.get(username) == password
 
 # ====================================================
-# CONEXIÓN DINÁMICA SEGÚN LA PLANTA
+# CONEXIÓN DINÁMICA
 # ====================================================
 def conectar_db(planta):
     db_name = "bodega_puquillay_real" if planta == "PUQUILLAY" else "bodega_tuniche_real"
@@ -54,8 +56,14 @@ def conectar_db(planta):
         )
         return conexion, conexion.cursor()
     except Exception as e:
-        print(f"Error de conexión a BD {db_name}: {e}")
+        print(f"Error de conexión a BD: {e}")
         return None, None
+
+def obtener_hora_chile():
+    # Matemática pura: Hora UTC menos 4 horas. No falla en ningún servidor.
+    hora_utc = datetime.utcnow()
+    hora_chile = hora_utc - timedelta(hours=4)
+    return hora_chile.strftime("%Y-%m-%d %H:%M:%S")
 
 @app.route('/')
 def index():
@@ -64,16 +72,16 @@ def index():
 @app.route('/login', methods=['POST'])
 def api_login():
     try:
-        data = request.get_json(silent=True) or {}
+        data = request.json or {}
         if check_auth(data.get('username'), data.get('password')):
             return jsonify({"success": True})
         return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error del servidor: {str(e)}"})
+        return jsonify({"success": False, "message": str(e)})
 
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
-    data = request.get_json(silent=True) or {}
+    data = request.json or {}
     
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False})
@@ -102,27 +110,25 @@ def api_buscar_trabajador():
 
 @app.route('/registrar_salida', methods=['POST'])
 def api_registrar_salida():
-    data = request.get_json(silent=True) or {}
+    data = request.json or {}
     
     if not check_auth(data.get('username'), data.get('password')):
-        return jsonify({"success": False, "message": "Acceso denegado. Reinicie la sesión."})
+        return jsonify({"success": False, "message": "Acceso denegado. Reinicie sesión."})
 
     accion = data.get('accion', 'SALIDA')
     id_prenda_bruto = data.get('articulo_id')
     planta = data.get('planta', 'TUNICHE')
 
     if not id_prenda_bruto:
-        return jsonify({"success": False, "message": "No se leyó el código QR correctamente."})
+        return jsonify({"success": False, "message": "Código QR inválido."})
 
     id_limpio = str(id_prenda_bruto).split(" | ")[0].strip()
 
     conexion, cursor = conectar_db(planta)
     if not conexion:
-        return jsonify({"success": False, "message": f"Falló la conexión con la base de datos de {planta}."})
+        return jsonify({"success": False, "message": "Fallo de conexión con la BD."})
 
-    # Hora exacta de Chile sin depender de librerías extrañas
-    chile_tz = timezone(timedelta(hours=-4))
-    hora_chile = datetime.now(chile_tz).strftime("%Y-%m-%d %H:%M:%S")
+    hora_chile = obtener_hora_chile()
 
     try:
         if accion == 'DEVOLUCION':
@@ -134,13 +140,13 @@ def api_registrar_salida():
             transaccion_abierta = cursor.fetchone()
 
             if not transaccion_abierta:
-                return jsonify({"success": False, "message": "Esta herramienta no registra una salida pendiente."})
+                return jsonify({"success": False, "message": "La herramienta no registra salida."})
 
             id_registro = transaccion_abierta[0]
             cursor.execute("UPDATE transacciones SET hora_entrada = %s, estado = 'DEVUELTO' WHERE id = %s", (hora_chile, id_registro))
             cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible + 1 WHERE id = %s", (id_limpio,))
             conexion.commit()
-            return jsonify({"success": True, "message": "Devolución exitosa. Stock actualizado."})
+            return jsonify({"success": True, "message": "Devolución exitosa."})
 
         else:
             rut = data.get('rut')
@@ -148,16 +154,16 @@ def api_registrar_salida():
             area = data.get('area')
 
             if not rut or not trabajador or not area:
-                return jsonify({"success": False, "message": "Faltan los datos del trabajador."})
+                return jsonify({"success": False, "message": "Faltan datos del trabajador."})
 
             cursor.execute("SELECT stock_disponible, descripcion FROM articulos WHERE id = %s", (id_limpio,))
             item_data = cursor.fetchone()
 
             if not item_data:
-                return jsonify({"success": False, "message": f"El código ID {id_limpio} no existe en inventario."})
+                return jsonify({"success": False, "message": "Artículo no existe."})
 
             if item_data[0] <= 0:
-                return jsonify({"success": False, "message": f"Sin stock disponible para: {item_data[1]}."})
+                return jsonify({"success": False, "message": f"Sin stock de: {item_data[1]}."})
 
             cursor.execute("""
                 INSERT INTO transacciones (articulo_id, rut, trabajador, area, hora_salida, estado) 
@@ -169,7 +175,7 @@ def api_registrar_salida():
             return jsonify({"success": True, "message": f"Salida de {item_data[1]} registrada."})
 
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error interno: {str(e)}"})
+        return jsonify({"success": False, "message": str(e)})
     finally:
         if cursor: cursor.close()
         if conexion: conexion.close()
