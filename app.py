@@ -28,7 +28,7 @@ AREAS_COMUNES = [
 ]
 
 # ====================================================
-# CREDENCIALES DE SEGURIDAD (Cámbialas cuando quieras)
+# CREDENCIALES DE SEGURIDAD
 # ====================================================
 def check_auth(username, password):
     credenciales_validas = {
@@ -60,7 +60,7 @@ def conectar_db(planta):
 
 @app.route('/')
 def index():
-    # Carga el HTML sin el candado viejo. El candado ahora es el Login negro del celular.
+    # Carga el HTML libremente. La seguridad ahora la maneja la pantalla negra de Login en el celular.
     return render_template('index.html', areas=AREAS_COMUNES)
 
 @app.route('/login', methods=['POST'])
