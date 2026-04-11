@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import os
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__)
 
@@ -60,7 +59,6 @@ def conectar_db(planta):
 
 @app.route('/')
 def index():
-    # Carga el HTML libremente. La seguridad ahora la maneja la pantalla negra de Login en el celular.
     return render_template('index.html', areas=AREAS_COMUNES)
 
 @app.route('/login', methods=['POST'])
@@ -71,13 +69,12 @@ def api_login():
             return jsonify({"success": True})
         return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": f"Error del servidor: {str(e)}"})
 
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
     data = request.get_json(silent=True) or {}
     
-    # Validación de seguridad por debajo
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False})
 
@@ -107,7 +104,6 @@ def api_buscar_trabajador():
 def api_registrar_salida():
     data = request.get_json(silent=True) or {}
     
-    # Validación de seguridad estricta para registrar
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False, "message": "Acceso denegado. Reinicie la sesión."})
 
@@ -124,7 +120,9 @@ def api_registrar_salida():
     if not conexion:
         return jsonify({"success": False, "message": f"Falló la conexión con la base de datos de {planta}."})
 
-    hora_chile = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d %H:%M:%S")
+    # Hora exacta de Chile sin depender de librerías extrañas
+    chile_tz = timezone(timedelta(hours=-4))
+    hora_chile = datetime.now(chile_tz).strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         if accion == 'DEVOLUCION':
