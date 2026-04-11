@@ -60,19 +60,23 @@ def conectar_db(planta):
 
 @app.route('/')
 def index():
-    # Carga el HTML. El candado ahora es visual (manejado por el celular)
+    # Carga el HTML sin el candado viejo. El candado ahora es el Login negro del celular.
     return render_template('index.html', areas=AREAS_COMUNES)
 
 @app.route('/login', methods=['POST'])
 def api_login():
-    data = request.json
-    if check_auth(data.get('username'), data.get('password')):
-        return jsonify({"success": True})
-    return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
+    try:
+        data = request.get_json(silent=True) or {}
+        if check_auth(data.get('username'), data.get('password')):
+            return jsonify({"success": True})
+        return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
 
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
-    data = request.json
+    data = request.get_json(silent=True) or {}
+    
     # Validación de seguridad por debajo
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False})
@@ -101,11 +105,9 @@ def api_buscar_trabajador():
 
 @app.route('/registrar_salida', methods=['POST'])
 def api_registrar_salida():
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "message": "No se recibieron datos."})
-
-    # Validación de seguridad estricta
+    data = request.get_json(silent=True) or {}
+    
+    # Validación de seguridad estricta para registrar
     if not check_auth(data.get('username'), data.get('password')):
         return jsonify({"success": False, "message": "Acceso denegado. Reinicie la sesión."})
 
@@ -120,7 +122,7 @@ def api_registrar_salida():
 
     conexion, cursor = conectar_db(planta)
     if not conexion:
-        return jsonify({"success": False, "message": f"Falló la conexión con {planta}."})
+        return jsonify({"success": False, "message": f"Falló la conexión con la base de datos de {planta}."})
 
     hora_chile = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d %H:%M:%S")
 
