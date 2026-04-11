@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template
 import mysql.connector
 import os
 from datetime import datetime
@@ -28,30 +28,20 @@ AREAS_COMUNES = [
 ]
 
 # ====================================================
-# ESCUDO DE SEGURIDAD (CANDADO RÁPIDO PARA TODA LA APP)
+# CREDENCIALES DE SEGURIDAD (Puedes agregar más aquí)
 # ====================================================
 def check_auth(username, password):
-    return username == 'bodega' and password == 'tuniche2026'
-
-def authenticate():
-    return Response(
-        'ACCESO DENEGADO. Sistema exclusivo de Tuniche Fruits.', 401,
-        {'WWW-Authenticate': 'Basic realm="Acceso a SGB Móvil"'}
-    )
-
-@app.before_request
-def require_auth():
-    auth = request.authorization
-    if not auth or not check_auth(auth.username, auth.password):
-        return authenticate()
+    credenciales_validas = {
+        "bodega": "tuniche2026",
+        "admin": "admin123"
+    }
+    return credenciales_validas.get(username) == password
 
 # ====================================================
 # CONEXIÓN DINÁMICA SEGÚN LA PLANTA
 # ====================================================
 def conectar_db(planta):
-    # Selecciona la base de datos según lo que envíe el celular
     db_name = "bodega_puquillay_real" if planta == "PUQUILLAY" else "bodega_tuniche_real"
-    
     try:
         conexion = mysql.connector.connect(
             host="gateway01.us-east-1.prod.aws.tidbcloud.com",
@@ -70,13 +60,31 @@ def conectar_db(planta):
 
 @app.route('/')
 def index():
+    # La página ahora carga libremente, pero el HTML mostrará un candado visual
     return render_template('index.html', areas=AREAS_COMUNES)
+
+# ====================================================
+# NUEVA RUTA: VERIFICAR LOGIN DESDE EL CELULAR
+# ====================================================
+@app.route('/login', methods=['POST'])
+def api_login():
+    data = request.json
+    user = data.get('username')
+    pwd = data.get('password')
+    
+    if check_auth(user, pwd):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Usuario o contraseña incorrectos"})
 
 @app.route('/buscar_trabajador', methods=['POST'])
 def api_buscar_trabajador():
     data = request.json
+    # Validación de seguridad invisible
+    if not check_auth(data.get('username'), data.get('password')):
+        return jsonify({"success": False})
+
     rut = data.get('rut')
-    planta = data.get('planta', 'TUNICHE') # Recibe la planta del celular
+    planta = data.get('planta', 'TUNICHE')
     
     if not rut:
         return jsonify({"success": False})
@@ -88,7 +96,6 @@ def api_buscar_trabajador():
     try:
         cursor.execute("SELECT trabajador, area FROM transacciones WHERE rut = %s ORDER BY id DESC LIMIT 1", (rut,))
         fila = cursor.fetchone()
-        
         if fila:
             return jsonify({"success": True, "nombre": fila[0], "area": fila[1]})
         else:
@@ -105,9 +112,13 @@ def api_registrar_salida():
     if not data:
         return jsonify({"success": False, "message": "No se recibieron datos."})
 
+    # Validación de seguridad estricta
+    if not check_auth(data.get('username'), data.get('password')):
+        return jsonify({"success": False, "message": "Acceso denegado. Reinicie la sesión."})
+
     accion = data.get('accion', 'SALIDA')
     id_prenda_bruto = data.get('articulo_id')
-    planta = data.get('planta', 'TUNICHE') # Recibe la planta del celular
+    planta = data.get('planta', 'TUNICHE')
 
     if not id_prenda_bruto:
         return jsonify({"success": False, "message": "No se leyó el código QR correctamente."})
@@ -127,17 +138,14 @@ def api_registrar_salida():
                 WHERE articulo_id = %s AND estado = 'EN TERRENO' 
                 ORDER BY id DESC LIMIT 1
             """, (id_limpio,))
-            
             transaccion_abierta = cursor.fetchone()
 
             if not transaccion_abierta:
-                return jsonify({"success": False, "message": "Esta herramienta no registra una salida pendiente en terreno."})
+                return jsonify({"success": False, "message": "Esta herramienta no registra una salida pendiente."})
 
             id_registro = transaccion_abierta[0]
-
             cursor.execute("UPDATE transacciones SET hora_entrada = %s, estado = 'DEVUELTO' WHERE id = %s", (hora_chile, id_registro))
             cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible + 1 WHERE id = %s", (id_limpio,))
-            
             conexion.commit()
             return jsonify({"success": True, "message": "Devolución exitosa. Stock actualizado."})
 
@@ -155,11 +163,8 @@ def api_registrar_salida():
             if not item_data:
                 return jsonify({"success": False, "message": f"El código ID {id_limpio} no existe en inventario."})
 
-            stock_actual = item_data[0]
-            nombre_articulo = item_data[1]
-
-            if stock_actual <= 0:
-                return jsonify({"success": False, "message": f"Sin stock disponible para: {nombre_articulo}."})
+            if item_data[0] <= 0:
+                return jsonify({"success": False, "message": f"Sin stock disponible para: {item_data[1]}."})
 
             cursor.execute("""
                 INSERT INTO transacciones (articulo_id, rut, trabajador, area, hora_salida, estado) 
@@ -167,12 +172,11 @@ def api_registrar_salida():
             """, (id_limpio, rut, trabajador, area, hora_chile))
             
             cursor.execute("UPDATE articulos SET stock_disponible = stock_disponible - 1 WHERE id = %s", (id_limpio,))
-            
             conexion.commit()
-            return jsonify({"success": True, "message": f"Salida de {nombre_articulo} registrada."})
+            return jsonify({"success": True, "message": f"Salida de {item_data[1]} registrada."})
 
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error del servidor interno: {str(e)}"})
+        return jsonify({"success": False, "message": f"Error interno: {str(e)}"})
     finally:
         if cursor: cursor.close()
         if conexion: conexion.close()
