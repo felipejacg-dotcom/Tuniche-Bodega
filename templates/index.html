@@ -124,6 +124,36 @@
             padding: 20px 16px 40px;
         }
 
+        /* === Selector de Planta === */
+        .selector-planta-container {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .selector-planta-container select {
+            background-color: transparent;
+            color: var(--text-primary);
+            border: none;
+            font-weight: 800;
+            font-size: 1.1rem;
+            outline: none;
+            cursor: pointer;
+            text-align: right;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        
+        .selector-planta-container select option {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
         /* === Glass card base === */
         .glass-card {
             background: var(--bg-card);
@@ -886,7 +916,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* === Responsive polish === */
         @media (max-width: 400px) {
             .main-container { padding: 12px 10px 36px; }
             .card-inner { padding: 16px; }
@@ -896,7 +925,6 @@
 </head>
 <body>
 
-<!-- Top bar -->
 <div class="top-bar">
     <div class="container" style="max-width:520px;">
         <div class="brand">
@@ -909,10 +937,16 @@
     </div>
 </div>
 
-<!-- Main content -->
 <div class="main-container">
 
-    <!-- Mode switcher -->
+    <div class="selector-planta-container">
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">🏢 PLANTA ACTIVA:</span>
+        <select id="selectorPlanta" onchange="guardarPlanta()">
+            <option value="TUNICHE">Tuniche Fruits (Central)</option>
+            <option value="PUQUILLAY">Puquillay</option>
+        </select>
+    </div>
+
     <div class="glass-card mode-card mode-salida" id="cardModo">
         <div class="mode-inner">
             <div class="mode-label">
@@ -929,7 +963,6 @@
         </div>
     </div>
 
-    <!-- Worker data -->
     <div class="glass-card">
         <div class="card-inner">
             <div class="section-header">
@@ -952,7 +985,6 @@
         </div>
     </div>
 
-    <!-- Scan method -->
     <div class="glass-card">
         <div class="card-inner">
             <div class="section-header">
@@ -963,35 +995,30 @@
             <div class="method-pills" role="group">
                 <input type="radio" name="btnradio" id="btn_laser" autocomplete="off" checked onclick="activarLaser()">
                 <label class="method-pill" for="btn_laser">
-                    <span class="pill-icon">🔫</span>
-                    Láser
+                    <span class="pill-icon">🔫</span> Láser
                 </label>
 
                 <input type="radio" name="btnradio" id="btn_cam_trasera" autocomplete="off" onclick="activarCamara('environment')">
                 <label class="method-pill" for="btn_cam_trasera">
-                    <span class="pill-icon">📸</span>
-                    Trasera
+                    <span class="pill-icon">📸</span> Trasera
                 </label>
 
                 <input type="radio" name="btnradio" id="btn_cam_frontal" autocomplete="off" onclick="activarCamara('user')">
                 <label class="method-pill" for="btn_cam_frontal">
-                    <span class="pill-icon">🤳</span>
-                    Frontal
+                    <span class="pill-icon">🤳</span> Frontal
                 </label>
             </div>
 
             <div id="laser_section">
                 <div class="help-text">
-                    <span class="dot"></span>
-                    Pon el cursor aquí y dispara el gatillo de la Zebra
+                    <span class="dot"></span> Pon el cursor aquí y dispara el gatillo de la Zebra
                 </div>
                 <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" inputmode="none">
             </div>
 
             <div id="camara_section" style="display: none;">
                 <div class="help-text">
-                    <span class="dot"></span>
-                    Apunta al código QR con la cámara
+                    <span class="dot"></span> Apunta al código QR con la cámara
                 </div>
                 <div id="reader"></div>
             </div>
@@ -1002,7 +1029,6 @@
         </div>
     </div>
 
-    <!-- Últimos 3 registros -->
     <div class="glass-card">
         <div class="card-inner">
             <div class="section-header">
@@ -1017,7 +1043,6 @@
 
 </div>
 
-<!-- Carnet Scanner Modal -->
 <div class="carnet-modal-overlay" id="carnetModalOverlay">
     <div class="carnet-modal">
         <div class="carnet-modal-header">
@@ -1043,15 +1068,13 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
 </div>
 
-<!-- Status bar -->
 <div class="status-bar">
     <span class="status-dot"></span>
-    <span class="status-text">Conectado — Tuniche Fruits</span>
+    <span class="status-text">Conectado — TiDB Cloud</span>
 </div>
 
 <script>
@@ -1061,18 +1084,37 @@
     let carnetQrScanner = null;
     const loadingOverlay = document.getElementById('loadingOverlay');
 
-    function mostrarOverlay() {
-        loadingOverlay.classList.add('active');
+    // =====================================================
+    // NUEVO: LÓGICA DE MEMORIA DE SUCURSAL
+    // =====================================================
+    function cargarPlantaGuardada() {
+        const plantaGuardada = localStorage.getItem('plantaActiva');
+        if (plantaGuardada) {
+            document.getElementById('selectorPlanta').value = plantaGuardada;
+        }
     }
 
-    function ocultarOverlay() {
-        loadingOverlay.classList.remove('active');
+    function guardarPlanta() {
+        const plantaSeleccionada = document.getElementById('selectorPlanta').value;
+        localStorage.setItem('plantaActiva', plantaSeleccionada);
+        // Efecto visual rápido para confirmar el cambio
+        document.body.style.opacity = '0.5';
+        setTimeout(() => document.body.style.opacity = '1', 200);
     }
 
+    function obtenerPlantaActual() {
+        return document.getElementById('selectorPlanta').value;
+    }
+
+    // Inicializar al cargar
     window.onload = () => {
+        cargarPlantaGuardada();
         html5QrCode = new Html5Qrcode("reader");
         activarLaser(); 
     };
+
+    function mostrarOverlay() { loadingOverlay.classList.add('active'); }
+    function ocultarOverlay() { loadingOverlay.classList.remove('active'); }
 
     // =====================================================
     // === ESCANEO DE CARNET CHILENO (QR de cédula) ===
@@ -1084,26 +1126,19 @@
         resultDiv.style.display = 'none';
         overlay.classList.add('active');
 
-        // Crear instancia del scanner si no existe
         if (!carnetQrScanner) {
             carnetQrScanner = new Html5Qrcode("carnetReader");
         }
 
         mostrarOverlay();
-
-        setTimeout(() => {
-            ocultarOverlay();
-        }, 800);
+        setTimeout(() => { ocultarOverlay(); }, 800);
 
         carnetQrScanner.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText) => {
-                procesarCarnetQR(decodedText);
-            },
-            (errorMessage) => { /* ignorar errores de lectura continua */ }
+            (decodedText) => { procesarCarnetQR(decodedText); },
+            (errorMessage) => { }
         ).catch((err) => {
-            console.error('Error al iniciar cámara para carnet:', err);
             resultDiv.className = 'carnet-result error';
             resultDiv.style.display = 'block';
             resultDiv.innerText = '❌ No se pudo acceder a la cámara.';
@@ -1113,26 +1148,17 @@
     function cerrarEscanerCarnet() {
         const overlay = document.getElementById('carnetModalOverlay');
         overlay.classList.remove('active');
-
         if (carnetQrScanner && carnetQrScanner.isScanning) {
             carnetQrScanner.stop().catch(() => {});
         }
     }
 
-    // --- DETECCIÓN INTELIGENTE: ¿Es un QR de carnet chileno? ---
     function esCarnetChileno(data) {
-        // Formato 2013+: URL del Registro Civil
-        if (data.includes('registrocivil.cl') || data.includes('RUN=') || data.includes('run=')) {
-            return true;
-        }
-        // Formato PDF417 (2002)
-        if (data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
-            return true;
-        }
+        if (data.includes('registrocivil.cl') || data.includes('RUN=') || data.includes('run=')) return true;
+        if (data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) return true;
         return false;
     }
 
-    // Router: decide si el escaneo es carnet o producto
     function routerEscaneo(codigo) {
         if (esCarnetChileno(codigo)) {
             procesarCarnetDesdeScanner(codigo);
@@ -1141,56 +1167,37 @@
         }
     }
 
-    // Procesar carnet escaneado desde láser/cámara (sin modal)
     function procesarCarnetDesdeScanner(data) {
         const resDiv = document.getElementById('resultado');
         let rut = null;
         let nombre = null;
 
-        // ── Formato 2013+: URL tipo query string ──
         if (data.includes('RUN=') || data.includes('run=')) {
             try {
-                let queryString = data;
-                if (data.includes('?')) {
-                    queryString = data.substring(data.indexOf('?') + 1);
-                }
+                let queryString = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
                 const params = new URLSearchParams(queryString);
                 rut = params.get('RUN') || params.get('run');
-                // Extraer nombre desde el parámetro 'name'
                 const nameParam = params.get('name');
                 if (nameParam) {
-                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
-                    // Limpiar caracteres especiales y espacios múltiples
-                    nombre = nombre.replace(/\s+/g, ' ').trim();
+                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
                 }
-            } catch(e) {
-                console.error('Error parseando QR carnet:', e);
-            }
+            } catch(e) { }
         }
 
-        // ── Formato PDF417 (2002): datos posicionales ──
         if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
             try {
                 let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
                 if (rawRut.length >= 7) {
                     rut = rawRut;
                     let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
-                    if (rawApellido.length > 1) {
-                        nombre = rawApellido;
-                    }
+                    if (rawApellido.length > 1) nombre = rawApellido;
                 }
-            } catch(e) {
-                console.error('Error parseando PDF417:', e);
-            }
+            } catch(e) { }
         }
 
-        // ── Fallback: buscar patrón de RUT en el texto ──
         if (!rut) {
-            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
-            const match = data.match(rutRegex);
-            if (match) {
-                rut = match[1];
-            }
+            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
+            if (match) rut = match[1];
         }
 
         if (rut) {
@@ -1199,28 +1206,37 @@
             document.getElementById('rut').classList.add('field-filled-pulse');
             setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
 
-            if (nombre) {
-                document.getElementById('trabajador').value = nombre;
-                document.getElementById('trabajador').classList.add('field-filled-pulse');
-                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
-            }
+            // AQUÍ BUSCAMOS EL NOMBRE EN LA BASE DE DATOS SEGÚN LA PLANTA SELECCIONADA
+            fetch('/buscar_trabajador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    rut: rutFormateado, 
+                    planta: obtenerPlantaActual() // Le enviamos la planta al Python
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('trabajador').value = data.nombre;
+                    document.getElementById('area').value = data.area;
+                    document.getElementById('trabajador').classList.add('field-filled-pulse');
+                    setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
+                } else if (nombre) {
+                    document.getElementById('trabajador').value = nombre;
+                }
+            });
 
             vibrarCelular([100, 50, 100]);
 
-            // Mostrar resultado en el div principal
             resDiv.style.display = 'block';
             resDiv.className = 'result-box result-success';
-            resDiv.innerHTML = '🪪 <strong>Carnet detectado — RUT: ' + rutFormateado + '</strong>' +
-                (nombre ? ' — ' + nombre : '');
+            resDiv.innerHTML = '🪪 <strong>Carnet detectado — RUT: ' + rutFormateado + '</strong>';
 
             setTimeout(() => {
                 resDiv.className = 'result-box result-idle';
                 resDiv.innerText = 'Listo para escanear producto...';
-                if (!nombre) {
-                    document.getElementById('trabajador').focus();
-                } else {
-                    document.getElementById('area').focus();
-                }
+                document.getElementById('area').focus();
             }, 2000);
         } else {
             resDiv.style.display = 'block';
@@ -1238,97 +1254,73 @@
         let rut = null;
         let nombre = null;
 
-        // ── Formato 2013+: URL tipo query string ──
-        // Ejemplo: https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-9&type=CEDULA&serial=...&name=JUAN%20RAMON%20MENDOZA
         if (data.includes('RUN=') || data.includes('run=')) {
             try {
-                let queryString = data;
-                if (data.includes('?')) {
-                    queryString = data.substring(data.indexOf('?') + 1);
-                }
+                let queryString = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
                 const params = new URLSearchParams(queryString);
                 rut = params.get('RUN') || params.get('run');
-                // Extraer nombre desde el parámetro 'name'
                 const nameParam = params.get('name');
-                if (nameParam) {
-                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
-                    // Limpiar caracteres especiales y espacios múltiples
-                    nombre = nombre.replace(/\s+/g, ' ').trim();
-                }
-            } catch(e) {
-                console.error('Error parseando QR carnet:', e);
-            }
+                if (nameParam) nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+            } catch(e) {}
         }
 
-        // ── Formato PDF417 (2002): datos posicionales ──
-        // Los primeros 9 chars contienen el RUN, posiciones 19-49 el apellido
         if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
             try {
                 let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
                 if (rawRut.length >= 7) {
                     rut = rawRut;
-                    // Intentar extraer apellido (posiciones 19-49)
                     let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
-                    if (rawApellido.length > 1) {
-                        nombre = rawApellido;
-                    }
+                    if (rawApellido.length > 1) nombre = rawApellido;
                 }
-            } catch(e) {
-                console.error('Error parseando PDF417:', e);
-            }
+            } catch(e) {}
         }
 
-        // ── Formato genérico: buscar patrón de RUT en el texto ──
         if (!rut) {
-            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
-            const match = data.match(rutRegex);
-            if (match) {
-                rut = match[1];
-            }
+            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
+            if (match) rut = match[1];
         }
 
         if (rut) {
-            // Formatear el RUT limpio
             const rutFormateado = formatearRut(rut);
             document.getElementById('rut').value = rutFormateado;
-            document.getElementById('rut').classList.add('field-filled-pulse');
-            setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
-
-            if (nombre) {
-                document.getElementById('trabajador').value = nombre;
-                document.getElementById('trabajador').classList.add('field-filled-pulse');
-                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
-            }
+            
+            fetch('/buscar_trabajador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    rut: rutFormateado, 
+                    planta: obtenerPlantaActual() 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('trabajador').value = data.nombre;
+                    document.getElementById('area').value = data.area;
+                } else if (nombre) {
+                    document.getElementById('trabajador').value = nombre;
+                }
+            });
 
             vibrarCelular([100, 50, 100]);
 
             resultDiv.className = 'carnet-result success';
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '✅ RUT detectado: <strong>' + rutFormateado + '</strong>' + 
-                (nombre ? '<br>👤 ' + nombre : '');
+            resultDiv.innerHTML = '✅ RUT detectado: <strong>' + rutFormateado + '</strong>';
 
-            // Cerrar automáticamente tras 1.5 segundos
             setTimeout(() => {
                 cerrarEscanerCarnet();
-                // Enfocar el campo nombre si no se llenó
-                if (!nombre) {
-                    document.getElementById('trabajador').focus();
-                } else {
-                    document.getElementById('area').focus();
-                }
+                document.getElementById('area').focus();
             }, 1500);
         } else {
             resultDiv.className = 'carnet-result error';
             resultDiv.style.display = 'block';
             resultDiv.innerText = '⚠️ QR no reconocido como carnet chileno. Intenta de nuevo.';
-            setTimeout(() => {
-                resultDiv.style.display = 'none';
-            }, 2500);
+            setTimeout(() => { resultDiv.style.display = 'none'; }, 2500);
         }
     }
 
     function formatearRut(rut) {
-        // Limpiar todo excepto dígitos y K
         let limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
         if (limpio.length < 2) return limpio;
         let cuerpo = limpio.slice(0, -1);
@@ -1337,14 +1329,10 @@
         return cuerpo + '-' + dv;
     }
 
-    // Cerrar modal al hacer clic fuera
     document.addEventListener('click', function(e) {
-        if (e.target.id === 'carnetModalOverlay') {
-            cerrarEscanerCarnet();
-        }
+        if (e.target.id === 'carnetModalOverlay') cerrarEscanerCarnet();
     });
 
-    // --- LÓGICA DEL SWITCH DE MODO ---
     function cambiarModo() {
         const toggle = document.getElementById("toggleModo");
         const texto = document.getElementById("textoModo");
@@ -1367,7 +1355,6 @@
         document.getElementById('laser_input').focus();
     }
 
-    // --- AUTOFORMATO DE RUT ---
     const inputRut = document.getElementById('rut');
     inputRut.addEventListener('input', function(e) {
         let valorLimpio = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -1382,7 +1369,6 @@
         }
     });
 
-    // --- PROCESAMIENTO DEL ESCANEO ---
     function procesarEscaneo(codigoLeido) {
         if (isProcessing) return;
         
@@ -1390,12 +1376,8 @@
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
         const resDiv = document.getElementById('resultado');
-        
-        // Verificamos en qué modo está el switch
-        const esDevolucion = document.getElementById('toggleModo').checked;
-        const accion = esDevolucion ? 'DEVOLUCION' : 'SALIDA';
+        const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
 
-        // Validamos datos solo si es SALIDA (En devolución asumimos que es rápido)
         if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
             resDiv.style.display = "block";
             resDiv.className = "result-box result-warning";
@@ -1410,16 +1392,16 @@
         resDiv.className = "result-box result-loading";
         resDiv.innerText = "⏳ Registrando " + accion.toLowerCase() + "...";
 
-        // Se envía al servidor
         fetch('/registrar_salida', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                accion: accion, // <-- SE ENVÍA LA ACCIÓN AL PYTHON
+                accion: accion,
                 rut: rut,
                 trabajador: trabajador,
                 area: area,
-                articulo_id: codigoLeido
+                articulo_id: codigoLeido,
+                planta: obtenerPlantaActual() // <-- AQUI ENVIAMOS LA PLANTA SELECCIONADA AL PYTHON
             })
         })
         .then(response => response.json())
@@ -1444,7 +1426,6 @@
             }, 1500); 
         })
         .catch(error => {
-            console.error('Error:', error);
             ocultarOverlay();
             resDiv.className = "result-box result-error";
             resDiv.innerText = "❌ Error de red.";
@@ -1453,11 +1434,8 @@
         });
     }
 
-    function vibrarCelular(patron) {
-        if ("vibrate" in navigator) { navigator.vibrate(patron); }
-    }
+    function vibrarCelular(patron) { if ("vibrate" in navigator) { navigator.vibrate(patron); } }
 
-    // --- LÓGICA DE CÁMARA Y LÁSER ---
     function apagarCamara() {
         return new Promise((resolve) => {
             if (html5QrCode && html5QrCode.isScanning) {
@@ -1501,8 +1479,6 @@
     const laserInput = document.getElementById('laser_input');
     let scanTimer = null;
 
-    // Auto-detect: el escáner Zebra escribe rápido y para.
-    // Esperamos 150ms sin actividad para procesar automáticamente.
     laserInput.addEventListener('input', function() {
         clearTimeout(scanTimer);
         const codigo = laserInput.value.trim();
@@ -1511,11 +1487,10 @@
                 routerEscaneo(codigo);
                 laserInput.value = '';
                 laserInput.focus();
-            }, 150); // 150ms de silencio = escaneo completo
+            }, 150);
         }
     });
 
-    // Respaldo: Enter manual sigue funcionando
     laserInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -1529,17 +1504,13 @@
         }
     });
 
-    // --- HISTORIAL DE ÚLTIMOS 3 REGISTROS ---
     let historialRegistros = [];
-
     function agregarRegistro(accion, mensaje, exito) {
         const ahora = new Date();
         const hora = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
         const registro = { accion, mensaje, exito, hora };
         historialRegistros.unshift(registro);
         if (historialRegistros.length > 3) historialRegistros.pop();
-
         renderHistorial();
     }
 
@@ -1552,22 +1523,12 @@
 
         container.innerHTML = historialRegistros.map(r => {
             let icon, itemClass, badgeClass, badgeText;
-
             if (!r.exito) {
-                icon = '❌';
-                itemClass = 'error-item';
-                badgeClass = 'badge-error';
-                badgeText = 'Error';
+                icon = '❌'; itemClass = 'error-item'; badgeClass = 'badge-error'; badgeText = 'Error';
             } else if (r.accion === 'DEVOLUCION') {
-                icon = '📥';
-                itemClass = 'devolucion-item';
-                badgeClass = 'badge-devolucion';
-                badgeText = 'Devolución';
+                icon = '📥'; itemClass = 'devolucion-item'; badgeClass = 'badge-devolucion'; badgeText = 'Devolución';
             } else {
-                icon = '📤';
-                itemClass = 'salida-item';
-                badgeClass = 'badge-salida';
-                badgeText = 'Salida';
+                icon = '📤'; itemClass = 'salida-item'; badgeClass = 'badge-salida'; badgeText = 'Salida';
             }
 
             return `
