@@ -2,167 +2,544 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bodega Tuniche - Escáner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        :root { --bg-primary: #0a0e17; --bg-card: rgba(17, 24, 39, 0.7); --accent-indigo: #6366f1; --accent-emerald: #10b981; --accent-amber: #f59e0b; --accent-red: #ef4444; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: #f1f5f9; min-height: 100vh; }
-        #loginScreen { position: fixed; inset: 0; background: var(--bg-primary); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-container { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; width: 100%; max-width: 380px; text-align: center; }
-        .form-input, .login-select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; margin-bottom: 15px; outline: none; }
-        .btn-main { width: 100%; padding: 14px; border-radius: 10px; border: none; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-weight: 800; }
-        .glass-card { background: var(--bg-card); border-radius: 16px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .laser-box { width: 100%; padding: 20px; border: 2px dashed var(--accent-indigo); border-radius: 12px; background: rgba(99, 102, 241, 0.05); text-align: center; font-weight: 800; color: var(--accent-indigo); }
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; }
-        .result-box { padding: 15px; border-radius: 10px; font-weight: 700; margin-top: 10px; display: none; }
-        .mode-salida { border-left: 5px solid var(--accent-amber); }
-        .mode-devolucion { border-left: 5px solid var(--accent-emerald); }
+        :root {
+            --bg-primary: #0a0e17; --bg-secondary: #111827; --bg-card: rgba(17, 24, 39, 0.7);
+            --border-subtle: rgba(148, 163, 184, 0.1); --text-primary: #f1f5f9; --text-muted: #64748b;
+            --accent-indigo: #6366f1; --accent-emerald: #10b981; --accent-amber: #f59e0b; --accent-red: #ef4444;
+            --gradient-main: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+            --radius-lg: 16px; --radius-md: 12px; --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+
+        body::before {
+            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+            z-index: 0; animation: bgShift 20s infinite alternate;
+        }
+        @keyframes bgShift { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(-5%, 3%) rotate(3deg); } }
+
+        #loginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-primary); z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .login-container {
+            background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg); padding: 30px 25px; max-width: 380px; width: 100%;
+            box-shadow: 0 0 50px rgba(99, 102, 241, 0.1);
+        }
+        .login-icon { font-size: 3rem; margin-bottom: 10px; display: block; text-align: center; }
+        .login-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 5px; text-align: center; }
+        .login-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 25px; text-align: center; }
+        
+        .login-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; display: block; }
+        .login-input, .login-select {
+            width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle);
+            color: white; font-size: 1rem; padding: 12px; border-radius: var(--radius-md);
+            margin-bottom: 15px; outline: none; transition: 0.3s;
+        }
+        .login-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+        .login-select option { background: var(--bg-secondary); }
+        .login-input:focus, .login-select:focus { border-color: var(--accent-indigo); }
+        
+        .btn-login {
+            width: 100%; background: var(--gradient-main); color: white; border: none;
+            padding: 14px; border-radius: var(--radius-md); font-weight: 700; font-size: 1rem;
+            cursor: pointer; margin-top: 10px; transition: transform 0.2s;
+        }
+        .btn-login:active { transform: scale(0.98); }
+        .login-error { color: var(--accent-red); font-size: 0.85rem; text-align: center; margin-bottom: 10px; min-height: 20px;}
+
+        #appContent { opacity: 0; visibility: hidden; transition: opacity 0.6s ease; }
+
+        .top-bar { position: relative; z-index: 10; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-subtle); padding: 14px 0; }
+        .brand { display: flex; align-items: center; justify-content: space-between; }
+        .brand-left { display: flex; align-items: center; gap: 12px; }
+        .brand-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .brand-text { font-weight: 700; font-size: 1.15rem; color: var(--text-primary); }
+        .brand-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+
+        .btn-logout { background: none; border: none; color: var(--accent-red); font-size: 0.75rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+        .main-container { position: relative; z-index: 5; max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+
+        .planta-bloqueada { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .planta-bloqueada-badge { background: var(--accent-indigo); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.05em;}
+
+        .glass-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; }
+        .card-inner { padding: 20px; }
+        .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .section-number { width: 28px; height: 28px; border-radius: 8px; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; }
+        .section-title { font-size: 0.95rem; font-weight: 600; }
+
+        .mode-card { position: relative; overflow: hidden; }
+        .mode-inner { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .mode-card.mode-salida { background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, var(--bg-card) 100%); border-left: 4px solid var(--accent-amber); }
+        .mode-card.mode-devolucion { background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%); border-left: 4px solid var(--accent-emerald);}
+        #textoModo { font-weight: 800; font-size: 1.05rem; }
+        .modo-salida-text { color: var(--accent-amber); }
+        .modo-devolucion-text { color: var(--accent-emerald); }
+
+        .switch-ios { position: relative; display: inline-block; width: 56px; height: 30px; }
+        .switch-ios input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--accent-amber); border-radius: 30px; transition: 0.4s; }
+        .slider:before { position: absolute; content: ""; height: 24px; width: 24px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.4s; }
+        input:checked + .slider { background-color: var(--accent-emerald); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .form-input { width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: rgba(15, 23, 42, 0.6); color: white; margin-bottom: 10px; outline: none; }
+        .form-input:focus { border-color: var(--accent-indigo); }
+        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+        select.form-input option { background: var(--bg-secondary); }
+
+        .method-pills { display: flex; gap: 6px; background: rgba(15, 23, 42, 0.5); border-radius: var(--radius-md); padding: 4px; margin-bottom: 16px; }
+        .method-pills input[type="radio"] { display: none; }
+        .method-pill { flex: 1; text-align: center; padding: 10px 8px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+        .method-pills input[type="radio"]:checked + .method-pill { background: var(--gradient-main); color: white; }
+
+        .laser-box { width: 100%; padding: 18px 16px; border-radius: var(--radius-md); border: 2px dashed rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.04); color: var(--accent-indigo-light); font-size: 1.1rem; font-weight: 700; text-align: center; outline: none; }
+        #reader { width: 100%; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; }
+
+        .result-box { border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.88rem; font-weight: 600; margin-top: 16px; display: none; }
+        .result-idle { background: rgba(100, 116, 139, 0.08); color: var(--text-muted); }
+        .result-loading { background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo-light); }
+        .result-success { background: rgba(16, 185, 129, 0.08); color: var(--accent-emerald); }
+        .result-error { background: rgba(239, 68, 68, 0.08); color: var(--accent-red); }
+        .result-warning { background: rgba(245, 158, 11, 0.08); color: var(--accent-amber); }
+
+        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; margin-bottom: 12px; border-radius: var(--radius-md); border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); font-weight: 600; cursor: pointer; }
+
+        .carnet-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: 0.3s; }
+        .carnet-modal-overlay.active { opacity: 1; visibility: visible; }
+        .carnet-modal { width: 100%; max-width: 440px; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 20px; }
+
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
+        .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); }
+        .history-item.salida-item { border-left: 3px solid var(--accent-amber); }
+        .history-item.devolucion-item { border-left: 3px solid var(--accent-emerald); }
+        .history-item.error-item { border-left: 3px solid var(--accent-red); opacity: 0.7; }
+        .history-msg { font-size: 0.82rem; font-weight: 600; }
+        .history-time { font-size: 0.7rem; color: var(--text-muted); }
+
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; }
+        .loading-overlay.active { opacity: 1; visibility: visible; }
+        .loading-spinner { width: 56px; height: 56px; border: 4px solid rgba(99, 102, 241, 0.2); border-top-color: var(--accent-indigo); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div id="loginScreen">
     <div class="login-container">
-        <h2 style="font-weight:800; margin-bottom:20px;">SGB Móvil</h2>
-        <div id="loginError" style="color:var(--accent-red); margin-bottom:10px;"></div>
+        <span class="login-icon">🔒</span>
+        <h2 class="login-title">SGB Móvil</h2>
+        <p class="login-subtitle">Acceso de Operario</p>
+        
+        <div id="loginError" class="login-error"></div>
+
+        <span class="login-label">🏢 Seleccione Sucursal:</span>
         <select id="loginPlanta" class="login-select">
             <option value="TUNICHE">Tuniche Fruits (Central)</option>
             <option value="PUQUILLAY">Puquillay</option>
         </select>
-        <input type="text" id="loginUser" class="form-input" placeholder="Usuario">
-        <input type="password" id="loginPass" class="form-input" placeholder="Contraseña">
-        <button class="btn-main" onclick="iniciarSesion()">INGRESAR AL SISTEMA</button>
+
+        <span class="login-label">👤 Usuario:</span>
+        <input type="text" id="loginUser" class="login-input" placeholder="Ej: bodega" autocorrect="off" autocapitalize="none">
+        
+        <span class="login-label">🔑 Contraseña:</span>
+        <input type="password" id="loginPass" class="login-input" placeholder="••••••••">
+        
+        <button class="btn-login" onclick="iniciarSesion()">INGRESAR AL SISTEMA</button>
     </div>
 </div>
 
-<div id="appContent" style="display:none; padding: 15px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div><h4 class="mb-0" style="font-weight:800;">Tuniche Móvil</h4><small id="lblPlanta" style="color:var(--accent-indigo); font-weight:700;"></small></div>
-        <button class="btn btn-sm btn-outline-danger" onclick="cerrarSesion()">Salir</button>
-    </div>
-
-    <div class="glass-card d-flex justify-content-between align-items-center" id="cardModo">
-        <span id="txtModo" style="font-weight:800; color:var(--accent-amber);">MODO: SALIDA 📤</span>
-        <div class="form-check form-switch">
-            <input class="form-check-switch" type="checkbox" id="toggleModo" onchange="cambiarModo()" style="width:50px; height:25px;">
+<div id="appContent">
+    <div class="top-bar">
+        <div class="container" style="max-width:520px;">
+            <div class="brand">
+                <div class="brand-left">
+                    <div class="brand-icon">⚙️</div>
+                    <div>
+                        <div class="brand-text">Tuniche Móvil</div>
+                        <div class="brand-sub">Sistema de Bodega</div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
         </div>
     </div>
 
-    <div class="glass-card">
-        <label style="font-size:0.8rem; color:#64748b; font-weight:700;">DATOS TRABAJADOR</label>
-        <input type="text" id="rut" class="form-input" placeholder="RUT o escanee carnet">
-        <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
-        <select id="area" class="form-input">
-            <option value="" disabled selected>Seleccione Área...</option>
-            {% for area in areas %}<option value="{{ area }}">{{ area }}</option>{% endfor %}
-        </select>
-    </div>
+    <div class="main-container">
 
-    <div class="glass-card">
-        <ul class="nav nav-pills nav-fill mb-3" id="pills-tab">
-            <li class="nav-item"><button class="nav-link active" onclick="activarLaser()">Pistola Láser</button></li>
-            <li class="nav-item"><button class="nav-link" onclick="activarCamara()">Cámara QR</button></li>
-        </ul>
-        <div id="sec_laser"><input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off"></div>
-        <div id="sec_camara" style="display:none;"><div id="reader"></div></div>
-        <div id="resultado" class="result-box text-center"></div>
+        <div class="planta-bloqueada">
+            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">🏢 PLANTA ACTIVA:</span>
+            <span id="lblPlantaActiva" class="planta-bloqueada-badge">TUNICHE</span>
+        </div>
+
+        <div class="glass-card mode-card mode-salida" id="cardModo">
+            <div class="mode-inner">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="modeIcon" style="font-size:1.4rem;">📤</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.65rem; color:var(--text-muted);">MODO ACTIVO</span>
+                        <span id="textoModo" class="modo-salida-text">SALIDA</span>
+                    </div>
+                </div>
+                <label class="switch-ios">
+                    <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-inner">
+                <div class="section-header">
+                    <div class="section-number">1</div> <span class="section-title">Datos del Trabajador</span>
+                </div>
+                <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
+                    🪪 Escanear Carnet Chileno <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR</span>
+                </button>
+                <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
+                <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
+                <select id="area" class="form-input">
+                    <option value="" disabled selected>Seleccione Área...</option>
+                    {% for area in areas %}
+                    <option value="{{ area }}">{{ area }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-inner">
+                <div class="section-header">
+                    <div class="section-number">2</div> <span class="section-title">Método de Escaneo</span>
+                </div>
+                <div class="method-pills">
+                    <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
+                    <label class="method-pill" for="btn_laser">🔫 Láser</label>
+                    <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
+                    <label class="method-pill" for="btn_cam_trasera">📸 Trasera</label>
+                </div>
+
+                <div id="laser_section">
+                    <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+                </div>
+                <div id="camara_section" style="display: none;">
+                    <div id="reader"></div>
+                </div>
+                <div id="resultado" class="result-box result-idle">Esperando escaneo...</div>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-inner">
+                <div class="section-header">
+                    <div class="section-number">3</div> <span class="section-title">Últimos Registros</span>
+                </div>
+                <div id="historyList" class="history-list">
+                    <div class="history-empty">📋 Aún no hay registros</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
+<div class="carnet-modal-overlay" id="carnetModalOverlay">
+    <div class="carnet-modal">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <strong style="color:white; font-size:1.1rem;">🪪 Escanear Carnet</strong>
+            <button onclick="cerrarEscanerCarnet()" style="background:none; border:none; color:red; font-size:1.2rem;">✕</button>
+        </div>
+        <div id="carnetReader"></div>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+
 <script>
     let CREDENCIALES = { user: "", pass: "", planta: "" };
-    let scanner = null;
     let isProcessing = false;
+    let html5QrCode;
+    let carnetQrScanner = null;
 
     window.onload = () => {
-        const session = localStorage.getItem('sgb_session');
-        if (session) { CREDENCIALES = JSON.parse(session); desbloquearApp(); }
+        const guardado = localStorage.getItem('sgb_session');
+        if (guardado) {
+            CREDENCIALES = JSON.parse(guardado);
+            desbloquearApp();
+        } else {
+            document.getElementById('loginUser').focus();
+        }
     };
 
     function iniciarSesion() {
-        const u = document.getElementById('loginUser').value, p = document.getElementById('loginPass').value, pl = document.getElementById('loginPlanta').value;
-        fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username:u, password:p}) })
-        .then(r => r.json()).then(data => {
-            if(data.success) { CREDENCIALES = {user:u, pass:p, planta:pl}; localStorage.setItem('sgb_session', JSON.stringify(CREDENCIALES)); desbloquearApp(); }
-            else document.getElementById('loginError').innerText = "❌ Datos incorrectos";
+        const u = document.getElementById('loginUser').value.trim();
+        const p = document.getElementById('loginPass').value.trim();
+        const pl = document.getElementById('loginPlanta').value;
+        const errorDiv = document.getElementById('loginError');
+
+        if(!u || !p) { errorDiv.innerText = "Complete usuario y contraseña."; return; }
+
+        errorDiv.style.color = "var(--accent-indigo)";
+        errorDiv.innerText = "Conectando al servidor...";
+
+        fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        })
+        .then(async res => {
+            const contentType = res.headers.get("content-type");
+            if (!res.ok) throw new Error("Error del servidor");
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                CREDENCIALES = { user: u, pass: p, planta: pl };
+                localStorage.setItem('sgb_session', JSON.stringify(CREDENCIALES));
+                desbloquearApp();
+            } else {
+                errorDiv.style.color = "var(--accent-red)";
+                errorDiv.innerText = "❌ " + (data.message || "Usuario o contraseña incorrectos.");
+                vibrarCelular([300]);
+            }
+        })
+        .catch(err => {
+            errorDiv.style.color = "var(--accent-red)";
+            errorDiv.innerText = "❌ Error al conectar.";
+            console.error(err);
         });
     }
 
     function desbloquearApp() {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        document.getElementById('lblPlanta').innerText = CREDENCIALES.planta;
+        document.getElementById('loginScreen').style.opacity = '0';
+        document.getElementById('loginScreen').style.visibility = 'hidden';
+        document.getElementById('appContent').style.opacity = '1';
+        document.getElementById('appContent').style.visibility = 'visible';
+        document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
+
+        html5QrCode = new Html5Qrcode("reader");
         activarLaser();
     }
 
-    function cerrarSesion() { localStorage.removeItem('sgb_session'); location.reload(); }
+    function cerrarSesion() {
+        localStorage.removeItem('sgb_session');
+        location.reload();
+    }
+
+    function abrirEscanerCarnet() {
+        document.getElementById('carnetModalOverlay').classList.add('active');
+        if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
+        carnetQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => procesarCarnetDesdeScanner(txt), () => {}).catch(() => alert("Error de cámara"));
+    }
+
+    function cerrarEscanerCarnet() {
+        document.getElementById('carnetModalOverlay').classList.remove('active');
+        if (carnetQrScanner && carnetQrScanner.isScanning) carnetQrScanner.stop();
+    }
+
+    function procesarCarnetDesdeScanner(data) {
+        let rut = null; let nombre = null;
+        if (data.includes('RUN=') || data.includes('run=')) {
+            let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
+            const params = new URLSearchParams(qs);
+            rut = params.get('RUN') || params.get('run');
+            if (params.get('name')) nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        if (!rut && data.length >= 70) {
+            let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
+            if (rawRut.length >= 7) { rut = rawRut; nombre = data.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
+        }
+        if (!rut) {
+            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
+            if (match) rut = match[1];
+        }
+
+        if (rut) {
+            const rutF = formatearRut(rut);
+            document.getElementById('rut').value = rutF;
+            vibrarCelular([100]); cerrarEscanerCarnet();
+
+            fetch('/buscar_trabajador', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    rut: rutF, planta: CREDENCIALES.planta,
+                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
+                })
+            }).then(r => r.json()).then(d => {
+                if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; }
+                else if(nombre) { document.getElementById('trabajador').value = nombre; }
+            }).catch(()=>{});
+        } else { vibrarCelular([300]); }
+    }
 
     function cambiarModo() {
-        const t = document.getElementById('toggleModo').checked, txt = document.getElementById('txtModo'), card = document.getElementById('cardModo');
-        txt.innerText = t ? "MODO: DEVOLUCIÓN 📥" : "MODO: SALIDA 📤";
-        txt.style.color = t ? "var(--accent-emerald)" : "var(--accent-amber)";
+        const toggle = document.getElementById("toggleModo");
+        const texto = document.getElementById("textoModo");
+        const card = document.getElementById("cardModo");
+        const icon = document.getElementById("modeIcon");
+
+        if (toggle.checked) {
+            texto.innerText = "DEVOLUCIÓN"; texto.className = "modo-devolucion-text";
+            icon.innerText = "📥"; card.className = "glass-card mode-card mode-devolucion";
+        } else {
+            texto.innerText = "SALIDA"; texto.className = "modo-salida-text";
+            icon.innerText = "📤"; card.className = "glass-card mode-card mode-salida";
+        }
     }
 
     function routerEscaneo(codigo) {
         if (isProcessing) return;
-        const res = document.getElementById('resultado');
         
-        // IDENTIFICAR CARNET
-        if (codigo.includes('RUN=') || codigo.length > 70) {
-            let rut = "";
-            if (codigo.includes('RUN=')) { rut = new URLSearchParams(codigo.split('?')[1]).get('RUN'); }
-            else { rut = codigo.substring(0, 9).replace(/^0+/, ''); }
-            
-            document.getElementById('rut').value = formatearRut(rut);
-            res.style.display = "block"; res.style.background = "rgba(99, 102, 241, 0.1)"; res.innerText = "Buscando trabajador...";
-            
-            fetch('/buscar_trabajador', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({rut: formatearRut(rut), planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass}) })
-            .then(r => r.json()).then(d => {
-                if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; res.innerText = "✅ Trabajador listo."; }
-                else { res.innerText = "⚠️ Trabajador nuevo. Rellena área."; }
-            });
-            return;
+        const resDiv = document.getElementById('resultado');
+        let isCarnet = false;
+        let rutCarnet = null;
+        let nombreCarnet = null;
+
+        // 1. Detectar si es Carnet
+        if (codigo.includes('RUN=') || codigo.includes('run=')) {
+            let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
+            const params = new URLSearchParams(qs);
+            rutCarnet = params.get('RUN') || params.get('run');
+            if (params.get('name')) nombreCarnet = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+            isCarnet = true;
+        } else if (codigo.length >= 70) {
+            let rawRut = codigo.substring(0, 9).trim().replace(/^0+/, '');
+            if (rawRut.length >= 7) { 
+                rutCarnet = rawRut; 
+                nombreCarnet = codigo.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
+                isCarnet = true;
+            }
         }
 
-        // TRANSACCIÓN
-        const rut = document.getElementById('rut').value, tr = document.getElementById('trabajador').value, ar = document.getElementById('area').value;
-        const modo = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
-        
-        if (modo === 'SALIDA' && (!rut || !tr || !ar)) { res.style.display="block"; res.style.background="var(--accent-red)"; res.innerText="⚠️ Falta trabajador"; return; }
+        if (isCarnet && rutCarnet) {
+            const rutF = formatearRut(rutCarnet);
+            document.getElementById('rut').value = rutF;
+            if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
+            vibrarCelular([100]);
+            
+            resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
+            resDiv.innerText = "Buscando trabajador en BD...";
+            
+            fetch('/buscar_trabajador', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rut: rutF, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
+            }).then(r => r.json()).then(d => {
+                if(d.success) { 
+                    document.getElementById('trabajador').value = d.nombre; 
+                    document.getElementById('area').value = d.area; 
+                    resDiv.className = "result-box result-success"; resDiv.innerText = "✅ Trabajador cargado. Escanea artículo.";
+                } else {
+                    resDiv.className = "result-box result-warning"; resDiv.innerText = "⚠️ Trabajador nuevo. Selecciona Área.";
+                    document.getElementById('area').focus();
+                }
+            }).catch(()=>{
+                resDiv.className = "result-box result-idle"; resDiv.innerText = "✅ RUT leído. Escanea artículo.";
+            });
+            return; 
+        }
 
-        isProcessing = true;
-        res.style.display = "block"; res.style.background = "var(--accent-indigo)"; res.innerText = "⏳ Registrando...";
-        
-        fetch('/registrar_salida', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({accion: modo, rut: rut, trabajador: tr, area: ar, articulo_id: codigo, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass}) })
-        .then(r => r.json()).then(d => {
-            res.style.background = d.success ? "var(--accent-emerald)" : "var(--accent-red)";
-            res.innerText = d.success ? "✅ " + d.message : "❌ " + d.message;
-            setTimeout(() => { res.style.display="none"; isProcessing = false; }, 2000);
+        // 2. Si es Artículo
+        const rut = document.getElementById('rut').value;
+        const trabajador = document.getElementById('trabajador').value;
+        const area = document.getElementById('area').value;
+        const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
+
+        if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
+            resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
+            resDiv.innerText = "⚠️ Faltan datos del trabajador. Escanea carnet."; 
+            vibrarCelular([300]); return;
+        }
+
+        isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
+        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Registrando...";
+
+        fetch('/registrar_salida', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: accion, rut: rut, trabajador: trabajador, area: area, articulo_id: codigo, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
+        }).then(async res => {
+            if (!res.ok) throw new Error("Error Servidor HTTP " + res.status);
+            return res.json();
+        }).then(data => {
+            document.getElementById('loadingOverlay').classList.remove('active');
+            if(data.success) {
+                resDiv.className = "result-box result-success"; resDiv.innerHTML = "✅ " + data.message;
+                vibrarCelular([100]); agregarRegistro(accion, data.message, true);
+            } else {
+                resDiv.className = "result-box result-error"; resDiv.innerHTML = "❌ " + data.message;
+                vibrarCelular([300]); agregarRegistro(accion, data.message, false);
+            }
+            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "[ DISPARA AQUÍ ]"; isProcessing = false; }, 2000);
+        }).catch(err => {
+            document.getElementById('loadingOverlay').classList.remove('active');
+            resDiv.className = "result-box result-error"; resDiv.innerText = "❌ Fallo de conexión.";
+            agregarRegistro('ERROR', err.message, false);
+            isProcessing = false;
         });
     }
 
     function activarLaser() {
-        document.getElementById('sec_camara').style.display='none'; document.getElementById('sec_laser').style.display='block';
-        if(scanner) scanner.stop();
-        document.getElementById('laser_input').focus();
+        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        document.getElementById('camara_section').style.display = 'none';
+        document.getElementById('laser_section').style.display = 'block';
     }
 
-    function activarCamara() {
-        document.getElementById('sec_laser').style.display='none'; document.getElementById('sec_camara').style.display='block';
-        if(!scanner) scanner = new Html5Qrcode("reader");
-        scanner.start({facingMode: "environment"}, {fps:10, qrbox:250}, (txt) => routerEscaneo(txt));
+    function activarCamara(modo) {
+        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        document.getElementById('laser_section').style.display = 'none';
+        document.getElementById('camara_section').style.display = 'block';
+        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
     }
+
+    let scanTimer;
+    document.getElementById('laser_input').addEventListener('input', (e) => {
+        clearTimeout(scanTimer);
+        if(e.target.value.trim().length > 0) {
+            scanTimer = setTimeout(() => { routerEscaneo(e.target.value.trim()); e.target.value = ''; }, 150);
+        }
+    });
 
     document.getElementById('laser_input').addEventListener('keypress', (e) => {
-        if(e.key === 'Enter') { routerEscaneo(e.target.value); e.target.value = ''; }
+        if (e.key === 'Enter') {
+            e.preventDefault(); clearTimeout(scanTimer);
+            if(e.target.value.trim()) { routerEscaneo(e.target.value.trim()); e.target.value = ''; }
+        }
     });
 
     function formatearRut(r) {
         let l = r.replace(/[^0-9kK]/g, '').toUpperCase(); if(l.length<2) return l;
         return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
+    }
+    function vibrarCelular(p) { if(navigator.vibrate) navigator.vibrate(p); }
+
+    let historial = [];
+    function agregarRegistro(accion, msg, exito) {
+        const h = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        historial.unshift({ accion, msg, exito, hora: h });
+        if (historial.length > 3) historial.pop();
+        document.getElementById('historyList').innerHTML = historial.map(r => `
+            <div class="history-item ${!r.exito ? 'error-item' : (r.accion==='DEVOLUCION'?'devolucion-item':'salida-item')}">
+                <span class="history-icon">${!r.exito ? '❌' : (r.accion==='DEVOLUCION'?'📥':'📤')}</span>
+                <div class="history-info">
+                    <div class="history-msg">${r.msg}</div>
+                    <div class="history-meta">
+                        <span class="history-badge ${!r.exito?'badge-error':(r.accion==='DEVOLUCION'?'badge-devolucion':'badge-salida')}">${!r.exito?'Error':(r.accion==='DEVOLUCION'?'Devolución':'Salida')}</span>
+                        <span class="history-time">🕐 ${r.hora}</span>
+                    </div>
+                </div>
+            </div>`).join('');
     }
 </script>
 </body>
