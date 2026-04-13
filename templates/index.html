@@ -27,7 +27,6 @@
         }
         @keyframes bgShift { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(-5%, 3%) rotate(3deg); } }
 
-        /* PANTALLA DE LOGIN HTML */
         #loginScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--bg-primary); z-index: 99999;
@@ -118,12 +117,6 @@
         .result-error { background: rgba(239, 68, 68, 0.08); color: var(--accent-red); }
         .result-warning { background: rgba(245, 158, 11, 0.08); color: var(--accent-amber); }
 
-        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; margin-bottom: 12px; border-radius: var(--radius-md); border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo-light); font-weight: 600; cursor: pointer; }
-
-        .carnet-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: 0.3s; }
-        .carnet-modal-overlay.active { opacity: 1; visibility: visible; }
-        .carnet-modal { width: 100%; max-width: 440px; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 20px; }
-
         .history-list { display: flex; flex-direction: column; gap: 8px; }
         .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); }
         .history-item.salida-item { border-left: 3px solid var(--accent-amber); }
@@ -208,9 +201,6 @@
                 <div class="section-header">
                     <div class="section-number">1</div> <span class="section-title">Datos del Trabajador</span>
                 </div>
-                <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
-                    🪪 Escanear Carnet Chileno <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR</span>
-                </button>
                 <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
                 <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
                 <select id="area" class="form-input">
@@ -225,13 +215,13 @@
         <div class="glass-card">
             <div class="card-inner">
                 <div class="section-header">
-                    <div class="section-number">2</div> <span class="section-title">Método de Escaneo</span>
+                    <div class="section-number">2</div> <span class="section-title">Escáner (Inteligente)</span>
                 </div>
                 <div class="method-pills">
                     <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
-                    <label class="method-pill" for="btn_laser">🔫 Láser</label>
+                    <label class="method-pill" for="btn_laser">🔫 Pistola Láser</label>
                     <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
-                    <label class="method-pill" for="btn_cam_trasera">📸 Trasera</label>
+                    <label class="method-pill" for="btn_cam_trasera">📸 Cámara Celular</label>
                 </div>
 
                 <div id="laser_section">
@@ -257,23 +247,12 @@
     </div>
 </div>
 
-<div class="carnet-modal-overlay" id="carnetModalOverlay">
-    <div class="carnet-modal">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <strong style="color:white; font-size:1.1rem;">🪪 Escanear Carnet</strong>
-            <button onclick="cerrarEscanerCarnet()" style="background:none; border:none; color:red; font-size:1.2rem;">✕</button>
-        </div>
-        <div id="carnetReader"></div>
-    </div>
-</div>
-
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
 
 <script>
     let CREDENCIALES = { user: "", pass: "", planta: "" };
     let isProcessing = false;
     let html5QrCode;
-    let carnetQrScanner = null;
 
     window.onload = () => {
         const guardado = localStorage.getItem('sgb_session');
@@ -301,18 +280,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u, password: p })
         })
-        .then(async res => {
-            const contentType = res.headers.get("content-type");
-            if (!res.ok) {
-                let errTxt = await res.text();
-                throw new Error("HTTP " + res.status + " | " + errTxt.substring(0, 30));
-            }
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                return res.json();
-            } else {
-                throw new Error("Render envió HTML (Servidor en reinicio)");
-            }
-        })
+        .then(res => res.json())
         .then(data => {
             if (data.success) {
                 CREDENCIALES = { user: u, pass: p, planta: pl };
@@ -326,72 +294,22 @@
         })
         .catch(err => {
             errorDiv.style.color = "var(--accent-red)";
-            errorDiv.innerText = "❌ Error Detallado: " + err.message;
-            console.error(err);
+            errorDiv.innerText = "❌ Error: Verifica conexión a internet.";
         });
     }
 
     function desbloquearApp() {
-        // CORRECCIÓN APLICADA AQUÍ: 'loginScreen' en vez de 'lockScreen'
         document.getElementById('loginScreen').style.opacity = '0';
         document.getElementById('loginScreen').style.visibility = 'hidden';
         document.getElementById('appContent').style.opacity = '1';
         document.getElementById('appContent').style.visibility = 'visible';
         document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
-
-        html5QrCode = new Html5Qrcode("reader");
         activarLaser();
     }
 
     function cerrarSesion() {
         localStorage.removeItem('sgb_session');
         location.reload();
-    }
-
-    function abrirEscanerCarnet() {
-        document.getElementById('carnetModalOverlay').classList.add('active');
-        if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        carnetQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => procesarCarnetDesdeScanner(txt), () => {}).catch(() => alert("Error de cámara"));
-    }
-
-    function cerrarEscanerCarnet() {
-        document.getElementById('carnetModalOverlay').classList.remove('active');
-        if (carnetQrScanner && carnetQrScanner.isScanning) carnetQrScanner.stop();
-    }
-
-    function procesarCarnetDesdeScanner(data) {
-        let rut = null; let nombre = null;
-        if (data.includes('RUN=') || data.includes('run=')) {
-            let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
-            const params = new URLSearchParams(qs);
-            rut = params.get('RUN') || params.get('run');
-            if (params.get('name')) nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-        }
-        if (!rut && data.length >= 70) {
-            let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { rut = rawRut; nombre = data.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
-        }
-        if (!rut) {
-            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
-            if (match) rut = match[1];
-        }
-
-        if (rut) {
-            const rutF = formatearRut(rut);
-            document.getElementById('rut').value = rutF;
-            vibrarCelular([100]); cerrarEscanerCarnet();
-
-            fetch('/buscar_trabajador', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    rut: rutF, planta: CREDENCIALES.planta,
-                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
-                })
-            }).then(r => r.json()).then(d => {
-                if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; }
-                else if(nombre) { document.getElementById('trabajador').value = nombre; }
-            }).catch(()=>{});
-        } else { vibrarCelular([300]); }
     }
 
     function cambiarModo() {
@@ -409,21 +327,88 @@
         }
     }
 
+    // ==========================================
+    // LÓGICA DE ESCANEO INTELIGENTE (CÁMARA O LÁSER)
+    // ==========================================
     function routerEscaneo(codigo) {
         if (isProcessing) return;
+        
+        const resDiv = document.getElementById('resultado');
+        let isCarnet = false;
+        let rutCarnet = null;
+        let nombreCarnet = null;
+
+        // Detectar Carnet QR
+        if (codigo.includes('RUN=') || codigo.includes('run=')) {
+            let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
+            const params = new URLSearchParams(qs);
+            rutCarnet = params.get('RUN') || params.get('run');
+            if (params.get('name')) nombreCarnet = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+            isCarnet = true;
+        } 
+        // Detectar Carnet PDF417 (Código de barras antiguo)
+        else if (codigo.length >= 70) {
+            let rawRut = codigo.substring(0, 9).trim().replace(/^0+/, '');
+            if (rawRut.length >= 7) { 
+                rutCarnet = rawRut; 
+                nombreCarnet = codigo.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
+                isCarnet = true;
+            }
+        }
+
+        // SI ES UN CARNET
+        if (isCarnet && rutCarnet) {
+            isProcessing = true; // Pausamos escaneo
+            const rutF = formatearRut(rutCarnet);
+            document.getElementById('rut').value = rutF;
+            if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
+            vibrarCelular([100]);
+            
+            resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
+            resDiv.innerText = "Buscando trabajador en la base de datos...";
+            
+            fetch('/buscar_trabajador', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    rut: rutF, planta: CREDENCIALES.planta,
+                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
+                })
+            }).then(r => r.json()).then(d => {
+                if(d.success) { 
+                    document.getElementById('trabajador').value = d.nombre; 
+                    document.getElementById('area').value = d.area; 
+                    resDiv.className = "result-box result-success";
+                    resDiv.innerText = "✅ Trabajador cargado. Ahora escanea el artículo.";
+                } else {
+                    resDiv.className = "result-box result-warning";
+                    resDiv.innerText = "⚠️ Trabajador nuevo. Selecciona su Área manualmente.";
+                    document.getElementById('area').focus();
+                }
+                setTimeout(() => { isProcessing = false; }, 1500);
+            }).catch(()=>{
+                resDiv.className = "result-box result-idle";
+                resDiv.innerText = "✅ RUT leído. Escanea el artículo.";
+                setTimeout(() => { isProcessing = false; }, 1500);
+            });
+            return;
+        }
+
+        // SI ES UN ARTÍCULO
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
         const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
-        const resDiv = document.getElementById('resultado');
 
         if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
             resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
-            resDiv.innerText = "⚠️ Faltan datos del trabajador."; vibrarCelular([300]); return;
+            resDiv.innerHTML = "⚠️ <b>Faltan datos.</b> Escanea el carnet primero."; 
+            vibrarCelular([300]); 
+            return;
         }
 
-        isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
-        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Procesando...";
+        isProcessing = true; 
+        document.getElementById('loadingOverlay').classList.add('active');
+        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Registrando en BD...";
 
         fetch('/registrar_salida', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -431,10 +416,7 @@
                 accion: accion, rut: rut, trabajador: trabajador, area: area, articulo_id: codigo,
                 planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass 
             })
-        }).then(async res => {
-            if (!res.ok) throw new Error("Error Servidor HTTP " + res.status);
-            return res.json();
-        }).then(data => {
+        }).then(res => res.json()).then(data => {
             document.getElementById('loadingOverlay').classList.remove('active');
             if(data.success) {
                 resDiv.className = "result-box result-success"; resDiv.innerHTML = "✅ " + data.message;
@@ -443,26 +425,51 @@
                 resDiv.className = "result-box result-error"; resDiv.innerHTML = "❌ " + data.message;
                 vibrarCelular([300]); agregarRegistro(accion, data.message, false);
             }
-            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "Esperando..."; isProcessing = false; }, 1500);
+            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "Esperando escaneo..."; isProcessing = false; }, 2000);
         }).catch(err => {
             document.getElementById('loadingOverlay').classList.remove('active');
             resDiv.className = "result-box result-error"; resDiv.innerText = "❌ Fallo de conexión.";
-            agregarRegistro('ERROR', err.message, false);
+            agregarRegistro('ERROR', "Fallo de internet", false);
             isProcessing = false;
         });
     }
 
     function activarLaser() {
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        document.getElementById('camara_section').style.display = 'none';
-        document.getElementById('laser_section').style.display = 'block';
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('camara_section').style.display = 'none';
+                document.getElementById('laser_section').style.display = 'block';
+                document.getElementById('laser_input').focus();
+            });
+        } else {
+            document.getElementById('camara_section').style.display = 'none';
+            document.getElementById('laser_section').style.display = 'block';
+            document.getElementById('laser_input').focus();
+        }
     }
 
     function activarCamara(modo) {
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
-        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
+        
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        
+        if (html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => arrancarCamara(modo));
+        } else {
+            arrancarCamara(modo);
+        }
+    }
+
+    function arrancarCamara(modo) {
+        html5QrCode.start(
+            { facingMode: modo }, 
+            { fps: 10, qrbox: { width: 250, height: 250 } }, 
+            (txt) => { routerEscaneo(txt); }, 
+            (err) => {}
+        ).catch(err => {
+            alert("No se pudo iniciar la cámara. Revisa los permisos del navegador.");
+        });
     }
 
     let scanTimer;
@@ -484,6 +491,7 @@
         let l = r.replace(/[^0-9kK]/g, '').toUpperCase(); if(l.length<2) return l;
         return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
     }
+    
     function vibrarCelular(p) { if(navigator.vibrate) navigator.vibrate(p); }
 
     let historial = [];
