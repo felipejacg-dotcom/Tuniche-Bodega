@@ -332,7 +332,6 @@
     }
 
     function desbloquearApp() {
-        // CORRECCIÓN APLICADA AQUÍ: 'loginScreen' en vez de 'lockScreen'
         document.getElementById('loginScreen').style.opacity = '0';
         document.getElementById('loginScreen').style.visibility = 'hidden';
         document.getElementById('appContent').style.opacity = '1';
@@ -411,19 +410,83 @@
 
     function routerEscaneo(codigo) {
         if (isProcessing) return;
+        
+        const resDiv = document.getElementById('resultado');
+
+        // === 🧠 MEJORA: LÁSER INTELIGENTE PARA CARNETS ===
+        let isCarnet = false;
+        let rutCarnet = null;
+        let nombreCarnet = null;
+
+        // 1. Detectar si es el QR del Carnet Nuevo (URL con RUN=)
+        if (codigo.includes('RUN=') || codigo.includes('run=')) {
+            let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
+            const params = new URLSearchParams(qs);
+            rutCarnet = params.get('RUN') || params.get('run');
+            if (params.get('name')) nombreCarnet = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+            isCarnet = true;
+        } 
+        // 2. Detectar si es el Código de Barras del Carnet Antiguo (PDF417)
+        else if (codigo.length >= 70) {
+            let rawRut = codigo.substring(0, 9).trim().replace(/^0+/, '');
+            if (rawRut.length >= 7) { 
+                rutCarnet = rawRut; 
+                nombreCarnet = codigo.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
+                isCarnet = true;
+            }
+        }
+
+        // Si el sistema detecta que le disparaste a un CARNET:
+        if (isCarnet && rutCarnet) {
+            const rutF = formatearRut(rutCarnet);
+            document.getElementById('rut').value = rutF;
+            if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
+            vibrarCelular([100]);
+            
+            resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
+            resDiv.innerText = "Buscando trabajador en la base de datos...";
+            
+            fetch('/buscar_trabajador', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    rut: rutF, planta: CREDENCIALES.planta,
+                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
+                })
+            }).then(r => r.json()).then(d => {
+                if(d.success) { 
+                    document.getElementById('trabajador').value = d.nombre; 
+                    document.getElementById('area').value = d.area; 
+                    resDiv.className = "result-box result-success";
+                    resDiv.innerText = "✅ Trabajador cargado. Ahora escanea el artículo.";
+                } else {
+                    resDiv.className = "result-box result-warning";
+                    resDiv.innerText = "⚠️ Trabajador nuevo. Selecciona su Área manualmente.";
+                    document.getElementById('area').focus();
+                }
+            }).catch(()=>{
+                resDiv.className = "result-box result-idle";
+                resDiv.innerText = "✅ RUT leído. Escanea el artículo.";
+            });
+            
+            return; // Termina aquí la función para no mezclarlo con artículos
+        }
+        // ====================================================
+
+        // Si NO era carnet, entonces es un ARTÍCULO. Sigue el proceso normal:
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
         const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
-        const resDiv = document.getElementById('resultado');
 
         if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
             resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
-            resDiv.innerText = "⚠️ Faltan datos del trabajador."; vibrarCelular([300]); return;
+            resDiv.innerText = "⚠️ Faltan datos del trabajador. Escanea su carnet primero."; 
+            vibrarCelular([300]); 
+            return;
         }
 
         isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
-        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Procesando...";
+        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Registrando en BD...";
 
         fetch('/registrar_salida', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -443,7 +506,7 @@
                 resDiv.className = "result-box result-error"; resDiv.innerHTML = "❌ " + data.message;
                 vibrarCelular([300]); agregarRegistro(accion, data.message, false);
             }
-            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "Esperando..."; isProcessing = false; }, 1500);
+            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "[ DISPARA AQUÍ ]"; isProcessing = false; }, 2000);
         }).catch(err => {
             document.getElementById('loadingOverlay').classList.remove('active');
             resDiv.className = "result-box result-error"; resDiv.innerText = "❌ Fallo de conexión.";
