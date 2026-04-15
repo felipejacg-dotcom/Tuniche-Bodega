@@ -339,9 +339,6 @@
         location.reload();
     }
 
-    // ========================================================
-    // LA SOLUCIÓN: CÁMARA DEL CARNET CON EL RECUADRO RESTAURADO
-    // ========================================================
     function abrirEscanerCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
         
@@ -356,13 +353,19 @@
     function iniciarCamaraCarnet() {
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
-        // ¡RESTAURADO EL QRBOX! Esto es lo que recorta la imagen y hace que lea rápido.
+        // ========================================================
+        // MEJORA: RECUADRO MÁS PEQUEÑO Y FILTRO EXCLUSIVO DE QR
+        // ========================================================
         carnetQrScanner.start(
             { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } }, 
+            { 
+                fps: 15, 
+                qrbox: { width: 200, height: 200 }, 
+                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
+            }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
-            () => {}
-        ).catch(() => alert("Error de cámara al abrir carnet."));
+            (err) => { /* Ignoramos los errores visuales de la cámara */ }
+        ).catch((err) => alert("Error de cámara: " + err));
     }
 
     function cerrarEscanerCarnet() {
@@ -371,6 +374,9 @@
     }
 
     function procesarCarnetDesdeScanner(data) {
+        // Alerta temporal para asegurarnos de que la cámara sí está leyendo el código
+        alert("¡LA CÁMARA LEYÓ ESTO! -> " + data);
+
         let rut = null; let nombre = null;
         if (data.includes('RUN=') || data.includes('run=')) {
             let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
@@ -514,15 +520,12 @@
         document.getElementById('laser_section').style.display = 'block';
     }
 
-    // ========================================================
-    // LA SOLUCIÓN: CÁMARA PRINCIPAL CON EL RECUADRO RESTAURADO
-    // ========================================================
     function activarCamara(modo) {
         if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
         
-        // ¡RESTAURADO EL QRBOX! 
+        // La cámara de artículos se mantiene igual (busca todos los formatos)
         html5QrCode.start(
             { facingMode: modo }, 
             { fps: 10, qrbox: { width: 250, height: 250 } }, 
