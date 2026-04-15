@@ -353,15 +353,17 @@
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
         carnetQrScanner.start(
-            { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
+            { facingMode: "environment" }, 
             { 
                 fps: 15, 
-                qrbox: { width: 280, height: 180 }, 
-                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.PDF_417 ] 
+                qrbox: { width: 250, height: 180 } 
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
-        ).catch(() => alert("Error de cámara al abrir carnet."));
+        ).catch((e) => {
+            console.error(e);
+            alert("Error de cámara al abrir carnet.");
+        });
     }
 
     function cerrarEscanerCarnet() {
