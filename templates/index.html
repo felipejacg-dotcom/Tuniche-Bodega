@@ -339,31 +339,17 @@
         location.reload();
     }
 
-    // =========================================================
-    // MEJORA 1: EVITA QUE LA CÁMARA SE BLOQUEE Y USA PANTALLA COMPLETA
-    // =========================================================
     function abrirEscanerCarnet() {
-        // Si la cámara trasera de herramientas está prendida, la apagamos primero.
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                iniciarCamaraCarnet();
-            }).catch(e => console.log(e));
-        } else {
-            iniciarCamaraCarnet();
-        }
-    }
-
-    function iniciarCamaraCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
-        // Se borró "qrbox" y se puso "fps: 15" para mayor rapidez
+        // --- MEJORA: ALTA RESOLUCIÓN Y FPS (FULL HD) ---
         carnetQrScanner.start(
-            { facingMode: "environment" }, 
-            { fps: 15 }, 
+            { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
+            { fps: 15, qrbox: { width: 250, height: 250 } }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             () => {}
-        ).catch(() => alert("Error de cámara. Revisa los permisos de tu navegador."));
+        ).catch(() => alert("Error de cámara. Intenta darle permisos a la web."));
     }
 
     function cerrarEscanerCarnet() {
@@ -373,18 +359,22 @@
 
     function procesarCarnetDesdeScanner(data) {
         let rut = null; let nombre = null;
-        if (data.includes('RUN=') || data.includes('run=')) {
-            let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
+        
+        // Limpiamos los datos por si trae espacios basura
+        const textoLimpio = data.trim();
+
+        if (textoLimpio.includes('RUN=') || textoLimpio.includes('run=')) {
+            let qs = textoLimpio.includes('?') ? textoLimpio.substring(textoLimpio.indexOf('?') + 1) : textoLimpio;
             const params = new URLSearchParams(qs);
             rut = params.get('RUN') || params.get('run');
             if (params.get('name')) nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
         }
-        if (!rut && data.length >= 70) {
-            let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { rut = rawRut; nombre = data.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
+        if (!rut && textoLimpio.length >= 70) {
+            let rawRut = textoLimpio.substring(0, 9).trim().replace(/^0+/, '');
+            if (rawRut.length >= 7) { rut = rawRut; nombre = textoLimpio.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
         }
         if (!rut) {
-            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
+            const match = textoLimpio.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
             if (match) rut = match[1];
         }
 
@@ -403,7 +393,12 @@
                 if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; }
                 else if(nombre) { document.getElementById('trabajador').value = nombre; }
             }).catch(()=>{});
-        } else { vibrarCelular([300]); }
+        } else { 
+            vibrarCelular([300]); 
+            cerrarEscanerCarnet();
+            // --- MEJORA: ALERTA PARA DEPURACIÓN ---
+            alert("¡Cámara leyó el QR! Pero el texto es distinto al esperado. Datos: " + textoLimpio);
+        }
     }
 
     function cambiarModo() {
@@ -429,6 +424,7 @@
         let rutCarnet = null;
         let nombreCarnet = null;
 
+        // 1. Detectar si es Carnet
         if (codigo.includes('RUN=') || codigo.includes('run=')) {
             let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
             const params = new URLSearchParams(qs);
@@ -471,6 +467,7 @@
             return; 
         }
 
+        // 2. Si es Artículo
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
@@ -515,16 +512,11 @@
         document.getElementById('laser_section').style.display = 'block';
     }
 
-    // =========================================================
-    // MEJORA 2: CÁMARA DE ARTÍCULOS A PANTALLA COMPLETA
-    // =========================================================
     function activarCamara(modo) {
         if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
-        
-        // Se borró "qrbox" y se puso "fps: 15" para mayor rapidez
-        html5QrCode.start({ facingMode: modo }, { fps: 15 }, (txt) => { routerEscaneo(txt); }, () => {});
+        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
     }
 
     let scanTimer;
