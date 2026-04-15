@@ -208,7 +208,7 @@
                     <div class="section-number">1</div> <span class="section-title">Datos del Trabajador</span>
                 </div>
                 <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
-                    🪪 Escanear Carnet Chileno <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR</span>
+                    🪪 Escanear Carnet Chileno <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR / PDF417</span>
                 </button>
                 <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
                 <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
@@ -353,11 +353,11 @@
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
         carnetQrScanner.start(
-            { facingMode: "environment" }, 
+            { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
             { 
                 fps: 15, 
-                qrbox: { width: 200, height: 200 }, 
-                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
+                qrbox: { width: 280, height: 180 }, 
+                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.PDF_417 ] 
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
