@@ -339,10 +339,31 @@
         location.reload();
     }
 
+    // =========================================================
+    // MEJORA 1: EVITA QUE LA CÁMARA SE BLOQUEE Y USA PANTALLA COMPLETA
+    // =========================================================
     function abrirEscanerCarnet() {
+        // Si la cámara trasera de herramientas está prendida, la apagamos primero.
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                iniciarCamaraCarnet();
+            }).catch(e => console.log(e));
+        } else {
+            iniciarCamaraCarnet();
+        }
+    }
+
+    function iniciarCamaraCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        carnetQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => procesarCarnetDesdeScanner(txt), () => {}).catch(() => alert("Error de cámara"));
+        
+        // Se borró "qrbox" y se puso "fps: 15" para mayor rapidez
+        carnetQrScanner.start(
+            { facingMode: "environment" }, 
+            { fps: 15 }, 
+            (txt) => procesarCarnetDesdeScanner(txt), 
+            () => {}
+        ).catch(() => alert("Error de cámara. Revisa los permisos de tu navegador."));
     }
 
     function cerrarEscanerCarnet() {
@@ -408,7 +429,6 @@
         let rutCarnet = null;
         let nombreCarnet = null;
 
-        // 1. Detectar si es Carnet
         if (codigo.includes('RUN=') || codigo.includes('run=')) {
             let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
             const params = new URLSearchParams(qs);
@@ -451,7 +471,6 @@
             return; 
         }
 
-        // 2. Si es Artículo
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
@@ -496,11 +515,16 @@
         document.getElementById('laser_section').style.display = 'block';
     }
 
+    // =========================================================
+    // MEJORA 2: CÁMARA DE ARTÍCULOS A PANTALLA COMPLETA
+    // =========================================================
     function activarCamara(modo) {
         if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
-        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
+        
+        // Se borró "qrbox" y se puso "fps: 15" para mayor rapidez
+        html5QrCode.start({ facingMode: modo }, { fps: 15 }, (txt) => { routerEscaneo(txt); }, () => {});
     }
 
     let scanTimer;
