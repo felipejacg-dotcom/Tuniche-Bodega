@@ -330,8 +330,7 @@
         document.getElementById('appContent').style.visibility = 'visible';
         document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
 
-        // --- MEJORA: ACTIVAMOS EL MOTOR NATIVO (LENS) SI EL CELULAR LO SOPORTA ---
-        html5QrCode = new Html5Qrcode("reader", { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+        html5QrCode = new Html5Qrcode("reader");
         activarLaser();
     }
 
@@ -351,24 +350,17 @@
     }
 
     function iniciarCamaraCarnet() {
-        if (!carnetQrScanner) {
-            // --- MEJORA: ACTIVAMOS EL MOTOR NATIVO (LENS) AQUÍ TAMBIÉN ---
-            carnetQrScanner = new Html5Qrcode("carnetReader", { 
-                experimentalFeatures: { useBarCodeDetectorIfSupported: true } 
-            });
-        }
+        if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
         carnetQrScanner.start(
             { facingMode: "environment" }, 
             { 
                 fps: 15, 
-                qrbox: { width: 250, height: 250 },
-                // Limitamos a QR para mayor velocidad, y permitimos giros para que no cueste tanto
-                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-                disableFlip: false 
+                qrbox: { width: 200, height: 200 }, 
+                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
-            () => {}
+            (err) => {}
         ).catch(() => alert("Error de cámara al abrir carnet."));
     }
 
@@ -431,7 +423,7 @@
         } else { 
             vibrarCelular([300]); 
             cerrarEscanerCarnet();
-            alert("No se detectó un RUT válido en el código. Lee: " + textoLimpio);
+            alert("No se detectó un RUT válido en el código.");
         }
     }
 
@@ -551,7 +543,7 @@
         
         html5QrCode.start(
             { facingMode: modo }, 
-            { fps: 15, qrbox: { width: 250, height: 250 } }, 
+            { fps: 10, qrbox: { width: 250, height: 250 } }, 
             (txt) => { routerEscaneo(txt); }, 
             () => {}
         );
