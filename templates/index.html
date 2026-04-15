@@ -339,10 +339,30 @@
         location.reload();
     }
 
+    // ========================================================
+    // ARREGLO: CÓDIGO ORIGINAL QUE ABRE LA CÁMARA CORRECTAMENTE
+    // ========================================================
     function abrirEscanerCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
+        
+        // Si la cámara principal de herramientas está prendida, evitamos que crasheen
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => iniciarCamaraCarnet()).catch(() => iniciarCamaraCarnet());
+        } else {
+            iniciarCamaraCarnet();
+        }
+    }
+
+    function iniciarCamaraCarnet() {
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        carnetQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => procesarCarnetDesdeScanner(txt), () => {}).catch(() => alert("Error de cámara"));
+        
+        // CÓDIGO ORIGINAL (Le quité el qrbox para que lea en toda la pantalla)
+        carnetQrScanner.start(
+            { facingMode: "environment" }, 
+            { fps: 10 }, 
+            (txt) => procesarCarnetDesdeScanner(txt), 
+            () => {}
+        ).catch(() => alert("Error de cámara"));
     }
 
     function cerrarEscanerCarnet() {
@@ -351,6 +371,11 @@
     }
 
     function procesarCarnetDesdeScanner(data) {
+        // ========================================================
+        // TRAMPA PARA DEPURAR: Si lee ALGO, saldrá esta alerta
+        // ========================================================
+        alert("¡LA CÁMARA LEYÓ ESTO! -> " + data);
+        
         let rut = null; let nombre = null;
         if (data.includes('RUN=') || data.includes('run=')) {
             let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
@@ -408,7 +433,6 @@
         let rutCarnet = null;
         let nombreCarnet = null;
 
-        // 1. Detectar si es Carnet
         if (codigo.includes('RUN=') || codigo.includes('run=')) {
             let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
             const params = new URLSearchParams(qs);
@@ -451,7 +475,6 @@
             return; 
         }
 
-        // 2. Si es Artículo
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
