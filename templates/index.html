@@ -339,15 +339,14 @@
         location.reload();
     }
 
-    // ========================================================
-    // ARREGLO: CÓDIGO ORIGINAL QUE ABRE LA CÁMARA CORRECTAMENTE
-    // ========================================================
     function abrirEscanerCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
-        
-        // Si la cámara principal de herramientas está prendida, evitamos que crasheen
         if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => iniciarCamaraCarnet()).catch(() => iniciarCamaraCarnet());
+            html5QrCode.stop().then(() => {
+                iniciarCamaraCarnet();
+            }).catch(e => {
+                iniciarCamaraCarnet();
+            });
         } else {
             iniciarCamaraCarnet();
         }
@@ -356,12 +355,14 @@
     function iniciarCamaraCarnet() {
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
-        // CÓDIGO ORIGINAL (Le quité el qrbox para que lea en toda la pantalla)
         carnetQrScanner.start(
             { facingMode: "environment" }, 
-            { fps: 10 }, 
+            { 
+                fps: 15
+                // Al quitar qrbox, la cámara usa toda su resolución disponible y procesa la imagen completa
+            }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
-            () => {}
+            (err) => {}
         ).catch(() => alert("Error de cámara"));
     }
 
@@ -371,10 +372,8 @@
     }
 
     function procesarCarnetDesdeScanner(data) {
-        // ========================================================
-        // TRAMPA PARA DEPURAR: Si lee ALGO, saldrá esta alerta
-        // ========================================================
-        alert("¡LA CÁMARA LEYÓ ESTO! -> " + data);
+        // Alerta de lectura exitosa (para ver si logra sacar texto)
+        alert("¡LECTURA EXITOSA! Texto extraído: " + data);
         
         let rut = null; let nombre = null;
         if (data.includes('RUN=') || data.includes('run=')) {
