@@ -342,7 +342,6 @@
     function abrirEscanerCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
         
-        // Evitamos que las dos cámaras choquen
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => iniciarCamaraCarnet()).catch(() => iniciarCamaraCarnet());
         } else {
@@ -353,9 +352,6 @@
     function iniciarCamaraCarnet() {
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
-        // ========================================================
-        // MEJORA: RECUADRO MÁS PEQUEÑO Y FILTRO EXCLUSIVO DE QR
-        // ========================================================
         carnetQrScanner.start(
             { facingMode: "environment" }, 
             { 
@@ -364,8 +360,8 @@
                 formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
-            (err) => { /* Ignoramos los errores visuales de la cámara */ }
-        ).catch((err) => alert("Error de cámara: " + err));
+            (err) => {}
+        ).catch(() => alert("Error de cámara al abrir carnet."));
     }
 
     function cerrarEscanerCarnet() {
@@ -374,29 +370,41 @@
     }
 
     function procesarCarnetDesdeScanner(data) {
-        // Alerta temporal para asegurarnos de que la cámara sí está leyendo el código
-        alert("¡LA CÁMARA LEYÓ ESTO! -> " + data);
+        let rut = null; 
+        let nombre = null;
+        let textoLimpio = data.trim();
 
-        let rut = null; let nombre = null;
-        if (data.includes('RUN=') || data.includes('run=')) {
-            let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
-            const params = new URLSearchParams(qs);
-            rut = params.get('RUN') || params.get('run');
-            if (params.get('name')) nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-        }
-        if (!rut && data.length >= 70) {
-            let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { rut = rawRut; nombre = data.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
-        }
-        if (!rut) {
-            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
-            if (match) rut = match[1];
+        try {
+            if (textoLimpio.includes('RUN=') || textoLimpio.includes('run=')) {
+                let qs = textoLimpio.includes('?') ? textoLimpio.substring(textoLimpio.indexOf('?') + 1) : textoLimpio;
+                const params = new URLSearchParams(qs);
+                rut = params.get('RUN') || params.get('run');
+                if (params.get('name')) {
+                    nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+                }
+            } 
+            else if (textoLimpio.length >= 70) {
+                let rawRut = textoLimpio.substring(0, 9).trim().replace(/^0+/, '');
+                if (rawRut.length >= 7) { 
+                    rut = rawRut; 
+                    nombre = textoLimpio.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
+                }
+            }
+            if (!rut) {
+                const match = textoLimpio.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
+                if (match) rut = match[1];
+            }
+        } catch(e) {
+            console.error("Error analizando datos del carnet");
         }
 
         if (rut) {
             const rutF = formatearRut(rut);
             document.getElementById('rut').value = rutF;
-            vibrarCelular([100]); cerrarEscanerCarnet();
+            if (nombre) document.getElementById('trabajador').value = nombre;
+            
+            vibrarCelular([100]); 
+            cerrarEscanerCarnet();
 
             fetch('/buscar_trabajador', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -405,10 +413,18 @@
                     username: CREDENCIALES.user, password: CREDENCIALES.pass 
                 })
             }).then(r => r.json()).then(d => {
-                if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; }
-                else if(nombre) { document.getElementById('trabajador').value = nombre; }
+                if(d.success) { 
+                    document.getElementById('trabajador').value = d.nombre; 
+                    document.getElementById('area').value = d.area; 
+                } else if(nombre) { 
+                    document.getElementById('trabajador').value = nombre; 
+                }
             }).catch(()=>{});
-        } else { vibrarCelular([300]); }
+        } else { 
+            vibrarCelular([300]); 
+            cerrarEscanerCarnet();
+            alert("No se detectó un RUT válido en el código.");
+        }
     }
 
     function cambiarModo() {
@@ -525,7 +541,6 @@
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
         
-        // La cámara de artículos se mantiene igual (busca todos los formatos)
         html5QrCode.start(
             { facingMode: modo }, 
             { fps: 10, qrbox: { width: 250, height: 250 } }, 
