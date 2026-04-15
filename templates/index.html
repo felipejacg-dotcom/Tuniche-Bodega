@@ -339,45 +339,10 @@
         location.reload();
     }
 
-    // =====================================================
-    // MODO TURBO PARA EL CARNET: Evita bloqueos y lee rápido
-    // =====================================================
     function abrirEscanerCarnet() {
         document.getElementById('carnetModalOverlay').classList.add('active');
-        
-        // 1. Detenemos la otra cámara si estaba encendida
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => iniciarCamaraCarnet()).catch(() => iniciarCamaraCarnet());
-        } else {
-            iniciarCamaraCarnet();
-        }
-    }
-
-    function iniciarCamaraCarnet() {
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        
-        // CONFIGURACIÓN TURBO: Solo busca QR para ser 10x más rápido
-        const configTurbo = { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 },
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
-        };
-
-        // Intentamos pedir 720p y Autofocus Continuo primero
-        carnetQrScanner.start(
-            { facingMode: "environment", width: { ideal: 1280 }, advanced: [{ focusMode: "continuous" }] }, 
-            configTurbo, 
-            (txt) => procesarCarnetDesdeScanner(txt), 
-            () => {}
-        ).catch(() => {
-            // FALLBACK: Si el celular rechaza los ajustes extras, usamos la cámara básica segura
-            carnetQrScanner.start(
-                { facingMode: "environment" }, 
-                configTurbo, 
-                (txt) => procesarCarnetDesdeScanner(txt), 
-                () => {}
-            ).catch(err => alert("Error de cámara web: " + err));
-        });
+        carnetQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => procesarCarnetDesdeScanner(txt), () => {}).catch(() => alert("Error de cámara"));
     }
 
     function cerrarEscanerCarnet() {
@@ -443,6 +408,7 @@
         let rutCarnet = null;
         let nombreCarnet = null;
 
+        // 1. Detectar si es Carnet
         if (codigo.includes('RUN=') || codigo.includes('run=')) {
             let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
             const params = new URLSearchParams(qs);
@@ -485,6 +451,7 @@
             return; 
         }
 
+        // 2. Si es Artículo
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
@@ -529,25 +496,11 @@
         document.getElementById('laser_section').style.display = 'block';
     }
 
-    // =====================================================
-    // MODO TURBO PARA ARTÍCULOS: Seguro y rápido
-    // =====================================================
     function activarCamara(modo) {
         if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
-        
-        const configTurbo = { fps: 15 };
-
-        html5QrCode.start(
-            { facingMode: modo, width: { ideal: 1280 }, advanced: [{ focusMode: "continuous" }] }, 
-            configTurbo, 
-            (txt) => { routerEscaneo(txt); }, 
-            () => {}
-        ).catch(() => {
-            // Si rechaza el HD, usamos configuración básica
-            html5QrCode.start({ facingMode: modo }, configTurbo, (txt) => { routerEscaneo(txt); }, () => {});
-        });
+        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
     }
 
     let scanTimer;
