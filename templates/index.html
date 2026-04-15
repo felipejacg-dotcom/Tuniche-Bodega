@@ -4,565 +4,1866 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bodega Tuniche - Escáner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="description" content="Sistema de escaneo y gestión de bodega Tuniche Fruits">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         :root {
-            --bg-primary: #0a0e17; --bg-secondary: #111827; --bg-card: rgba(17, 24, 39, 0.7);
-            --border-subtle: rgba(148, 163, 184, 0.1); --text-primary: #f1f5f9; --text-muted: #64748b;
-            --accent-indigo: #6366f1; --accent-emerald: #10b981; --accent-amber: #f59e0b; --accent-red: #ef4444;
-            --gradient-main: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-            --radius-lg: 16px; --radius-md: 12px; --radius-sm: 8px;
+            --bg-primary: #030712;
+            --bg-secondary: #0f172a;
+            --bg-card: rgba(15, 23, 42, 0.45);
+            --bg-card-hover: rgba(30, 41, 59, 0.6);
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            --border-glow: rgba(99, 102, 241, 0.5);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --accent-indigo: #6366f1;
+            --accent-indigo-light: #818cf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #f43f5e;
+            --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --shadow-glow-indigo: 0 0 25px rgba(99, 102, 241, 0.25);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif !important;
+        }
 
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* === Premium Animated background === */
         body::before {
-            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
-            z-index: 0; animation: bgShift 20s infinite alternate;
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.12), transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08), transparent 40%);
+            z-index: 0;
+            filter: blur(40px);
+            animation: bgShift 15s ease-in-out infinite alternate;
+            pointer-events: none;
         }
-        @keyframes bgShift { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(-5%, 3%) rotate(3deg); } }
 
-        #loginScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-primary); z-index: 99999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; transition: opacity 0.5s ease, visibility 0.5s ease;
+        @keyframes bgShift {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.1) translate(-20px, 20px); }
         }
-        .login-container {
-            background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg); padding: 30px 25px; max-width: 380px; width: 100%;
-            box-shadow: 0 0 50px rgba(99, 102, 241, 0.1);
+
+        /* === Navbar === */
+        .top-bar {
+            position: relative;
+            z-index: 10;
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            padding: 14px 0;
         }
-        .login-icon { font-size: 3rem; margin-bottom: 10px; display: block; text-align: center; }
-        .login-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 5px; text-align: center; }
-        .login-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 25px; text-align: center; }
+
+        .top-bar .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo-glass-small {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 38px;
+            overflow: hidden;
+        }
         
-        .login-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; display: block; }
-        .login-input, .login-select {
-            width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle);
-            color: white; font-size: 1rem; padding: 12px; border-radius: var(--radius-md);
-            margin-bottom: 15px; outline: none; transition: 0.3s;
+        .brand-logo-glass-small img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+            mix-blend-mode: multiply;
         }
-        .login-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
-        .login-select option { background: var(--bg-secondary); }
-        .login-input:focus, .login-select:focus { border-color: var(--accent-indigo); }
+
+        .brand-text {
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .brand-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .logout-btn:active {
+            transform: translateY(0);
+        }
+
+        /* === Main container === */
+        .main-container {
+            position: relative;
+            z-index: 5;
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 20px 16px 40px;
+        }
+
+        /* === Glass card base === */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            margin-bottom: 20px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            position: relative;
+        }
         
-        .btn-login {
-            width: 100%; background: var(--gradient-main); color: white; border: none;
-            padding: 14px; border-radius: var(--radius-md); font-weight: 700; font-size: 1rem;
-            cursor: pointer; margin-top: 10px; transition: transform 0.2s;
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         }
-        .btn-login:active { transform: scale(0.98); }
-        .login-error { color: var(--accent-red); font-size: 0.85rem; text-align: center; margin-bottom: 10px; min-height: 20px;}
 
-        #appContent { opacity: 0; visibility: hidden; transition: opacity 0.6s ease; }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.2);
+            box-shadow: var(--shadow-card), var(--shadow-glow-indigo);
+            transform: translateY(-3px);
+        }
 
-        .top-bar { position: relative; z-index: 10; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-subtle); padding: 14px 0; }
-        .brand { display: flex; align-items: center; justify-content: space-between; }
-        .brand-left { display: flex; align-items: center; gap: 12px; }
-        .brand-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .brand-text { font-weight: 700; font-size: 1.15rem; color: var(--text-primary); }
-        .brand-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+        .card-inner {
+            padding: 20px;
+        }
 
-        .btn-logout { background: none; border: none; color: var(--accent-red); font-size: 0.75rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
+        /* === Section titles === */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
 
-        .main-container { position: relative; z-index: 5; max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+        .section-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--gradient-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
 
-        .planta-bloqueada { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
-        .planta-bloqueada-badge { background: var(--accent-indigo); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.05em;}
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
 
-        .glass-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; }
-        .card-inner { padding: 20px; }
-        .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-        .section-number { width: 28px; height: 28px; border-radius: 8px; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; }
-        .section-title { font-size: 0.95rem; font-weight: 600; }
+        /* === Mode switcher card === */
+        .mode-card {
+            position: relative;
+            overflow: hidden;
+        }
 
-        .mode-card { position: relative; overflow: hidden; }
-        .mode-inner { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .mode-card.mode-salida { background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, var(--bg-card) 100%); border-left: 4px solid var(--accent-amber); }
-        .mode-card.mode-devolucion { background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%); border-left: 4px solid var(--accent-emerald);}
-        #textoModo { font-weight: 800; font-size: 1.05rem; }
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            transition: background 0.4s ease;
+        }
+
+        .mode-card.mode-salida::before {
+            background: var(--gradient-amber);
+        }
+
+        .mode-card.mode-devolucion::before {
+            background: var(--gradient-emerald);
+        }
+
+        .mode-card.mode-salida {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, var(--bg-card) 100%);
+        }
+
+        .mode-card.mode-devolucion {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%);
+        }
+
+        .mode-inner {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mode-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-icon {
+            font-size: 1.4rem;
+        }
+
+        .mode-text-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mode-text-sub {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 500;
+        }
+
+        #textoModo {
+            font-weight: 800;
+            font-size: 1.05rem;
+            transition: color 0.4s ease;
+            letter-spacing: -0.01em;
+        }
+
         .modo-salida-text { color: var(--accent-amber); }
         .modo-devolucion-text { color: var(--accent-emerald); }
 
-        .switch-ios { position: relative; display: inline-block; width: 56px; height: 30px; }
+        /* === iOS Switch (refined) === */
+        .switch-ios {
+            position: relative;
+            display: inline-block;
+            width: 56px;
+            height: 30px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
         .switch-ios input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--accent-amber); border-radius: 30px; transition: 0.4s; }
-        .slider:before { position: absolute; content: ""; height: 24px; width: 24px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.4s; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--accent-amber);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 30px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 24px;
+            width: 24px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
         input:checked + .slider { background-color: var(--accent-emerald); }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        .form-input { width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: rgba(15, 23, 42, 0.6); color: white; margin-bottom: 10px; outline: none; }
-        .form-input:focus { border-color: var(--accent-indigo); }
-        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
-        select.form-input option { background: var(--bg-secondary); }
+        /* === Inputs & Select === */
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            outline: none;
+            margin-bottom: 10px;
+        }
 
-        .method-pills { display: flex; gap: 6px; background: rgba(15, 23, 42, 0.5); border-radius: var(--radius-md); padding: 4px; margin-bottom: 16px; }
+        .form-input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        select.form-input {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        select.form-input option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* === Method selector pills === */
+        .method-pills {
+            display: flex;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
         .method-pills input[type="radio"] { display: none; }
-        .method-pill { flex: 1; text-align: center; padding: 10px 8px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
-        .method-pills input[type="radio"]:checked + .method-pill { background: var(--gradient-main); color: white; }
 
-        .laser-box { width: 100%; padding: 18px 16px; border-radius: var(--radius-md); border: 2px dashed rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.04); color: var(--accent-indigo-light); font-size: 1.1rem; font-weight: 700; text-align: center; outline: none; }
-        #reader { width: 100%; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; }
+        .method-pill {
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.03);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-        .result-box { border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.88rem; font-weight: 600; margin-top: 16px; display: none; }
-        .result-idle { background: rgba(100, 116, 139, 0.08); color: var(--text-muted); }
-        .result-loading { background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo-light); }
-        .result-success { background: rgba(16, 185, 129, 0.08); color: var(--accent-emerald); }
-        .result-error { background: rgba(239, 68, 68, 0.08); color: var(--accent-red); }
-        .result-warning { background: rgba(245, 158, 11, 0.08); color: var(--accent-amber); }
+        .method-pill:hover {
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateY(-1px);
+        }
 
-        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; margin-bottom: 12px; border-radius: var(--radius-md); border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.08); color: var(--accent-indigo); font-weight: 600; cursor: pointer; }
+        .method-pills input[type="radio"]:checked + .method-pill {
+            background: var(--gradient-main);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            transform: scale(1.02);
+        }
 
-        .carnet-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: 0.3s; }
-        .carnet-modal-overlay.active { opacity: 1; visibility: visible; }
-        .carnet-modal { width: 100%; max-width: 440px; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 20px; }
+        .pill-icon {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 2px;
+        }
 
-        .history-list { display: flex; flex-direction: column; gap: 8px; }
-        .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); }
-        .history-item.salida-item { border-left: 3px solid var(--accent-amber); }
-        .history-item.devolucion-item { border-left: 3px solid var(--accent-emerald); }
-        .history-item.error-item { border-left: 3px solid var(--accent-red); opacity: 0.7; }
-        .history-msg { font-size: 0.82rem; font-weight: 600; }
-        .history-time { font-size: 0.7rem; color: var(--text-muted); }
+        /* === Laser input === */
+        .laser-box {
+            width: 100%;
+            padding: 18px 16px;
+            border-radius: var(--radius-md);
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+            background: rgba(99, 102, 241, 0.04);
+            color: var(--accent-indigo-light);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.3s ease;
+            outline: none;
+            letter-spacing: 0.02em;
+        }
 
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; }
-        .loading-overlay.active { opacity: 1; visibility: visible; }
-        .loading-spinner { width: 56px; height: 56px; border: 4px solid rgba(99, 102, 241, 0.2); border-top-color: var(--accent-indigo); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .laser-box::placeholder {
+            color: rgba(99, 102, 241, 0.4);
+            font-weight: 600;
+        }
+
+        .laser-box:focus {
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12), 0 0 30px rgba(99, 102, 241, 0.1);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        /* === Camera / reader === */
+        #reader {
+            width: 100%;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* === Help text === */
+        .help-text {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .help-text .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-indigo);
+            animation: pulse-dot 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        /* === Result alerts === */
+        .result-box {
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-top: 16px;
+            display: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-idle {
+            background: rgba(100, 116, 139, 0.08);
+            border-color: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+        }
+
+        .result-loading {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.2);
+            color: var(--accent-indigo-light);
+        }
+
+        .result-success {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.25);
+            color: var(--accent-emerald);
+        }
+
+        .result-error {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        .result-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+        }
+
+        /* === Status bar at bottom === */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(17, 24, 39, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald-glow);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        .status-text {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        /* === Scrollbar === */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
+
+        /* === Scan Carnet Button === */
+        .scan-carnet-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+            color: var(--accent-indigo-light);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        .scan-carnet-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.08), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .scan-carnet-btn:hover {
+            border-color: var(--accent-indigo);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .scan-carnet-btn:hover::before {
+            left: 100%;
+        }
+
+        .scan-carnet-btn:active {
+            transform: translateY(0) scale(0.99);
+        }
+
+        .scan-carnet-btn .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        .scan-carnet-btn .btn-badge {
+            background: var(--gradient-main);
+            color: white;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.06em;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* === Carnet Modal === */
+        .carnet-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .carnet-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .carnet-modal {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+            overflow: hidden;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .carnet-modal-overlay.active .carnet-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .carnet-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .carnet-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .modal-icon {
+            font-size: 1.5rem;
+        }
+
+        .carnet-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(239, 68, 68, 0.08);
+            color: var(--accent-red);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .carnet-modal-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .carnet-modal-body {
+            padding: 16px 20px 20px;
+        }
+
+        #carnetReader {
+            width: 100%;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .carnet-help {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            margin-bottom: 12px;
+        }
+
+        .carnet-help-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .carnet-help-text {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .carnet-result {
+            display: none;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .carnet-result.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: var(--accent-emerald);
+        }
+
+        .carnet-result.error {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* === Field filled pulse animation === */
+        @keyframes fieldPulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); border-color: var(--accent-emerald); }
+            50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); border-color: var(--border-subtle); }
+        }
+
+        .field-filled-pulse {
+            animation: fieldPulse 0.7s ease-out !important;
+        }
+
+        /* === History section === */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 20px 16px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-subtle);
+            animation: slideUp 0.3s ease-out;
+            transition: border-color 0.3s ease;
+        }
+
+        .history-item:hover {
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        .history-item.salida-item {
+            border-left: 3px solid var(--accent-amber);
+        }
+
+        .history-item.devolucion-item {
+            border-left: 3px solid var(--accent-emerald);
+        }
+
+        .history-item.error-item {
+            border-left: 3px solid var(--accent-red);
+            opacity: 0.7;
+        }
+
+        .history-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-msg {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .history-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .history-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+
+        .badge-salida {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-amber);
+        }
+
+        .badge-devolucion {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+        }
+
+        /* === Misc animations === */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-card { animation: fadeIn 0.5s ease-out both; }
+        .glass-card:nth-child(1) { animation-delay: 0.05s; }
+        .glass-card:nth-child(2) { animation-delay: 0.1s; }
+        .glass-card:nth-child(3) { animation-delay: 0.15s; }
+
+        /* === Loading Overlay === */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 23, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            pointer-events: none;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+        }
+
+        .loading-spinner {
+            width: 56px;
+            height: 56px;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top-color: var(--accent-indigo);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* === Responsive polish === */
+        @media (max-width: 400px) {
+            .main-container { padding: 12px 10px 36px; }
+            .card-inner { padding: 16px; }
+            .method-pill { font-size: 0.72rem; padding: 8px 4px; }
+        }
+    .card-inner {
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .login-container .brand-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: var(--gradient-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
+            margin-bottom: 20px;
+        }
+
+        .login-container .brand-text {
+            font-weight: 800;
+            font-size: 1.8rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .login-container .brand-sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .input-group-custom {
+            position: relative;
+            width: 100%;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            transition: color 0.3s ease;
+            z-index: 2;
+        }
+
+        .form-input {
+            position: relative;
+            zIndex: 1;
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .form-input:focus + .input-icon {
+            color: var(--accent-indigo-light);
+        }
+
+        .submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            margin-top: 10px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: var(--gradient-main);
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+            letter-spacing: 0.02em;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
     </style>
 </head>
 <body>
 
-<div id="loginScreen">
-    <div class="login-container">
-        <span class="login-icon">🔒</span>
-        <h2 class="login-title">SGB Móvil</h2>
-        <p class="login-subtitle">Acceso de Operario</p>
-        
-        <div id="loginError" class="login-error"></div>
+{% if session.get('logged_in') %}
 
-        <span class="login-label">🏢 Seleccione Sucursal:</span>
-        <select id="loginPlanta" class="login-select">
-            <option value="TUNICHE">Tuniche Fruits (Central)</option>
-            <option value="PUQUILLAY">Puquillay</option>
-        </select>
 
-        <span class="login-label">👤 Usuario:</span>
-        <input type="text" id="loginUser" class="login-input" placeholder="Ej: bodega" autocorrect="off" autocapitalize="none">
-        
-        <span class="login-label">🔑 Contraseña:</span>
-        <input type="password" id="loginPass" class="login-input" placeholder="••••••••">
-        
-        <button class="btn-login" onclick="iniciarSesion()">INGRESAR AL SISTEMA</button>
+<!-- Top bar -->
+<div class="top-bar">
+    <div class="container" style="max-width:520px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="brand">
+            <div class="brand-logo-glass-small">
+                <img src="/static/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/150x50?text=Logo'">
+            </div>
+        </div>
+        <a href="/logout" class="logout-btn" title="Cerrar Sesión">
+            <i data-lucide="log-out" style="width:20px;height:20px;"></i>
+        </a>
     </div>
 </div>
 
-<div id="appContent">
-    <div class="top-bar">
-        <div class="container" style="max-width:520px;">
-            <div class="brand">
-                <div class="brand-left">
-                    <div class="brand-icon">⚙️</div>
-                    <div>
-                        <div class="brand-text">Tuniche Móvil</div>
-                        <div class="brand-sub">Sistema de Bodega</div>
-                    </div>
+<!-- Main content -->
+<div class="main-container">
+
+    <!-- Mode switcher -->
+    <div class="glass-card mode-card mode-salida" id="cardModo">
+        <div class="mode-inner">
+            <div class="mode-label">
+                <span class="mode-icon" id="modeIcon"><i data-lucide="arrow-up-right" style="width:24px;height:24px;color:var(--accent-amber);"></i></span>
+                <div class="mode-text-group">
+                    <span class="mode-text-sub">Modo activo</span>
+                    <span id="textoModo" class="modo-salida-text">SALIDA</span>
                 </div>
-                <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
             </div>
+            <label class="switch-ios">
+                <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
+                <span class="slider"></span>
+            </label>
         </div>
     </div>
 
-    <div class="main-container">
-
-        <div class="planta-bloqueada">
-            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">🏢 PLANTA ACTIVA:</span>
-            <span id="lblPlantaActiva" class="planta-bloqueada-badge">TUNICHE</span>
+    <!-- Worker data -->
+    <div class="glass-card">
+        <div class="card-inner">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <span class="section-title">Datos del Trabajador</span>
+            </div>
+            <button type="button" class="scan-carnet-btn" id="btnScanCarnet" onclick="abrirEscanerCarnet()">
+                <span class="btn-icon"><i data-lucide="id-card" style="width:20px;height:20px;"></i></span>
+                Escanear Carnet Chileno
+                <span class="btn-badge">QR</span>
+            </button>
+            <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
+            <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
+            <select id="area" class="form-input">
+                <option value="" disabled selected>Seleccione Área...</option>
+                {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
         </div>
+    </div>
 
-        <div class="glass-card mode-card mode-salida" id="cardModo">
-            <div class="mode-inner">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span id="modeIcon" style="font-size:1.4rem;">📤</span>
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.65rem; color:var(--text-muted);">MODO ACTIVO</span>
-                        <span id="textoModo" class="modo-salida-text">SALIDA</span>
-                    </div>
-                </div>
-                <label class="switch-ios">
-                    <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
-                    <span class="slider"></span>
+    <!-- Scan method -->
+    <div class="glass-card">
+        <div class="card-inner">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <span class="section-title">Método de Escaneo</span>
+            </div>
+
+            <div class="method-pills" role="group">
+                <input type="radio" name="btnradio" id="btn_laser" autocomplete="off" checked onclick="activarLaser()">
+                <label class="method-pill" for="btn_laser">
+                    <span class="pill-icon"><i data-lucide="barcode" style="width:20px;height:20px;margin-bottom:4px"></i></span>
+                    Láser
+                </label>
+
+                <input type="radio" name="btnradio" id="btn_cam_trasera" autocomplete="off" onclick="activarCamara('environment')">
+                <label class="method-pill" for="btn_cam_trasera">
+                    <span class="pill-icon"><i data-lucide="camera" style="width:20px;height:20px;margin-bottom:4px"></i></span>
+                    Trasera
+                </label>
+
+                <input type="radio" name="btnradio" id="btn_cam_frontal" autocomplete="off" onclick="activarCamara('user')">
+                <label class="method-pill" for="btn_cam_frontal">
+                    <span class="pill-icon"><i data-lucide="smartphone" style="width:20px;height:20px;margin-bottom:4px"></i></span>
+                    Frontal
                 </label>
             </div>
-        </div>
 
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">1</div> <span class="section-title">Datos del Trabajador</span>
+            <div id="laser_section">
+                <div class="help-text">
+                    <span class="dot"></span>
+                    Pon el cursor aquí y dispara el gatillo de la Zebra
                 </div>
-                <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
-                    🪪 Escanear Carnet Chileno <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR</span>
-                </button>
-                <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
-                <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
-                <select id="area" class="form-input">
-                    <option value="" disabled selected>Seleccione Área...</option>
-                    {% for area in areas %}
-                    <option value="{{ area }}">{{ area }}</option>
-                    {% endfor %}
-                </select>
+                <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" inputmode="none">
             </div>
-        </div>
 
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">2</div> <span class="section-title">Método de Escaneo</span>
+            <div id="camara_section" style="display: none;">
+                <div class="help-text">
+                    <span class="dot"></span>
+                    Apunta al código QR con la cámara
                 </div>
-                <div class="method-pills">
-                    <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
-                    <label class="method-pill" for="btn_laser">🔫 Láser</label>
-                    <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
-                    <label class="method-pill" for="btn_cam_trasera">📸 Trasera</label>
-                </div>
-
-                <div id="laser_section">
-                    <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
-                </div>
-                <div id="camara_section" style="display: none;">
-                    <div id="reader"></div>
-                </div>
-                <div id="resultado" class="result-box result-idle">Esperando escaneo...</div>
+                <div id="reader"></div>
             </div>
-        </div>
 
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">3</div> <span class="section-title">Últimos Registros</span>
-                </div>
-                <div id="historyList" class="history-list">
-                    <div class="history-empty">📋 Aún no hay registros</div>
-                </div>
+            <div id="resultado" class="result-box result-idle">
+                Esperando escaneo...
             </div>
         </div>
     </div>
+
+    <!-- Últimos 3 registros -->
+    <div class="glass-card">
+        <div class="card-inner">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <span class="section-title">Últimos Registros</span>
+            </div>
+            <div id="historyList" class="history-list">
+                <div class="history-empty"><i data-lucide="clipboard-list" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i> Aún no hay registros en esta sesión</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
+<!-- Carnet Scanner Modal -->
 <div class="carnet-modal-overlay" id="carnetModalOverlay">
     <div class="carnet-modal">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <strong style="color:white; font-size:1.1rem;">🪪 Escanear Carnet</strong>
-            <button onclick="cerrarEscanerCarnet()" style="background:none; border:none; color:red; font-size:1.2rem;">✕</button>
+        <div class="carnet-modal-header">
+            <div class="carnet-modal-title">
+                <div class="modal-icon"><i data-lucide="id-card" style="width:28px;height:28px;color:var(--accent-indigo);"></i></div>
+                <div>
+                    <div>Escanear Carnet</div>
+                    <div style="font-size:0.68rem; font-weight:500; color:var(--text-muted); margin-top:1px;">Cédula de Identidad Chilena</div>
+                </div>
+            </div>
+            <button class="carnet-modal-close" onclick="cerrarEscanerCarnet()" title="Cerrar">✕</button>
         </div>
-        <div id="carnetReader"></div>
+        <div class="carnet-modal-body">
+            <div id="carnetReader"></div>
+            <div class="carnet-help">
+                <span class="carnet-help-icon"><i data-lucide="scan-line" style="width:20px;height:20px;"></i></span>
+                <div class="carnet-help-text">
+                    Apunta la cámara al <strong>código QR del reverso</strong> del carnet chileno. El RUT se llenará automáticamente.
+                </div>
+            </div>
+            <div id="carnetResult" class="carnet-result"></div>
+        </div>
     </div>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+    <span class="status-dot"></span>
+    <span class="status-text">Conectado — {{ sucursal }}</span>
+</div>
+
+
+{% else %}
+<div class="login-container">
+    <div class="glass-card">
+        <div class="card-inner">
+            <div class="brand-icon"><i data-lucide="boxes" style="width:32px;height:32px;color:white;"></i></div>
+            <div class="brand-text">Tuniche Móvil</div>
+            <div class="brand-sub">Sistema de Bodega</div>
+
+            {% if error %}
+            <div class="error-message">
+                <i data-lucide="alert-circle" style="width:20px;height:20px;"></i>
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/login">
+                <div class="input-group-custom">
+                    <input type="text" name="username" class="form-input" placeholder="Usuario" required autocomplete="username" autofocus>
+                    <div class="input-icon"><i data-lucide="user" style="width:20px;height:20px;"></i></div>
+                </div>
+                
+                <div class="input-group-custom">
+                    <input type="password" name="password" class="form-input" placeholder="Contraseña" required autocomplete="current-password">
+                    <div class="input-icon"><i data-lucide="lock" style="width:20px;height:20px;"></i></div>
+                </div>
+
+                <div class="input-group-custom">
+                    <select name="sucursal" class="form-input" required style="appearance: none; -webkit-appearance: none; padding-right:36px; background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'%2394a3b8\' viewBox=\'0 0 16 16\'%3E%3Cpath d=\'M8 11L3 6h10l-5 5z\'/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 14px center;">
+                        <option value="" disabled selected>Seleccione Sucursal...</option>
+                        <option value="TUNICHE" style="background:var(--bg-secondary);color:var(--text-primary)">Tuniche Fruits (Central)</option>
+                        <option value="PUQUILLAY" style="background:var(--bg-secondary);color:var(--text-primary)">Puquillay</option>
+                    </select>
+                    <div class="input-icon"><i data-lucide="building-2" style="width:20px;height:20px;"></i></div>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    Acceder al Sistema <i data-lucide="arrow-right" style="width:20px;height:20px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
-    let CREDENCIALES = { user: "", pass: "", planta: "" };
     let isProcessing = false;
+    let lastScannedCode = "";
     let html5QrCode;
     let carnetQrScanner = null;
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    function mostrarOverlay() {
+        loadingOverlay.classList.add('active');
+    }
+
+    function ocultarOverlay() {
+        loadingOverlay.classList.remove('active');
+    }
 
     window.onload = () => {
-        const guardado = localStorage.getItem('sgb_session');
-        if (guardado) {
-            CREDENCIALES = JSON.parse(guardado);
-            desbloquearApp();
-        } else {
-            document.getElementById('loginUser').focus();
-        }
+        html5QrCode = new Html5Qrcode("reader");
+        activarLaser(); 
     };
 
-    function iniciarSesion() {
-        const u = document.getElementById('loginUser').value.trim();
-        const p = document.getElementById('loginPass').value.trim();
-        const pl = document.getElementById('loginPlanta').value;
-        const errorDiv = document.getElementById('loginError');
+    // =====================================================
+    // === ESCANEO DE CARNET CHILENO (QR de cédula) ===
+    // =====================================================
+    function abrirEscanerCarnet() {
+        const overlay = document.getElementById('carnetModalOverlay');
+        const resultDiv = document.getElementById('carnetResult');
+        resultDiv.className = 'carnet-result';
+        resultDiv.style.display = 'none';
+        overlay.classList.add('active');
 
-        if(!u || !p) { errorDiv.innerText = "Complete usuario y contraseña."; return; }
+        // Crear instancia del scanner si no existe
+        if (!carnetQrScanner) {
+            carnetQrScanner = new Html5Qrcode("carnetReader");
+        }
 
-        errorDiv.style.color = "var(--accent-indigo)";
-        errorDiv.innerText = "Conectando al servidor...";
+        mostrarOverlay();
 
-        fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p })
-        })
-        .then(async res => {
-            const contentType = res.headers.get("content-type");
-            if (!res.ok) throw new Error("Error del servidor");
-            return res.json();
-        })
-        .then(data => {
-            if (data.success) {
-                CREDENCIALES = { user: u, pass: p, planta: pl };
-                localStorage.setItem('sgb_session', JSON.stringify(CREDENCIALES));
-                desbloquearApp();
-            } else {
-                errorDiv.style.color = "var(--accent-red)";
-                errorDiv.innerText = "❌ " + (data.message || "Usuario o contraseña incorrectos.");
-                vibrarCelular([300]);
-            }
-        })
-        .catch(err => {
-            errorDiv.style.color = "var(--accent-red)";
-            errorDiv.innerText = "❌ Error al conectar.";
-            console.error(err);
+        setTimeout(() => {
+            ocultarOverlay();
+        }, 800);
+
+        const cameraConfig = { 
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: "continuous" }] 
+        };
+
+        const scannerConfig = { 
+            fps: 15,
+            formatsToSupport: [ 
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.PDF_417
+            ]
+        };
+
+        carnetQrScanner.start(
+            cameraConfig,
+            scannerConfig,
+            (decodedText) => {
+                procesarCarnetQR(decodedText);
+            },
+            (errorMessage) => { /* ignorar errores de lectura continua */ }
+        ).catch((err) => {
+            console.error('Error al iniciar cámara para carnet:', err);
+            resultDiv.className = 'carnet-result error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = '❌ No se pudo acceder a la cámara.';
         });
     }
 
-    function desbloquearApp() {
-        document.getElementById('loginScreen').style.opacity = '0';
-        document.getElementById('loginScreen').style.visibility = 'hidden';
-        document.getElementById('appContent').style.opacity = '1';
-        document.getElementById('appContent').style.visibility = 'visible';
-        document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
-
-        html5QrCode = new Html5Qrcode("reader");
-        activarLaser();
-    }
-
-    function cerrarSesion() {
-        localStorage.removeItem('sgb_session');
-        location.reload();
-    }
-
-    function abrirEscanerCarnet() {
-        document.getElementById('carnetModalOverlay').classList.add('active');
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                iniciarCamaraCarnet();
-            }).catch(e => {
-                iniciarCamaraCarnet();
-            });
-        } else {
-            iniciarCamaraCarnet();
-        }
-    }
-
-    function iniciarCamaraCarnet() {
-        if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        
-        carnetQrScanner.start(
-            { facingMode: "environment" }, 
-            { 
-                fps: 15
-                // Al quitar qrbox, la cámara usa toda su resolución disponible y procesa la imagen completa
-            }, 
-            (txt) => procesarCarnetDesdeScanner(txt), 
-            (err) => {}
-        ).catch(() => alert("Error de cámara"));
-    }
-
     function cerrarEscanerCarnet() {
-        document.getElementById('carnetModalOverlay').classList.remove('active');
-        if (carnetQrScanner && carnetQrScanner.isScanning) carnetQrScanner.stop();
+        const overlay = document.getElementById('carnetModalOverlay');
+        overlay.classList.remove('active');
+
+        if (carnetQrScanner && carnetQrScanner.isScanning) {
+            carnetQrScanner.stop().catch(() => {});
+        }
     }
 
+    // --- DETECCIÓN INTELIGENTE: ¿Es un QR de carnet chileno? ---
+    function esCarnetChileno(data) {
+        // Formato 2013+: URL del Registro Civil
+        if (data.includes('registrocivil.cl') || data.includes('RUN=') || data.includes('run=')) {
+            return true;
+        }
+        // Formato PDF417 (2002)
+        if (data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            return true;
+        }
+        return false;
+    }
+
+    // Router: decide si el escaneo es carnet o producto
+    function routerEscaneo(codigo) {
+        if (esCarnetChileno(codigo)) {
+            procesarCarnetDesdeScanner(codigo);
+        } else {
+            procesarEscaneo(codigo);
+        }
+    }
+
+    // Procesar carnet escaneado desde láser/cámara (sin modal)
     function procesarCarnetDesdeScanner(data) {
-        // Alerta de lectura exitosa (para ver si logra sacar texto)
-        alert("¡LECTURA EXITOSA! Texto extraído: " + data);
-        
-        let rut = null; let nombre = null;
+        const resDiv = document.getElementById('resultado');
+        let rut = null;
+        let nombre = null;
+
+        // ── Formato 2013+: URL tipo query string ──
         if (data.includes('RUN=') || data.includes('run=')) {
-            let qs = data.includes('?') ? data.substring(data.indexOf('?') + 1) : data;
-            const params = new URLSearchParams(qs);
-            rut = params.get('RUN') || params.get('run');
-            if (params.get('name')) nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+            try {
+                let queryString = data;
+                if (data.includes('?')) {
+                    queryString = data.substring(data.indexOf('?') + 1);
+                }
+                const params = new URLSearchParams(queryString);
+                rut = params.get('RUN') || params.get('run');
+                // Extraer nombre desde el parámetro 'name'
+                const nameParam = params.get('name');
+                if (nameParam) {
+                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
+                    // Limpiar caracteres especiales y espacios múltiples
+                    nombre = nombre.replace(/\s+/g, ' ').trim();
+                }
+            } catch(e) {
+                console.error('Error parseando QR carnet:', e);
+            }
         }
-        if (!rut && data.length >= 70) {
-            let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { rut = rawRut; nombre = data.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); }
+
+        // ── Formato PDF417 (2002): datos posicionales ──
+        if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            try {
+                let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
+                if (rawRut.length >= 7) {
+                    rut = rawRut;
+                    let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
+                    if (rawApellido.length > 1) {
+                        nombre = rawApellido;
+                    }
+                }
+            } catch(e) {
+                console.error('Error parseando PDF417:', e);
+            }
         }
+
+        // ── Fallback: buscar patrón de RUT en el texto ──
         if (!rut) {
-            const match = data.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
-            if (match) rut = match[1];
+            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
+            const match = data.match(rutRegex);
+            if (match) {
+                rut = match[1];
+            }
         }
 
         if (rut) {
-            const rutF = formatearRut(rut);
-            document.getElementById('rut').value = rutF;
-            vibrarCelular([100]); cerrarEscanerCarnet();
+            const rutFormateado = formatearRut(rut);
+            document.getElementById('rut').value = rutFormateado;
+            document.getElementById('rut').classList.add('field-filled-pulse');
+            setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
 
-            fetch('/buscar_trabajador', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    rut: rutF, planta: CREDENCIALES.planta,
-                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
-                })
-            }).then(r => r.json()).then(d => {
-                if(d.success) { document.getElementById('trabajador').value = d.nombre; document.getElementById('area').value = d.area; }
-                else if(nombre) { document.getElementById('trabajador').value = nombre; }
-            }).catch(()=>{});
-        } else { vibrarCelular([300]); }
+            if (nombre) {
+                document.getElementById('trabajador').value = nombre;
+                document.getElementById('trabajador').classList.add('field-filled-pulse');
+                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
+            }
+
+            vibrarCelular([100, 50, 100]);
+
+            // Mostrar resultado en el div principal
+            resDiv.style.display = 'block';
+            resDiv.className = 'result-box result-success';
+            resDiv.innerHTML = '🪪 <strong>Carnet detectado — RUT: ' + rutFormateado + '</strong>' +
+                (nombre ? ' — ' + nombre : '');
+
+            setTimeout(() => {
+                resDiv.className = 'result-box result-idle';
+                resDiv.innerText = 'Listo para escanear producto...';
+                if (!nombre) {
+                    document.getElementById('trabajador').focus();
+                } else {
+                    document.getElementById('area').focus();
+                }
+            }, 2000);
+        } else {
+            resDiv.style.display = 'block';
+            resDiv.className = 'result-box result-warning';
+            resDiv.innerText = '⚠️ QR no reconocido como carnet chileno.';
+            setTimeout(() => {
+                resDiv.className = 'result-box result-idle';
+                resDiv.innerText = 'Esperando escaneo...';
+            }, 2500);
+        }
     }
 
+    function procesarCarnetQR(data) {
+        const resultDiv = document.getElementById('carnetResult');
+        let rut = null;
+        let nombre = null;
+
+        // ── Formato 2013+: URL tipo query string ──
+        // Ejemplo: https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-9&type=CEDULA&serial=...&name=JUAN%20RAMON%20MENDOZA
+        if (data.includes('RUN=') || data.includes('run=')) {
+            try {
+                let queryString = data;
+                if (data.includes('?')) {
+                    queryString = data.substring(data.indexOf('?') + 1);
+                }
+                const params = new URLSearchParams(queryString);
+                rut = params.get('RUN') || params.get('run');
+                // Extraer nombre desde el parámetro 'name'
+                const nameParam = params.get('name');
+                if (nameParam) {
+                    nombre = decodeURIComponent(nameParam).replace(/\+/g, ' ').trim();
+                    // Limpiar caracteres especiales y espacios múltiples
+                    nombre = nombre.replace(/\s+/g, ' ').trim();
+                }
+            } catch(e) {
+                console.error('Error parseando QR carnet:', e);
+            }
+        }
+
+        // ── Formato PDF417 (2002): datos posicionales ──
+        // Los primeros 9 chars contienen el RUN, posiciones 19-49 el apellido
+        if (!rut && data.length >= 70 && data.includes('EABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi')) {
+            try {
+                let rawRut = data.substring(0, 9).trim().replace(/^0+/, '');
+                if (rawRut.length >= 7) {
+                    rut = rawRut;
+                    // Intentar extraer apellido (posiciones 19-49)
+                    let rawApellido = data.substring(19, 49).trim().replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim();
+                    if (rawApellido.length > 1) {
+                        nombre = rawApellido;
+                    }
+                }
+            } catch(e) {
+                console.error('Error parseando PDF417:', e);
+            }
+        }
+
+        // ── Formato genérico: buscar patrón de RUT en el texto ──
+        if (!rut) {
+            const rutRegex = /\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i;
+            const match = data.match(rutRegex);
+            if (match) {
+                rut = match[1];
+            }
+        }
+
+        if (rut) {
+            // Formatear el RUT limpio
+            const rutFormateado = formatearRut(rut);
+            document.getElementById('rut').value = rutFormateado;
+            document.getElementById('rut').classList.add('field-filled-pulse');
+            setTimeout(() => document.getElementById('rut').classList.remove('field-filled-pulse'), 700);
+
+            if (nombre) {
+                document.getElementById('trabajador').value = nombre;
+                document.getElementById('trabajador').classList.add('field-filled-pulse');
+                setTimeout(() => document.getElementById('trabajador').classList.remove('field-filled-pulse'), 700);
+            }
+
+            vibrarCelular([100, 50, 100]);
+
+            resultDiv.className = 'carnet-result success';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '✅ RUT detectado: <strong>' + rutFormateado + '</strong>' + 
+                (nombre ? '<br>👤 ' + nombre : '');
+
+            // Cerrar automáticamente tras 1.5 segundos
+            setTimeout(() => {
+                cerrarEscanerCarnet();
+                // Enfocar el campo nombre si no se llenó
+                if (!nombre) {
+                    document.getElementById('trabajador').focus();
+                } else {
+                    document.getElementById('area').focus();
+                }
+            }, 1500);
+        } else {
+            resultDiv.className = 'carnet-result error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = '⚠️ QR no reconocido como carnet chileno. Intenta de nuevo.';
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 2500);
+        }
+    }
+
+    function formatearRut(rut) {
+        // Limpiar todo excepto dígitos y K
+        let limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        if (limpio.length < 2) return limpio;
+        let cuerpo = limpio.slice(0, -1);
+        let dv = limpio.slice(-1);
+        cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return cuerpo + '-' + dv;
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'carnetModalOverlay') {
+            cerrarEscanerCarnet();
+        }
+    });
+
+    // --- LÓGICA DEL SWITCH DE MODO ---
     function cambiarModo() {
         const toggle = document.getElementById("toggleModo");
         const texto = document.getElementById("textoModo");
-        const card = document.getElementById("cardModo");
-        const icon = document.getElementById("modeIcon");
+        const cardModo = document.getElementById("cardModo");
+        const modeIcon = document.getElementById("modeIcon");
 
         if (toggle.checked) {
-            texto.innerText = "DEVOLUCIÓN"; texto.className = "modo-devolucion-text";
-            icon.innerText = "📥"; card.className = "glass-card mode-card mode-devolucion";
+            texto.innerText = "DEVOLUCIÓN";
+            texto.className = "modo-devolucion-text";
+            modeIcon.innerHTML = `<i data-lucide="arrow-down-left" style="width:24px;height:24px;color:var(--accent-emerald);"></i>`; lucide.createIcons();
+            cardModo.classList.remove("mode-salida");
+            cardModo.classList.add("mode-devolucion");
         } else {
-            texto.innerText = "SALIDA"; texto.className = "modo-salida-text";
-            icon.innerText = "📤"; card.className = "glass-card mode-card mode-salida";
+            texto.innerText = "SALIDA";
+            texto.className = "modo-salida-text";
+            modeIcon.innerHTML = `<i data-lucide="arrow-up-right" style="width:24px;height:24px;color:var(--accent-amber);"></i>`; lucide.createIcons();
+            cardModo.classList.remove("mode-devolucion");
+            cardModo.classList.add("mode-salida");
         }
+        document.getElementById('laser_input').focus();
     }
 
-    function routerEscaneo(codigo) {
+    // --- AUTOFORMATO DE RUT ---
+    const inputRut = document.getElementById('rut');
+    inputRut.addEventListener('input', function(e) {
+        let valorLimpio = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
+        if (valorLimpio.length === 0) { e.target.value = ''; return; }
+        if (valorLimpio.length > 1) {
+            let cuerpo = valorLimpio.slice(0, -1);
+            let dv = valorLimpio.slice(-1);
+            cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            e.target.value = cuerpo + '-' + dv;
+        } else {
+            e.target.value = valorLimpio;
+        }
+    });
+
+    // --- PROCESAMIENTO DEL ESCANEO ---
+    function procesarEscaneo(codigoLeido) {
         if (isProcessing) return;
         
-        const resDiv = document.getElementById('resultado');
-        let isCarnet = false;
-        let rutCarnet = null;
-        let nombreCarnet = null;
-
-        if (codigo.includes('RUN=') || codigo.includes('run=')) {
-            let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
-            const params = new URLSearchParams(qs);
-            rutCarnet = params.get('RUN') || params.get('run');
-            if (params.get('name')) nombreCarnet = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-            isCarnet = true;
-        } else if (codigo.length >= 70) {
-            let rawRut = codigo.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { 
-                rutCarnet = rawRut; 
-                nombreCarnet = codigo.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
-                isCarnet = true;
-            }
-        }
-
-        if (isCarnet && rutCarnet) {
-            const rutF = formatearRut(rutCarnet);
-            document.getElementById('rut').value = rutF;
-            if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
-            vibrarCelular([100]);
-            
-            resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
-            resDiv.innerText = "Buscando trabajador en BD...";
-            
-            fetch('/buscar_trabajador', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rut: rutF, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
-            }).then(r => r.json()).then(d => {
-                if(d.success) { 
-                    document.getElementById('trabajador').value = d.nombre; 
-                    document.getElementById('area').value = d.area; 
-                    resDiv.className = "result-box result-success"; resDiv.innerText = "✅ Trabajador cargado. Escanea artículo.";
-                } else {
-                    resDiv.className = "result-box result-warning"; resDiv.innerText = "⚠️ Trabajador nuevo. Selecciona Área.";
-                    document.getElementById('area').focus();
-                }
-            }).catch(()=>{
-                resDiv.className = "result-box result-idle"; resDiv.innerText = "✅ RUT leído. Escanea artículo.";
-            });
-            return; 
-        }
-
         const rut = document.getElementById('rut').value;
         const trabajador = document.getElementById('trabajador').value;
         const area = document.getElementById('area').value;
-        const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
+        const resDiv = document.getElementById('resultado');
+        
+        // Verificamos en qué modo está el switch
+        const esDevolucion = document.getElementById('toggleModo').checked;
+        const accion = esDevolucion ? 'DEVOLUCION' : 'SALIDA';
 
+        // Validamos datos solo si es SALIDA (En devolución asumimos que es rápido)
         if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
-            resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
-            resDiv.innerText = "⚠️ Faltan datos del trabajador. Escanea carnet."; 
-            vibrarCelular([300]); return;
+            resDiv.style.display = "block";
+            resDiv.className = "result-box result-warning";
+            resDiv.innerText = "⚠️ Completa RUT, Nombre y Área para hacer una Salida.";
+            vibrarCelular([300]);
+            return;
         }
 
-        isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
-        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "⏳ Registrando...";
+        isProcessing = true;
+        mostrarOverlay();
+        resDiv.style.display = "block";
+        resDiv.className = "result-box result-loading";
+        resDiv.innerText = "⏳ Registrando " + accion.toLowerCase() + "...";
 
+        // Se envía al servidor
         fetch('/registrar_salida', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: accion, rut: rut, trabajador: trabajador, area: area, articulo_id: codigo, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
-        }).then(async res => {
-            if (!res.ok) throw new Error("Error Servidor HTTP " + res.status);
-            return res.json();
-        }).then(data => {
-            document.getElementById('loadingOverlay').classList.remove('active');
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                accion: accion, // <-- SE ENVÍA LA ACCIÓN AL PYTHON
+                rut: rut,
+                trabajador: trabajador,
+                area: area,
+                articulo_id: codigoLeido
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
             if(data.success) {
-                resDiv.className = "result-box result-success"; resDiv.innerHTML = "✅ " + data.message;
-                vibrarCelular([100]); agregarRegistro(accion, data.message, true);
+                resDiv.className = "result-box result-success";
+                resDiv.innerHTML = "<strong>✅ " + data.message + "</strong>";
+                vibrarCelular([100]);
+                agregarRegistro(accion, data.message, true);
             } else {
-                resDiv.className = "result-box result-error"; resDiv.innerHTML = "❌ " + data.message;
-                vibrarCelular([300]); agregarRegistro(accion, data.message, false);
+                resDiv.className = "result-box result-error";
+                resDiv.innerHTML = "<strong>❌ " + data.message + "</strong>";
+                vibrarCelular([300, 100, 300]);
+                agregarRegistro(accion, data.message, false);
             }
-            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "[ DISPARA AQUÍ ]"; isProcessing = false; }, 2000);
-        }).catch(err => {
-            document.getElementById('loadingOverlay').classList.remove('active');
-            resDiv.className = "result-box result-error"; resDiv.innerText = "❌ Fallo de conexión.";
-            agregarRegistro('ERROR', err.message, false);
+            
+            setTimeout(() => { 
+                ocultarOverlay();
+                isProcessing = false; 
+                resDiv.className = "result-box result-idle";
+                resDiv.innerText = "Listo para el siguiente...";
+            }, 1500); 
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            ocultarOverlay();
+            resDiv.className = "result-box result-error";
+            resDiv.innerHTML = '<i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:-3px;margin-right:2px"></i> Error de red.';
+            agregarRegistro('ERROR', 'Error de red', false);
             isProcessing = false;
         });
     }
 
+    function vibrarCelular(patron) {
+        if ("vibrate" in navigator) { navigator.vibrate(patron); }
+    }
+
+    // --- LÓGICA DE CÁMARA Y LÁSER ---
+    function apagarCamara() {
+        return new Promise((resolve) => {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => resolve()).catch(() => resolve());
+            } else { resolve(); }
+        });
+    }
+
     function activarLaser() {
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        document.getElementById('camara_section').style.display = 'none';
-        document.getElementById('laser_section').style.display = 'block';
+        apagarCamara().then(() => {
+            document.getElementById('camara_section').style.display = 'none';
+            document.getElementById('laser_section').style.display = 'block';
+            setTimeout(() => document.getElementById('laser_input').focus(), 100);
+        });
     }
 
-    function activarCamara(modo) {
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        document.getElementById('laser_section').style.display = 'none';
-        document.getElementById('camara_section').style.display = 'block';
-        html5QrCode.start({ facingMode: modo }, { fps: 10 }, (txt) => { routerEscaneo(txt); }, () => {});
+    function activarCamara(modo_lente) {
+        apagarCamara().then(() => {
+            document.getElementById('laser_section').style.display = 'none';
+            document.getElementById('camara_section').style.display = 'block';
+            
+            const cameraConfig = { 
+                facingMode: modo_lente,
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                advanced: [{ focusMode: "continuous" }]
+            };
+
+            html5QrCode.start(
+                cameraConfig,
+                { fps: 15, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    if (decodedText !== lastScannedCode) {
+                        lastScannedCode = decodedText;
+                        routerEscaneo(decodedText);
+                        setTimeout(() => { lastScannedCode = ""; }, 2000);
+                    }
+                },
+                (errorMessage) => { }
+            ).catch((err) => {
+                alert("Error al iniciar la cámara.");
+                activarLaser(); 
+                document.getElementById('btn_laser').checked = true;
+            });
+        });
     }
 
-    let scanTimer;
-    document.getElementById('laser_input').addEventListener('input', (e) => {
+    const laserInput = document.getElementById('laser_input');
+    let scanTimer = null;
+
+    // Auto-detect: el escáner Zebra escribe rápido y para.
+    // Esperamos 150ms sin actividad para procesar automáticamente.
+    laserInput.addEventListener('input', function() {
         clearTimeout(scanTimer);
-        if(e.target.value.trim().length > 0) {
-            scanTimer = setTimeout(() => { routerEscaneo(e.target.value.trim()); e.target.value = ''; }, 150);
+        const codigo = laserInput.value.trim();
+        if (codigo.length > 0) {
+            scanTimer = setTimeout(() => {
+                routerEscaneo(codigo);
+                laserInput.value = '';
+                laserInput.focus();
+            }, 150); // 150ms de silencio = escaneo completo
         }
     });
 
-    document.getElementById('laser_input').addEventListener('keypress', (e) => {
+    // Respaldo: Enter manual sigue funcionando
+    laserInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            e.preventDefault(); clearTimeout(scanTimer);
-            if(e.target.value.trim()) { routerEscaneo(e.target.value.trim()); e.target.value = ''; }
+            e.preventDefault();
+            clearTimeout(scanTimer);
+            const codigo = laserInput.value.trim();
+            if(codigo) {
+                routerEscaneo(codigo);
+                laserInput.value = ''; 
+                laserInput.focus();    
+            }
         }
     });
 
-    function formatearRut(r) {
-        let l = r.replace(/[^0-9kK]/g, '').toUpperCase(); if(l.length<2) return l;
-        return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
-    }
-    function vibrarCelular(p) { if(navigator.vibrate) navigator.vibrate(p); }
+    // --- HISTORIAL DE ÚLTIMOS 3 REGISTROS ---
+    let historialRegistros = [];
 
-    let historial = [];
-    function agregarRegistro(accion, msg, exito) {
-        const h = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        historial.unshift({ accion, msg, exito, hora: h });
-        if (historial.length > 3) historial.pop();
-        document.getElementById('historyList').innerHTML = historial.map(r => `
-            <div class="history-item ${!r.exito ? 'error-item' : (r.accion==='DEVOLUCION'?'devolucion-item':'salida-item')}">
-                <span class="history-icon">${!r.exito ? '❌' : (r.accion==='DEVOLUCION'?'📥':'📤')}</span>
-                <div class="history-info">
-                    <div class="history-msg">${r.msg}</div>
-                    <div class="history-meta">
-                        <span class="history-badge ${!r.exito?'badge-error':(r.accion==='DEVOLUCION'?'badge-devolucion':'badge-salida')}">${!r.exito?'Error':(r.accion==='DEVOLUCION'?'Devolución':'Salida')}</span>
-                        <span class="history-time">🕐 ${r.hora}</span>
+    function agregarRegistro(accion, mensaje, exito) {
+        const ahora = new Date();
+        const hora = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const registro = { accion, mensaje, exito, hora };
+        historialRegistros.unshift(registro);
+        if (historialRegistros.length > 3) historialRegistros.pop();
+
+        renderHistorial();
+    }
+
+    function renderHistorial() {
+        const container = document.getElementById('historyList');
+        if (historialRegistros.length === 0) {
+            container.innerHTML = '<div class="history-empty"><i data-lucide="clipboard-list" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i> Aún no hay registros en esta sesión</div>';
+            return;
+        }
+
+        container.innerHTML = historialRegistros.map(r => {
+            let icon, itemClass, badgeClass, badgeText;
+
+            if (!r.exito) {
+                icon = '<i data-lucide="x-circle" style="width:20px;color:var(--accent-red);"></i>';
+                itemClass = 'error-item';
+                badgeClass = 'badge-error';
+                badgeText = 'Error';
+            } else if (r.accion === 'DEVOLUCION') {
+                icon = '<i data-lucide="arrow-down-left" style="width:20px;color:var(--accent-emerald);"></i>';
+                itemClass = 'devolucion-item';
+                badgeClass = 'badge-devolucion';
+                badgeText = 'Devolución';
+            } else {
+                icon = '<i data-lucide="arrow-up-right" style="width:20px;color:var(--accent-amber);"></i>';
+                itemClass = 'salida-item';
+                badgeClass = 'badge-salida';
+                badgeText = 'Salida';
+            }
+
+            return `
+                <div class="history-item ${itemClass}">
+                    <span class="history-icon">${icon}</span>
+                    <div class="history-info">
+                        <div class="history-msg">${r.mensaje}</div>
+                        <div class="history-meta">
+                            <span class="history-badge ${badgeClass}">${badgeText}</span>
+                            <span class="history-time">🕐 ${r.hora}</span>
+                        </div>
                     </div>
                 </div>
-            </div>`).join('');
+            `;
+        }).join('');
+        setTimeout(() => lucide.createIcons(), 10);
+        setTimeout(() => lucide.createIcons(), 10);
     }
 </script>
+
 </body>
 </html>
