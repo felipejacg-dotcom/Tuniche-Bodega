@@ -569,6 +569,11 @@
         }
     });
 
+    // Formatear RUT automáticamente mientras se escribe
+    document.getElementById('rut').addEventListener('input', function(e) {
+        e.target.value = formatearRut(e.target.value);
+    });
+
     function formatearRut(r) {
         let l = r.replace(/[^0-9kK]/g, '').toUpperCase(); if(l.length<2) return l;
         return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
