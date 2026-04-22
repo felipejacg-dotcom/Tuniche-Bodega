@@ -210,7 +210,7 @@
                 <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
                     🪪 Escanear Carnet <span class="btn-badge" style="background:var(--gradient-main); color:white; padding:2px 6px; border-radius:4px; font-size:0.6rem;">QR / PDF417</span>
                 </button>
-                <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)">
+                <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)" oninput="this.value = formatearRut(this.value)">
                 <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
                 <select id="area" class="form-input">
                     <option value="" disabled selected>Seleccione Área...</option>
@@ -567,11 +567,6 @@
             e.preventDefault(); clearTimeout(scanTimer);
             if(e.target.value.trim()) { routerEscaneo(e.target.value.trim()); e.target.value = ''; }
         }
-    });
-
-    // Formatear RUT automáticamente mientras se escribe
-    document.getElementById('rut').addEventListener('input', function(e) {
-        e.target.value = formatearRut(e.target.value);
     });
 
     function formatearRut(r) {
