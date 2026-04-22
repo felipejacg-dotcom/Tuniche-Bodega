@@ -406,6 +406,7 @@
             if (nombre) document.getElementById('trabajador').value = nombre;
             
             vibrarCelular([100]); 
+            reproducirSonido('success');
             cerrarEscanerCarnet();
 
             fetch('/buscar_trabajador', {
@@ -424,6 +425,7 @@
             }).catch(()=>{});
         } else { 
             vibrarCelular([300]); 
+            reproducirSonido('error');
             cerrarEscanerCarnet();
             alert("No se detectó un RUT válido en el código.");
         }
@@ -472,6 +474,7 @@
             document.getElementById('rut').value = rutF;
             if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
             vibrarCelular([100]);
+            reproducirSonido('success');
             
             resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
             resDiv.innerText = "Buscando trabajador en BD...";
@@ -502,7 +505,7 @@
         if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
             resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
             resDiv.innerText = "⚠️ Faltan datos del trabajador. Escanea carnet."; 
-            vibrarCelular([300]); return;
+            vibrarCelular([300]); reproducirSonido('error'); return;
         }
 
         isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
@@ -518,16 +521,16 @@
             document.getElementById('loadingOverlay').classList.remove('active');
             if(data.success) {
                 resDiv.className = "result-box result-success"; resDiv.innerHTML = "✅ " + data.message;
-                vibrarCelular([100]); agregarRegistro(accion, data.message, true);
+                vibrarCelular([100]); reproducirSonido('success'); agregarRegistro(accion, data.message, true);
             } else {
                 resDiv.className = "result-box result-error"; resDiv.innerHTML = "❌ " + data.message;
-                vibrarCelular([300]); agregarRegistro(accion, data.message, false);
+                vibrarCelular([300]); reproducirSonido('error'); agregarRegistro(accion, data.message, false);
             }
             setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "[ DISPARA AQUÍ ]"; isProcessing = false; }, 2000);
         }).catch(err => {
             document.getElementById('loadingOverlay').classList.remove('active');
             resDiv.className = "result-box result-error"; resDiv.innerText = "❌ Fallo de conexión.";
-            agregarRegistro('ERROR', err.message, false);
+            reproducirSonido('error'); agregarRegistro('ERROR', err.message, false);
             isProcessing = false;
         });
     }
@@ -571,6 +574,32 @@
         return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
     }
     function vibrarCelular(p) { if(navigator.vibrate) navigator.vibrate(p); }
+
+    let audioCtx = null;
+    function reproducirSonido(tipo) {
+        try {
+            // 1. Intentar sonido nativo Android primero si esta disponible
+            if (window.AndroidApp && window.AndroidApp.playBeep) {
+                window.AndroidApp.playBeep(tipo);
+                return;
+            }
+            // 2. Fallback Web Audio API
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            if (tipo === 'success') {
+                o.type = 'sine'; o.frequency.value = 1500; // Beep agudo de éxito
+                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                o.start(); o.stop(audioCtx.currentTime + 0.15);
+            } else {
+                o.type = 'square'; o.frequency.value = 250; // Buzz grave de error
+                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                o.start(); o.stop(audioCtx.currentTime + 0.3);
+            }
+        } catch(e){}
+    }
 
     let historial = [];
     function agregarRegistro(accion, msg, exito) {
