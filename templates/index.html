@@ -353,24 +353,18 @@
         if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
         
         carnetQrScanner.start(
-            { 
-                facingMode: "environment",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                advanced: [{ focusMode: "continuous" }]
-            }, 
+            { facingMode: "environment" }, 
             { 
                 fps: 15, 
-                // Caja rectangular más ancha para códigos largos como el PDF417
-                qrbox: function(cw, ch) {
-                    return { width: Math.min(cw * 0.9, 450), height: 160 };
-                }
+                // Caja rectangular (300 de ancho x 130 de alto) perfecta para PDF417
+                // Usamos valores que caben en todas las pantallas de celular sin error
+                qrbox: { width: 300, height: 130 } 
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
         ).catch((e) => {
-            console.warn("Fallo cámara alta resolución, usando fallback normal", e);
-            carnetQrScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 300, height: 150 } }, (txt) => procesarCarnetDesdeScanner(txt), (err) => {});
+            console.error(e);
+            alert("Error al iniciar cámara: " + e);
         });
     }
 
