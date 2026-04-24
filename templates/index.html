@@ -356,15 +356,15 @@
             { facingMode: "environment" }, 
             { 
                 fps: 15,
-                // Cuadrado central para facilitar el enfoque sin sobrecargar el procesador
                 qrbox: 250,
-                // TRUCO MAESTRO: Le pedimos que SOLO lea Códigos QR e ignore PDF417 o barras.
-                // Esto le da a la cámara el 100% del procesador para leer los micropuntos rápidos a baja resolución.
                 formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
-        ).catch((e) => {
+        ).then(() => {
+            // Aplicar Zoom x2.5 para que la cámara no necesite pegarse al carnet y pueda enfocar
+            aplicarZoomCamara(carnetQrScanner, 2.5);
+        }).catch((e) => {
             console.error(e);
             alert("Error al iniciar cámara: " + e);
         });
@@ -555,7 +555,28 @@
             { fps: 15 }, // Sin qrbox para usar pantalla completa
             (txt) => { routerEscaneo(txt); }, 
             () => {}
-        );
+        ).then(() => {
+            // Aplicar Zoom x1.8 para los artículos normales
+            aplicarZoomCamara(html5QrCode, 1.8);
+        }).catch((e) => console.error(e));
+    }
+
+    function aplicarZoomCamara(scannerInstancia, zoomLevel) {
+        setTimeout(() => {
+            try {
+                // Obtiene la señal de video de la cámara
+                const track = scannerInstancia.getRunningTrack();
+                if (track && track.getCapabilities && track.applyConstraints) {
+                    const capabilities = track.getCapabilities();
+                    // Si el lente del celular soporta Zoom digital desde la Web
+                    if (capabilities.zoom) {
+                        // Limitar el zoom al máximo que el lente soporte (para que no de error)
+                        let fZ = Math.min(Math.max(capabilities.zoom.min, zoomLevel), capabilities.zoom.max);
+                        track.applyConstraints({ advanced: [{ zoom: fZ }] }).catch(()=>{});
+                    }
+                }
+            } catch(e) {}
+        }, 600); // 600ms de retraso para asegurar que la cámara encendió por completo
     }
 
     let scanTimer;
