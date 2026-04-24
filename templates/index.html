@@ -269,6 +269,15 @@
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
 
 <script>
+    // --- Receptor del Scanner Nativo de Android ---
+    window.onNativeScanResult = function(data, tipo) {
+        if (tipo === 'carnet') {
+            procesarCarnetDesdeScanner(data);
+        } else if (tipo === 'articulo') {
+            routerEscaneo(data);
+        }
+    };
+
     let CREDENCIALES = { user: "", pass: "", planta: "" };
     let isProcessing = false;
     let html5QrCode;
@@ -340,6 +349,13 @@
     }
 
     function abrirEscanerCarnet() {
+        // Intento de usar el escáner experto nativo de Android (Google Play Services)
+        if (window.AndroidApp && window.AndroidApp.openNativeScanner) {
+            window.AndroidApp.openNativeScanner('carnet');
+            return;
+        }
+        
+        // Fallback: usar cámara web (para PC o navegadores ajenos)
         document.getElementById('carnetModalOverlay').classList.add('active');
         
         if (html5QrCode && html5QrCode.isScanning) {
@@ -546,6 +562,14 @@
     }
 
     function activarCamara(modo) {
+        // Intento de usar el escáner experto nativo de Android
+        if (window.AndroidApp && window.AndroidApp.openNativeScanner) {
+            window.AndroidApp.openNativeScanner('articulo');
+            // Como el escáner captura toda la pantalla, regresamos el botón a Láser automáticamente
+            setTimeout(() => { document.getElementById('btn_laser').click(); }, 300);
+            return;
+        }
+
         if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         document.getElementById('laser_section').style.display = 'none';
         document.getElementById('camara_section').style.display = 'block';
