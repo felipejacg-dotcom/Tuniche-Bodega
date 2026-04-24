@@ -355,10 +355,9 @@
         carnetQrScanner.start(
             { facingMode: "environment" }, 
             { 
-                fps: 15, 
-                // Caja rectangular (300 de ancho x 130 de alto) perfecta para PDF417
-                // Usamos valores que caben en todas las pantallas de celular sin error
-                qrbox: { width: 300, height: 130 } 
+                fps: 15
+                // Eliminamos el 'qrbox' para leer la imagen a pantalla completa.
+                // Así agarra instantáneamente tanto el PDF417 (largo) como el código QR (cuadrado).
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
@@ -550,7 +549,7 @@
         
         html5QrCode.start(
             { facingMode: modo }, 
-            { fps: 10, qrbox: { width: 250, height: 250 } }, 
+            { fps: 15 }, // Sin qrbox para usar pantalla completa
             (txt) => { routerEscaneo(txt); }, 
             () => {}
         );
