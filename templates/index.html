@@ -355,9 +355,12 @@
         carnetQrScanner.start(
             { facingMode: "environment" }, 
             { 
-                fps: 15
-                // Eliminamos el 'qrbox' para leer la imagen a pantalla completa.
-                // Así agarra instantáneamente tanto el PDF417 (largo) como el código QR (cuadrado).
+                fps: 15,
+                // Cuadrado central para facilitar el enfoque sin sobrecargar el procesador
+                qrbox: 250,
+                // TRUCO MAESTRO: Le pedimos que SOLO lea Códigos QR e ignore PDF417 o barras.
+                // Esto le da a la cámara el 100% del procesador para leer los micropuntos rápidos a baja resolución.
+                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
             }, 
             (txt) => procesarCarnetDesdeScanner(txt), 
             (err) => {}
