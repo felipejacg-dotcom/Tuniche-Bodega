@@ -14,6 +14,7 @@ const App = (() => {
         currentWorker: null,      // { rut, nombre, area }
         currentArticulo: null,    // { id, descripcion, stock }
         articulos: [],            // cache from /api/articulos
+        scannedArticulos: [],     // carro de multi-escaneo para salida masiva
         historial: [],            // session history
         registros: [],            // loaded from /api/registros
         registrosFilter: "",      // "EN TERRENO" | "DEVUELTO" | ""
@@ -68,6 +69,11 @@ const App = (() => {
         // Modal carnet
         carnetModal: $("carnetModal"),
         btnCloseCarnet: $("btnCloseCarnet"),
+        // Nuevos contenedores dinamicos
+        devolucionesPendientesSection: $("devolucionesPendientesSection"),
+        devolucionesPendientesList: $("devolucionesPendientesList"),
+        multiScanSection: $("multiScanSection"),
+        multiScanList: $("multiScanList"),
         // Overlays
         loadingOverlay: $("loadingOverlay"),
         toastContainer: $("toastContainer"),
@@ -185,6 +191,22 @@ const App = (() => {
             : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>`;
         els.btnConfirm.className = `btn-confirm mode-${state.mode.toLowerCase()}`;
         els.btnConfirm.querySelector("span").textContent = state.mode === "SALIDA" ? "CONFIRMAR SALIDA" : "CONFIRMAR DEVOLUCION";
+
+        clearArticulo();
+
+        if (state.mode === "DEVOLUCION") {
+            els.multiScanSection.style.display = "none";
+            const rut = els.inputRut.value.trim();
+            if (rut) {
+                cargarPendientes(rut);
+            } else {
+                ocultarPendientes();
+            }
+        } else {
+            ocultarPendientes();
+            renderMultiScanList();
+        }
+
         updateConfirmButton();
     }
 
@@ -216,6 +238,11 @@ const App = (() => {
             }
         } catch (_) {}
         state.currentWorker = { rut: rutFmt };
+
+        if (state.mode === "DEVOLUCION") {
+            cargarPendientes(rutFmt);
+        }
+
         updateConfirmButton();
     }
 
@@ -241,22 +268,70 @@ const App = (() => {
         }
     }
 
-    function selectArticulo(art) {
-        state.currentArticulo = art;
-        vibrate([80]);
-        const hasStock = art.stock_disponible > 0;
-        const display = els.articuloDisplay;
-        display.className = `articulo-display ${hasStock ? "found" : "no-stock"}`;
-        els.articuloNombre.textContent = `${art.descripcion} [${art.talla}]`;
-        els.articuloStock.textContent = hasStock
-            ? `Stock disponible: ${art.stock_disponible}`
-            : "Sin stock disponible";
+    async function selectArticulo(art) {
+        const rut = els.inputRut.value.trim();
+        const nombre = els.inputNombre.value.trim();
+        const area = els.inputArea.value;
 
-        const iconEl = display.querySelector(".articulo-icon");
-        if (iconEl) {
-            iconEl.innerHTML = hasStock
-                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M20 6L9 17l-5-5"/></svg>`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+        if (state.mode === "SALIDA") {
+            if (art.stock_disponible <= 0) {
+                toast(`Sin stock disponible de ${art.descripcion}`, "error");
+                vibrate([300]);
+                return;
+            }
+
+            let warningText = "";
+            if (rut) {
+                try {
+                    const freq = await API.getUltimoRetiro(rut, art.id);
+                    if (freq.success && freq.alerta) {
+                        warningText = `⚠️ Retirado hace ${freq.dias} dias (${freq.fecha})`;
+                    }
+                } catch (_) {}
+            }
+
+            if (state.scannedArticulos.some(a => a.id === art.id)) {
+                toast("Este articulo ya esta en la lista.", "warning");
+                return;
+            }
+
+            state.scannedArticulos.push({
+                id: art.id,
+                descripcion: art.descripcion,
+                talla: art.talla,
+                medida: art.medida,
+                stock_disponible: art.stock_disponible,
+                warning: warningText
+            });
+
+            vibrate([80]);
+            renderMultiScanList();
+
+            els.articuloDisplay.className = "articulo-display found";
+            els.articuloNombre.textContent = `Agregado: ${art.descripcion} [${art.talla || ""}]`;
+            els.articuloStock.textContent = "";
+
+            if (state.scanMethod === "laser") {
+                els.laserInput.value = "";
+                setTimeout(() => els.laserInput.focus(), 100);
+            }
+        } else {
+            // Modo DEVOLUCION: verificar si coincide con la lista de pendientes cargada
+            const pendientesItems = Array.from(document.querySelectorAll(".pending-return-item"));
+            const matchPendiente = pendientesItems.find(el => parseInt(el.dataset.articuloId) === art.id);
+
+            if (matchPendiente && rut && nombre && area) {
+                vibrate([80]);
+                toast(`Procesando devolucion automatica de ${art.descripcion}...`, "info");
+                devolverRapido(art.id, art.descripcion);
+                return;
+            }
+
+            state.currentArticulo = art;
+            vibrate([80]);
+            els.articuloDisplay.className = "articulo-display found";
+            els.articuloNombre.textContent = `${art.descripcion} [${art.talla || ""}]`;
+            els.articuloStock.textContent = "Listo para devolucion";
         }
         updateConfirmButton();
     }
@@ -275,9 +350,19 @@ const App = (() => {
         const rut = els.inputRut.value.trim();
         const nombre = els.inputNombre.value.trim();
         const area = els.inputArea.value;
-        const hasArt = state.currentArticulo !== null;
-        const hasStock = state.currentArticulo && state.currentArticulo.stock_disponible > 0;
-        const canConfirm = rut && nombre && area && hasArt && (state.mode === "DEVOLUCION" || hasStock);
+
+        let canConfirm = false;
+        if (state.mode === "SALIDA") {
+            canConfirm = rut && nombre && area && state.scannedArticulos.length > 0;
+            const n = state.scannedArticulos.length;
+            els.btnConfirm.querySelector("span").textContent = n > 1
+                ? `CONFIRMAR SALIDA (${n} ITEMS)`
+                : "CONFIRMAR SALIDA";
+        } else {
+            const hasArt = state.currentArticulo !== null;
+            canConfirm = rut && nombre && area && hasArt;
+            els.btnConfirm.querySelector("span").textContent = "CONFIRMAR DEVOLUCION";
+        }
         els.btnConfirm.disabled = !canConfirm;
     }
 
@@ -305,43 +390,202 @@ const App = (() => {
         const rut = els.inputRut.value.trim();
         const nombre = els.inputNombre.value.trim();
         const area = els.inputArea.value;
-        const art = state.currentArticulo;
 
-        if (!rut || !nombre || !area || !art) {
-            toast("Completa todos los campos.", "warning"); return;
+        if (!rut || !nombre || !area) {
+            toast("Completa los datos del trabajador.", "warning"); return;
+        }
+
+        if (state.mode === "SALIDA") {
+            if (state.scannedArticulos.length === 0) {
+                toast("Escanea al menos un articulo.", "warning"); return;
+            }
+
+            showLoading();
+            try {
+                const ids = state.scannedArticulos.map(a => a.id);
+                const data = await API.registrarMasivo(rut, nombre, area, ids);
+                hideLoading();
+
+                if (data.success) {
+                    vibrate([100, 50, 100]);
+                    toast(data.message, "success", 4000);
+
+                    // Update stocks in local cache
+                    data.entregados.forEach(item => {
+                        const idx = state.articulos.findIndex(a => a.id === item.id);
+                        if (idx !== -1) state.articulos[idx].stock_disponible = item.nuevo_stock;
+                    });
+
+                    // Add to session history
+                    state.historial.unshift({
+                        tipo: "salida",
+                        msg: data.message,
+                        rut,
+                        area,
+                        hora: data.hora || "",
+                    });
+                    renderHistorial();
+
+                    // Reset form and multi-scan cart
+                    state.scannedArticulos = [];
+                    renderMultiScanList();
+                    clearArticulo();
+
+                    if (state.scanMethod === "laser") {
+                        setTimeout(() => els.laserInput.focus(), 200);
+                    }
+                } else {
+                    vibrate([300]);
+                    toast(data.message || "Error al registrar entrega.", "error", 4000);
+                }
+            } catch (e) {
+                hideLoading();
+                toast("Error de conexion.", "error");
+            }
+        } else {
+            // Modo DEVOLUCION manual
+            const art = state.currentArticulo;
+            if (!art) {
+                toast("Escanea o selecciona el articulo a devolver.", "warning"); return;
+            }
+
+            showLoading();
+            try {
+                const data = await API.registrar("DEVOLUCION", rut, nombre, area, art.id);
+                hideLoading();
+
+                if (data.success) {
+                    vibrate([100, 50, 100]);
+                    toast(data.message, "success", 3000);
+
+                    const idx = state.articulos.findIndex(a => a.id === art.id);
+                    if (idx !== -1) state.articulos[idx].stock_disponible = data.nuevo_stock;
+
+                    // Reload pending returns list
+                    cargarPendientes(rut);
+
+                    state.historial.unshift({
+                        tipo: "devolucion",
+                        msg: data.message,
+                        rut,
+                        area,
+                        hora: data.hora || "",
+                    });
+                    renderHistorial();
+
+                    clearArticulo();
+                    if (state.scanMethod === "laser") {
+                        setTimeout(() => els.laserInput.focus(), 200);
+                    }
+                } else {
+                    vibrate([300]);
+                    toast(data.message || "Error al registrar devolucion.", "error", 4000);
+                }
+            } catch (e) {
+                hideLoading();
+                toast("Error de conexion.", "error");
+            }
+        }
+    }
+
+    // ── Multi-Scan List Render ────────────────────────────────────
+    function renderMultiScanList() {
+        const container = els.multiScanList;
+        if (state.scannedArticulos.length === 0) {
+            els.multiScanSection.style.display = "none";
+            container.innerHTML = "";
+            return;
+        }
+
+        els.multiScanSection.style.display = "block";
+        container.innerHTML = state.scannedArticulos.map((art, idx) => {
+            const warnHtml = art.warning
+                ? `<div class="multi-scan-alert">${art.warning}</div>`
+                : "";
+            return `
+                <div class="multi-scan-item" data-index="${idx}">
+                    <div class="multi-scan-details">
+                        <div>${escHtml(art.descripcion)} [${escHtml(art.talla || "-")}]</div>
+                        ${warnHtml}
+                    </div>
+                    <button type="button" class="btn-remove-item" onclick="App.removeItemFromMultiScan(${idx})" aria-label="Eliminar">&times;</button>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function removeItemFromMultiScan(idx) {
+        state.scannedArticulos.splice(idx, 1);
+        renderMultiScanList();
+        updateConfirmButton();
+        if (state.scannedArticulos.length === 0) {
+            clearArticulo();
+        }
+    }
+
+    // ── Devoluciones Pendientes ───────────────────────────────────
+    async function cargarPendientes(rut) {
+        if (!rut) return;
+        try {
+            const data = await API.getPendientes(rut);
+            if (data.success && data.pendientes && data.pendientes.length > 0) {
+                els.devolucionesPendientesSection.style.display = "block";
+                els.devolucionesPendientesList.innerHTML = data.pendientes.map(p => `
+                    <div class="pending-return-item" data-articulo-id="${p.articulo_id}" data-transaccion-id="${p.transaccion_id}">
+                        <div class="pending-return-info">
+                            <div class="pending-return-title">${escHtml(p.descripcion)}</div>
+                            <div class="pending-return-date">Retirado el ${escHtml(p.hora_salida)}</div>
+                        </div>
+                        <button type="button" class="btn-quick-return"
+                                onclick="App.devolverRapido(${p.articulo_id}, '${escHtml(p.descripcion).replace(/'/g, "\\'")}')">
+                            Devolver
+                        </button>
+                    </div>
+                `).join("");
+            } else {
+                ocultarPendientes();
+            }
+        } catch (e) {
+            console.error("Error al cargar pendientes:", e);
+            ocultarPendientes();
+        }
+    }
+
+    function ocultarPendientes() {
+        els.devolucionesPendientesSection.style.display = "none";
+        els.devolucionesPendientesList.innerHTML = "";
+    }
+
+    async function devolverRapido(articuloId, descripcion) {
+        const rut = els.inputRut.value.trim();
+        const nombre = els.inputNombre.value.trim();
+        const area = els.inputArea.value;
+
+        if (!rut || !nombre || !area) {
+            toast("Completa el RUT y datos del trabajador.", "warning");
+            return;
         }
 
         showLoading();
         try {
-            const data = await API.registrar(state.mode, rut, nombre, area, art.id);
+            const data = await API.registrar("DEVOLUCION", rut, nombre, area, articuloId);
             hideLoading();
-
             if (data.success) {
                 vibrate([100, 50, 100]);
-                toast(data.message, "success", 3000);
+                toast(`Devuelto con exito: ${descripcion}`, "success");
 
-                // Update local stock cache
-                const idx = state.articulos.findIndex(a => a.id === art.id);
-                if (idx !== -1) state.articulos[idx].stock_disponible = data.nuevo_stock;
+                cargarPendientes(rut);
 
-                // Add to session history
                 state.historial.unshift({
-                    tipo: state.mode.toLowerCase(),
+                    tipo: "devolucion",
                     msg: data.message,
                     rut,
                     area,
                     hora: data.hora || "",
                 });
                 renderHistorial();
-
-                // Reset form for next scan
-                clearArticulo();
-                if (state.scanMethod === "laser") {
-                    setTimeout(() => els.laserInput.focus(), 200);
-                }
             } else {
-                vibrate([300]);
-                toast(data.message || "Error al registrar.", "error", 4000);
+                toast(data.message || "Error al registrar devolucion.", "error");
             }
         } catch (e) {
             hideLoading();
@@ -388,6 +632,7 @@ const App = (() => {
         els.carnetModal.classList.remove("active");
         Scanner.stopCarnetCamera();
     }
+
 
     // ── Stock View ────────────────────────────────────────────────
     async function loadArticulos() {
@@ -502,6 +747,64 @@ const App = (() => {
             .replace(/"/g, "&quot;");
     }
 
+    /**
+     * Formatea un RUT chileno en tiempo real mientras el usuario escribe.
+     * Ejemplos:
+     *   "208269216"  →  "20.826.921-6"
+     *   "20826921k"  →  "20.826.921-K"
+     * Regla: solo permite digitos + K; aplica puntos al cuerpo y guion antes del DV.
+     * Requiere minimo 2 caracteres para mostrar el guion.
+     */
+    function formatRutLive(raw) {
+        // 1. Limpiar: solo digitos y K
+        const clean = raw.replace(/[^0-9kK]/g, "").toUpperCase();
+        if (clean.length === 0) return "";
+        if (clean.length === 1) return clean;
+
+        // 2. Separar cuerpo y digito verificador
+        const dv = clean.slice(-1);
+        const body = clean.slice(0, -1);
+        if (body.length === 0) return dv;
+
+        // 3. Agregar puntos al cuerpo (cada 3 digitos desde la derecha)
+        const bodyFmt = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+        return `${bodyFmt}-${dv}`;
+    }
+
+    /**
+     * Handler del campo RUT: formatea mientras el usuario escribe
+     * y reposiciona el cursor correctamente despues de formatear.
+     */
+    function onRutInput(e) {
+        const el = e.target;
+        const before = el.value;
+        const cursorBefore = el.selectionStart;
+
+        // Contar cuantos caracteres reales (digitos/K) hay ANTES del cursor
+        const realBefore = before.slice(0, cursorBefore).replace(/[^0-9kK]/gi, "").length;
+
+        const formatted = formatRutLive(before);
+
+        // Solo actualizar si el valor cambia (evitar bucles)
+        if (formatted !== before) {
+            el.value = formatted;
+
+            // Reposicionar cursor: avanzar en el string formateado
+            // hasta haber contado la misma cantidad de chars reales
+            let realCount = 0;
+            let newCursor = 0;
+            for (let i = 0; i < formatted.length; i++) {
+                if (/[0-9kK]/i.test(formatted[i])) realCount++;
+                newCursor = i + 1;
+                if (realCount >= realBefore) break;
+            }
+            el.setSelectionRange(newCursor, newCursor);
+        }
+
+        updateConfirmButton();
+    }
+
     // ── Init ──────────────────────────────────────────────────────
     function init() {
         // Login
@@ -519,6 +822,7 @@ const App = (() => {
         els.btnCloseCarnet.addEventListener("click", closeCarnetModal);
         els.carnetModal.addEventListener("click", e => { if (e.target === els.carnetModal) closeCarnetModal(); });
 
+
         // Laser input for articles
         Scanner.initLaser(els.laserInput, onArticuloScanned);
         setTimeout(() => els.laserInput.focus(), 500);
@@ -527,7 +831,29 @@ const App = (() => {
         els.btnConfirm.addEventListener("click", confirmOperation);
 
         // Form change → re-validate confirm button
-        els.inputRut.addEventListener("input", updateConfirmButton);
+        // RUT: formatea en tiempo real mientras se escribe
+        els.inputRut.addEventListener("input", onRutInput);
+        els.inputRut.addEventListener("change", async (e) => {
+            const rutFmt = e.target.value.trim();
+            if (rutFmt.length >= 11) {
+                try {
+                    const data = await API.buscarTrabajador(rutFmt);
+                    if (data.success) {
+                        els.inputNombre.value = data.nombre;
+                        const sel = els.inputArea;
+                        for (let i = 0; i < sel.options.length; i++) {
+                            if (sel.options[i].value === data.area) {
+                                sel.selectedIndex = i; break;
+                            }
+                        }
+                    }
+                } catch (_) {}
+                if (state.mode === "DEVOLUCION") {
+                    cargarPendientes(rutFmt);
+                }
+                updateConfirmButton();
+            }
+        });
         els.inputNombre.addEventListener("input", updateConfirmButton);
         els.inputArea.addEventListener("change", updateConfirmButton);
 
@@ -562,5 +888,7 @@ const App = (() => {
         setScanMethod,
         loadRegistros,
         logout,
+        removeItemFromMultiScan,
+        devolverRapido,
     };
 })();

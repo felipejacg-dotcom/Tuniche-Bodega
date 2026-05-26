@@ -10,7 +10,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-loginfix">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-multiscan">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
      ============================================================ -->
 <div id="loginScreen">
     <div class="login-card">
-        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-loginfix" alt="Tuniche Fruits">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-multiscan" alt="Tuniche Fruits">
         <div class="login-brand">
             <h1>SGB Logistic F.C.</h1>
             <p>Sistema de Bodega &mdash; Acceso de Operario</p>
@@ -56,7 +56,7 @@
     <header class="app-header">
         <div class="header-left">
             <div class="header-logo-box">
-                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-loginfix" alt="Tuniche">
+                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-multiscan" alt="Tuniche">
             </div>
             <div class="header-brand">
                 <strong>SGB LOGISTIC F.C.</strong>
@@ -133,6 +133,17 @@
                 </div>
             </div>
 
+            <!-- Contenedor dinámico de Devoluciones Pendientes (se muestra en modo DEVOLUCION si hay items) -->
+            <div id="devolucionesPendientesSection" style="display:none;" class="card">
+                <div class="card-header" style="background:#f0fdf4; border-bottom:1px solid #bbf7d0;">
+                    <div class="card-step" style="background:var(--success); color:#fff;">↺</div>
+                    <span class="card-title" style="color:var(--success-dark); font-weight:800;">Pendientes de Devolución</span>
+                </div>
+                <div class="card-body" id="devolucionesPendientesList" style="padding:10px 14px;">
+                    <!-- Se rellena vía JS -->
+                </div>
+            </div>
+
             <!-- Card 2: Articulo -->
             <div class="card">
                 <div class="card-header">
@@ -176,6 +187,12 @@
                             </div>
                             <div class="articulo-stock" id="articuloStock"></div>
                         </div>
+                    </div>
+
+                    <!-- Multi-scan cart (se muestra en modo SALIDA) -->
+                    <div id="multiScanSection" style="display:none; margin-top: 14px;">
+                        <div class="section-label">Artículos para entrega masiva</div>
+                        <div id="multiScanList"></div>
                     </div>
                 </div>
             </div>
@@ -326,6 +343,7 @@
     </div>
 </div>
 
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
     <div class="spinner"></div>
@@ -334,9 +352,9 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-loginfix"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-loginfix"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-loginfix"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-multiscan"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-multiscan"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-multiscan"></script>
 
 </body>
 </html>

@@ -97,3 +97,71 @@ def get_registros():
     finally:
         if conn:
             conn.close()
+
+
+@stock_bp.route("/ultimo_retiro")
+@login_required
+def get_ultimo_retiro():
+    rut = request.args.get("rut", "").strip()
+    art_id_raw = request.args.get("articulo_id", "").strip()
+
+    if not rut or not art_id_raw:
+        return jsonify({"success": False, "message": "RUT y ID de articulo requeridos."}), 400
+
+    try:
+        art_id = int(art_id_raw)
+    except ValueError:
+        return jsonify({"success": False, "message": "ID de articulo invalido."}), 400
+
+    planta = get_current_planta()
+    conn = None
+    try:
+        conn = get_connection(planta)
+        cur = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT hora_salida FROM transacciones "
+            "WHERE rut = %s AND articulo_id = %s "
+            "ORDER BY id DESC LIMIT 1",
+            (rut, art_id),
+        )
+        row = cur.fetchone()
+        cur.close()
+
+        if row:
+            from datetime import datetime
+            val = row["hora_salida"]
+
+            # Parse datetime
+            if isinstance(val, str):
+                try:
+                    dt = datetime.strptime(val, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    dt = None
+            else:
+                dt = val
+
+            if dt:
+                from zoneinfo import ZoneInfo
+                ZONA_CHILE = ZoneInfo("America/Santiago")
+                now = datetime.now(ZONA_CHILE)
+
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=ZONA_CHILE)
+
+                diff = now - dt
+                dias = diff.days
+
+                alerta = dias <= 7
+                return jsonify({
+                    "success": True,
+                    "alerta": alerta,
+                    "dias": dias,
+                    "fecha": dt.strftime("%d/%m/%Y %H:%M"),
+                })
+
+        return jsonify({"success": True, "alerta": False})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+    finally:
+        if conn:
+            conn.close()

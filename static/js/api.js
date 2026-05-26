@@ -60,5 +60,17 @@ const API = (() => {
                 method: "POST",
                 body: { accion, rut, trabajador, area, articulo_id },
             }),
+
+        registrarMasivo: (rut, trabajador, area, articulo_ids) =>
+            _req("/api/registrar_masivo", {
+                method: "POST",
+                body: { rut, trabajador, area, articulo_ids },
+            }),
+
+        getPendientes: (rut) =>
+            _req(`/api/pendientes?rut=${encodeURIComponent(rut)}`),
+
+        getUltimoRetiro: (rut, articulo_id) =>
+            _req(`/api/ultimo_retiro?rut=${encodeURIComponent(rut)}&articulo_id=${articulo_id}`),
     };
 })();
