@@ -2,1003 +2,341 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bodega Tuniche - Escáner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <style>
-        :root {
-            --app-bg: #fbfaf8;
-            --ink: #121412;
-            --muted: #6f7d6d;
-            --line: #b8c9b6;
-            --line-soft: #dce5da;
-            --green: #007a21;
-            --green-soft: #e8f6e9;
-            --green-card: #18451f;
-            --red: #c9151e;
-            --red-soft: #fde8e8;
-            --black: #1c1f1d;
-            --field: #ffffff;
-            --radius-lg: 14px;
-            --radius-md: 10px;
-            --radius-sm: 6px;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--app-bg);
-            color: var(--ink);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        #loginScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fbfaf8; z-index: 99999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 18px; transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        .login-container {
-            background: #ffffff;
-            border: 1px solid #b8c9b6;
-            border-radius: var(--radius-lg);
-            padding: 48px 32px 34px;
-            max-width: 336px;
-            width: calc(100vw - 36px);
-            box-shadow: 0 12px 30px rgba(26, 54, 30, 0.08);
-        }
-        .tuniche-logo {
-            display: block;
-            width: min(190px, 78%);
-            height: auto;
-            margin: 0 auto 34px;
-        }
-        .brand-mark {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #07111f;
-            font-weight: 900;
-            letter-spacing: 0.04em;
-            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
-        }
-        .login-subtitle { font-size: 1.08rem; color: #263927; margin-bottom: 36px; text-align: center; font-weight: 500; }
-
-        .login-label { font-size: 0.92rem; font-weight: 800; color: #111111; margin-bottom: 8px; display: block; letter-spacing: 0.08em; }
-        .login-input, .login-select {
-            width: 100%; background: #ffffff; border: 1px solid #b8c9b6;
-            color: #101214; font-size: 1rem; padding: 14px 18px; border-radius: 2px;
-            margin-bottom: 18px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .login-field { position: relative; }
-        .login-field .login-input { padding-left: 52px; }
-        .login-field-icon {
-            position: absolute;
-            left: 18px;
-            top: 15px;
-            width: 22px;
-            height: 22px;
-            color: #2d3f2c;
-            pointer-events: none;
-        }
-        .login-select { appearance: none; padding-right: 44px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' fill='none' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%232d3f2c' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 20px center; }
-        .login-select option { background: #ffffff; color: #101214; }
-        .login-input::placeholder { color: #6b7280; }
-        .login-input:focus, .login-select:focus { border-color: #007a21; box-shadow: 0 0 0 3px rgba(0, 122, 33, 0.12); }
-
-        .btn-login {
-            width: 100%; background: #007a21; color: white; border: none;
-            padding: 17px; border-radius: 2px; font-weight: 800; font-size: 1rem;
-            cursor: pointer; margin-top: 8px; transition: transform 0.2s, background 0.2s;
-            letter-spacing: 0.09em;
-        }
-        .btn-login:hover { background: #00681c; }
-        .btn-login:active { transform: scale(0.98); }
-        .login-error { color: #b91c1c; font-size: 0.85rem; text-align: center; margin-bottom: 10px; min-height: 20px;}
-
-        #appContent { opacity: 0; visibility: hidden; transition: opacity 0.6s ease; }
-        .app-shell { min-height: 100vh; padding-bottom: 92px; background: var(--app-bg); }
-        .top-bar { position: sticky; top: 0; z-index: 20; background: var(--black); border-bottom: 1px solid #2e332f; padding: 16px 0; }
-        .brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 520px; margin: 0 auto; padding: 0 20px; }
-        .brand-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-        .brand-logo-box { width: 54px; height: 54px; border-radius: 7px; background: #123f1c; display: flex; align-items: center; justify-content: center; padding: 7px; flex: 0 0 auto; }
-        .brand-logo { max-width: 100%; height: auto; display: block; }
-        .brand-text { color: white; font-weight: 800; font-size: 1.18rem; line-height: 1.1; }
-        .brand-sub { color: #52624f; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.11em; margin-top: 5px; text-transform: uppercase; }
-        .btn-logout { background: transparent; border: none; color: #ff3944; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; cursor: pointer; text-align: right; text-transform: none; }
-
-        .main-container { position: relative; z-index: 5; max-width: 520px; margin: 0 auto; padding: 20px 20px 24px; }
-        .app-view { display: none; }
-        .app-view.active { display: block; }
-
-        .planta-bloqueada { background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 15px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .planta-label { display: inline-flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #243323; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-        .planta-bloqueada-badge { background: #49b958; color: #132716; padding: 8px 15px; border-radius: 999px; font-weight: 900; font-size: 0.84rem; letter-spacing: 0.05em; text-align: right; white-space: nowrap; }
-
-        .glass-card { background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius-md); margin-bottom: 26px; overflow: hidden; }
-        .card-inner { padding: 26px; }
-        .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-        .section-number { width: 42px; height: 42px; border-radius: 13px; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 900; color: white; flex: 0 0 auto; }
-        .section-title { font-size: 1.17rem; font-weight: 800; color: #111111; }
-
-        .mode-card { position: relative; overflow: hidden; }
-        .mode-inner { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .mode-card.mode-salida { border-left: 5px solid var(--red); }
-        .mode-card.mode-devolucion { border-left: 5px solid var(--green); }
-        .mode-symbol { width: 60px; height: 60px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--red); background: var(--red-soft); margin-right: 14px; }
-        .mode-card.mode-devolucion .mode-symbol { color: var(--green); background: var(--green-soft); }
-        #textoModo { font-weight: 900; font-size: 1.35rem; letter-spacing: 0.02em; }
-        .modo-salida-text { color: var(--red); }
-        .modo-devolucion-text { color: var(--green); }
-        .mode-caption { font-size: 0.72rem; color: #3f493e; text-transform: uppercase; }
-
-        .switch-ios { position: relative; display: inline-block; width: 74px; height: 42px; }
-        .switch-ios input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--red); border-radius: 14px; transition: 0.25s; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08); }
-        .slider:before { position: absolute; content: ""; height: 30px; width: 30px; right: 6px; bottom: 6px; background: #2f80ed; border-radius: 999px; transition: 0.25s; }
-        .slider:after { content: ""; position: absolute; right: 16px; top: 14px; width: 10px; height: 6px; border-left: 3px solid white; border-bottom: 3px solid white; transform: rotate(-45deg); z-index: 1; }
-        input:checked + .slider { background-color: var(--green); }
-        input:checked + .slider:before { transform: translateX(-32px); }
-        input:checked + .slider:after { right: 48px; }
-
-        .form-input { width: 100%; padding: 15px 20px; border-radius: 4px; border: 1px solid var(--line); background: var(--field); color: #141414; margin-bottom: 16px; outline: none; font-size: 1rem; }
-        .form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0, 122, 33, 0.12); }
-        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' fill='none' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%23364236' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 20px center; padding-right: 48px; }
-        select.form-input option { background: #ffffff; color: #141414; }
-
-        .method-pills { display: flex; gap: 6px; background: #f8f7f5; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 5px; margin-bottom: 24px; }
-        .method-pills input[type="radio"] { display: none; }
-        .method-pill { flex: 1; text-align: center; padding: 12px 8px; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 900; color: #2f3d2f; cursor: pointer; letter-spacing: 0.08em; }
-        .method-pills input[type="radio"]:checked + .method-pill { background: var(--green); color: white; }
-
-        .laser-box { width: 100%; padding: 34px 16px; border-radius: var(--radius-md); border: 2px dashed var(--line); background: #fffdfa; color: #223220; font-size: 1rem; font-weight: 900; text-align: center; outline: none; letter-spacing: 0.12em; }
-        #reader { width: 100%; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; }
-
-        .result-box { border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.9rem; font-weight: 700; margin-top: 16px; display: none; }
-        .result-idle { background: #f4f6f3; color: var(--muted); }
-        .result-loading { background: #edf7ef; color: var(--green); }
-        .result-success { background: #e8f6e9; color: var(--green); }
-        .result-error { background: #fde8e8; color: var(--red); }
-        .result-warning { background: #fff7dd; color: #8a5b00; }
-
-        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px; margin-bottom: 18px; border-radius: 3px; border: 2px solid var(--green); background: #ffffff; color: var(--green); font-weight: 900; letter-spacing: 0.08em; cursor: pointer; }
-        .btn-badge { background: #e8eee7; color: var(--green); padding: 6px 10px; border-radius: 3px; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; }
-
-        .records-toolbar { display: flex; flex-direction: column; gap: 18px; margin-bottom: 26px; }
-        .search-box { position: relative; }
-        .search-box svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #6f7d6d; }
-        .search-box input { width: 100%; padding: 18px 18px 18px 54px; border: 1px solid var(--line); border-radius: 4px; background: #ffffff; font-size: 1rem; color: var(--ink); outline: none; }
-        .filter-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 3px; }
-        .filter-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border: 2px solid #111111; border-radius: 13px; background: #ffffff; color: #111111; font-weight: 900; letter-spacing: 0.08em; }
-        .records-date { margin: 26px 0 12px; color: var(--muted); font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
-        .record-card { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: #ffffff; border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: var(--radius-md); padding: 20px 18px; margin-bottom: 14px; }
-        .record-card.salida { border-left-color: var(--red); }
-        .record-name { font-weight: 900; font-size: 1.1rem; color: #111111; margin-bottom: 6px; }
-        .record-rut { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 700; margin-bottom: 12px; }
-        .record-meta { display: flex; flex-wrap: wrap; gap: 14px; color: #2e3a2e; font-size: 0.9rem; }
-        .record-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 13px; border-radius: 999px; background: #dff3e1; border: 1px solid #acd9b0; color: var(--green); font-size: 0.75rem; font-weight: 900; letter-spacing: 0.08em; }
-        .record-card.salida .record-badge { background: var(--red-soft); border-color: #efa9ad; color: var(--red); }
-        .summary-card { background: var(--black); color: #ffffff; border: 2px solid #050505; border-radius: var(--radius-md); padding: 28px 34px; margin-top: 28px; }
-        .summary-title { color: #9cff9d; font-size: 0.92rem; letter-spacing: 0.16em; font-weight: 900; margin-bottom: 26px; }
-        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        .summary-number { font-size: 2rem; font-weight: 800; line-height: 1; }
-        .summary-label { margin-top: 10px; color: #f5f5f5; font-size: 0.78rem; text-transform: uppercase; }
-
-        .settings-header { display: flex; justify-content: space-between; align-items: center; margin: 2px 0 20px; }
-        .settings-title { color: var(--green); font-size: 1.18rem; font-weight: 900; letter-spacing: 0.07em; }
-        .settings-group-title { color: #324033; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.05em; margin: 24px 0 12px; text-transform: uppercase; }
-        .profile-card, .settings-card { background: #ffffff; border: 1px solid var(--line-soft); border-left: 4px solid var(--green); border-radius: var(--radius-md); padding: 22px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
-        .profile-kicker { color: var(--green); font-size: 0.76rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
-        .profile-name { font-size: 1.35rem; font-weight: 900; margin: 8px 0; }
-        .profile-meta { color: #596356; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.85rem; }
-        .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 19px 4px; border-bottom: 1px solid #ecefec; }
-        .setting-row:last-child { border-bottom: none; }
-        .setting-copy strong { display: block; font-weight: 700; color: #1e241e; margin-bottom: 3px; }
-        .setting-copy span { color: #596356; font-size: 0.9rem; }
-        .switch-control { width: 44px; height: 24px; border-radius: 999px; background: #dedede; position: relative; flex: 0 0 auto; }
-        .switch-control.on { background: var(--green); }
-        .switch-control::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 999px; right: 2px; top: 2px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .switch-control:not(.on)::after { right: 22px; }
-        .logout-wide { width: 100%; margin-top: 28px; padding: 16px; border: none; border-radius: 7px; background: var(--red); color: #ffffff; font-weight: 800; }
-        .settings-footer { text-align: center; color: #a0a0a0; font-size: 0.78rem; margin: 42px 0 18px; }
-
-        .bottom-nav { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 30; width: min(520px, 100%); background: var(--black); border-radius: 8px 8px 0 0; padding: 12px 20px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; box-shadow: 0 -4px 18px rgba(0,0,0,0.18); }
-        .nav-btn { border: none; background: transparent; color: #ffffff; border-radius: 13px; padding: 9px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 800; letter-spacing: 0.03em; }
-        .nav-btn svg { width: 24px; height: 24px; }
-        .nav-btn.active { background: #1f4a24; color: #7dff7f; }
-
-        .icon { width: 22px; height: 22px; display: inline-block; vertical-align: middle; }
-
-        .carnet-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: 0.3s; }
-        .carnet-modal-overlay.active { opacity: 1; visibility: visible; }
-        .carnet-modal { width: 100%; max-width: 440px; background: #ffffff; border-radius: var(--radius-lg); padding: 20px; }
-        .history-list { display: flex; flex-direction: column; gap: 10px; }
-        .history-empty { color: #2f3d2f; font-style: italic; padding: 12px 16px; }
-        .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: #fffdfa; border: 1px solid var(--line-soft); }
-        .history-item.salida-item { border-left: 4px solid var(--red); }
-        .history-item.devolucion-item { border-left: 4px solid var(--green); }
-        .history-item.error-item { border-left: 4px solid var(--red); opacity: 0.75; }
-        .history-status { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; margin-top: 4px; background: var(--red); }
-        .devolucion-item .history-status { background: var(--green); }
-        .history-msg { font-size: 0.84rem; font-weight: 700; color: #111111; }
-        .history-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
-        .history-badge { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 900; color: var(--muted); }
-        .history-time { font-size: 0.72rem; color: var(--muted); }
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; }
-        .loading-overlay.active { opacity: 1; visibility: visible; }
-        .loading-spinner { width: 56px; height: 56px; border: 4px solid rgba(255,255,255, 0.25); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SGB Bodega — Tuniche</title>
+    <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 
+<!-- ============================================================
+     LOGIN SCREEN
+     ============================================================ -->
 <div id="loginScreen">
-    <div class="login-container">
-        <img class="tuniche-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}" alt="Tuniche Infinite Flavor">
-        <p class="login-subtitle">Acceso de Operario</p>
-        
-        <div id="loginError" class="login-error"></div>
-
-        <span class="login-label">Seleccione Sucursal</span>
-        <select id="loginPlanta" class="login-select">
-            <option value="TUNICHE">Tuniche Fruits (Central)</option>
-            <option value="PUQUILLAY">Puquillay</option>
-        </select>
-
-        <span class="login-label">Usuario</span>
-        <div class="login-field">
-            <svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 21a8 8 0 0 0-16 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            <input type="text" id="loginUser" class="login-input" placeholder="Ej: bodega" autocorrect="off" autocapitalize="none">
+    <div class="login-card">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}" alt="Tuniche Fruits">
+        <div class="login-brand">
+            <h1>SGB Logistic F.C.</h1>
+            <p>Sistema de Bodega &mdash; Acceso de Operario</p>
         </div>
-
-        <span class="login-label">Contraseña</span>
-        <div class="login-field">
-            <svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-                <path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="12" cy="15" r="1.3" fill="currentColor"/>
-            </svg>
-            <input type="password" id="loginPass" class="login-input" placeholder="••••••••">
+        <div id="loginError" class="login-error" role="alert"></div>
+        <div class="form-group">
+            <label for="loginPlanta">Sucursal</label>
+            <select id="loginPlanta" class="form-ctrl">
+                <option value="TUNICHE">Tuniche Fruits (Central)</option>
+                <option value="PUQUILLAY">Puquillay</option>
+            </select>
         </div>
-
-        <button class="btn-login" onclick="iniciarSesion()">INGRESAR AL SISTEMA</button>
+        <div class="form-group">
+            <label for="loginUser">Usuario</label>
+            <input type="text" id="loginUser" class="form-ctrl" placeholder="Ej: bodega"
+                   autocorrect="off" autocapitalize="none" autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="loginPass">Contrasena</label>
+            <input type="password" id="loginPass" class="form-ctrl" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                   autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="btnLogin" type="button">INGRESAR AL SISTEMA</button>
     </div>
 </div>
 
+<!-- ============================================================
+     APP CONTENT
+     ============================================================ -->
 <div id="appContent">
-    <div class="app-shell">
-        <div class="top-bar">
-            <div class="brand">
-                <div class="brand-left">
-                    <div class="brand-logo-box">
-                        <img class="brand-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}" alt="Tuniche">
-                    </div>
-                    <div>
-                        <div class="brand-text">Tuniche Móvil</div>
-                        <div class="brand-sub">Sistema de Bodega</div>
-                    </div>
-                </div>
-                <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="header-logo-box">
+                <img src="{{ url_for('static', filename='logo-tuniche.png') }}" alt="Tuniche">
+            </div>
+            <div class="header-brand">
+                <strong>SGB LOGISTIC F.C.</strong>
+                <span id="headerPlanta">Planta: TUNICHE</span>
             </div>
         </div>
+        <div class="header-right">
+            <span id="headerPlantaBadge" class="planta-badge">TUNICHE</span>
+            <button class="btn-logout" id="btnLogout" type="button">Salir</button>
+        </div>
+    </header>
 
-        <div class="main-container">
-            <section id="viewOperacion" class="app-view active">
-                <div class="planta-bloqueada">
-                    <span class="planta-label">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 21h18M5 21V5h10v16M9 8h2M9 12h2M9 16h2M15 11h4v10"/>
+    <!-- MAIN -->
+    <main class="app-main">
+
+        <!-- ====================================================
+             VIEW: OPERACION
+             ==================================================== -->
+        <section id="viewOperacion" class="view active" aria-label="Operacion">
+
+            <!-- Mode Banner -->
+            <div class="mode-banner mode-salida" id="modeBanner">
+                <div class="mode-info">
+                    <span class="mode-icon" id="modeIcon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+                            <path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/>
                         </svg>
-                        Planta activa
                     </span>
-                    <span id="lblPlantaActiva" class="planta-bloqueada-badge">TUNICHE</span>
-                </div>
-
-                <div class="glass-card mode-card mode-salida" id="cardModo">
-                    <div class="mode-inner">
-                        <div style="display:flex; align-items:center;">
-                            <span id="modeIcon" class="mode-symbol">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/>
-                                </svg>
-                            </span>
-                            <div style="display:flex; flex-direction:column;">
-                                <span class="mode-caption">Modo activo</span>
-                                <span id="textoModo" class="modo-salida-text">SALIDA</span>
-                            </div>
-                        </div>
-                        <label class="switch-ios">
-                            <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
-                            <span class="slider"></span>
-                        </label>
+                    <div>
+                        <div class="mode-label">Modo activo</div>
+                        <div class="mode-name" id="modeName">SALIDA</div>
                     </div>
                 </div>
+                <label class="toggle-wrap" aria-label="Cambiar a devolucion">
+                    <input type="checkbox" class="toggle-input" id="modeToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
 
-                <div class="glass-card">
-                    <div class="card-inner">
-                        <div class="section-header">
-                            <div class="section-number">1</div>
-                            <span class="section-title">Datos del Trabajador</span>
-                        </div>
-                        <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="4" y="6" width="16" height="12" rx="2"/>
-                                <path d="M8 10h3M8 14h8M15 10h1"/>
-                                <path d="M12 3v5M9 3h6"/>
-                            </svg>
-                            Escanear Carnet <span class="btn-badge">QR / PDF417</span>
-                        </button>
-                        <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)" oninput="this.value = formatearRut(this.value)">
-                        <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
-                        <select id="area" class="form-input">
-                            <option value="" disabled selected>Seleccione Área...</option>
+            <!-- Card 1: Trabajador -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">1</div>
+                    <span class="card-title">Datos del Trabajador</span>
+                </div>
+                <div class="card-body">
+                    <button class="btn-scan" id="btnScanCarnet" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="4" y="6" width="16" height="12" rx="2"/>
+                            <path d="M8 10h3M8 14h8M15 10h1"/>
+                            <path d="M12 3v5M9 3h6"/>
+                        </svg>
+                        Escanear Credencial (Carnet / QR)
+                    </button>
+                    <div class="input-group">
+                        <label class="input-label" for="inputRut">RUT</label>
+                        <input type="text" id="inputRut" class="app-input" placeholder="Ej: 12.345.678-9"
+                               inputmode="text" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="inputNombre">Nombre Completo</label>
+                        <input type="text" id="inputNombre" class="app-input" placeholder="Nombre del trabajador"
+                               autocomplete="off">
+                    </div>
+                    <div class="input-group" style="margin-bottom:0">
+                        <label class="input-label" for="inputArea">Area / Departamento</label>
+                        <select id="inputArea" class="app-input">
+                            <option value="" disabled selected>Seleccione area...</option>
                             {% for area in areas %}
                             <option value="{{ area }}">{{ area }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
+            </div>
 
-                <div class="glass-card">
-                    <div class="card-inner">
-                        <div class="section-header">
-                            <div class="section-number">2</div>
-                            <span class="section-title">Método de Escaneo</span>
-                        </div>
-                        <div class="method-pills">
-                            <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
-                            <label class="method-pill" for="btn_laser">Láser</label>
-                            <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
-                            <label class="method-pill" for="btn_cam_trasera">Trasera</label>
-                        </div>
-
-                        <div id="laser_section">
-                            <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
-                        </div>
-                        <div id="camara_section" style="display: none;">
-                            <div id="reader"></div>
-                        </div>
-                        <div id="resultado" class="result-box result-idle">Esperando escaneo...</div>
-                    </div>
+            <!-- Card 2: Articulo -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">2</div>
+                    <span class="card-title">Articulo EPP / Herramienta</span>
                 </div>
-
-                <div class="glass-card">
-                    <div class="card-inner">
-                        <div class="section-header">
-                            <div class="section-number">3</div>
-                            <span class="section-title">Últimos Registros</span>
-                        </div>
-                        <div id="historyList" class="history-list">
-                            <div class="history-empty">Aún no hay registros</div>
-                        </div>
+                <div class="card-body">
+                    <!-- Scan method tabs -->
+                    <div class="scan-method-tabs">
+                        <button class="scan-tab active" id="tabLaser" type="button" onclick="App.setScanMethod('laser')">
+                            Pistola Laser
+                        </button>
+                        <button class="scan-tab" id="tabCamara" type="button" onclick="App.setScanMethod('camera')">
+                            Camara
+                        </button>
                     </div>
-                </div>
-            </section>
 
-            <section id="viewRegistros" class="app-view">
-                <div class="records-toolbar">
-                    <div class="search-box">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="7"/>
-                            <path d="M20 20l-3.5-3.5"/>
-                        </svg>
-                        <input type="text" placeholder="Buscar trabajador por nombre o RUT..." oninput="filtrarRegistros(this.value)">
+                    <!-- Laser input -->
+                    <div id="laserSection">
+                        <input type="text" id="laserInput" class="laser-input"
+                               placeholder="[ Dispara aqui con la pistola ]"
+                               autocomplete="off" spellcheck="false" inputmode="none">
                     </div>
-                    <div class="filter-row">
-                        <button class="filter-chip" type="button">Fecha</button>
-                        <button class="filter-chip" type="button">Entrada/Salida</button>
-                        <button class="filter-chip" type="button">Filtros</button>
+
+                    <!-- Camera -->
+                    <div id="camaraSection" style="display:none;">
+                        <div id="readerArticulo" style="width:100%;border-radius:8px;overflow:hidden;margin-bottom:10px;"></div>
                     </div>
-                </div>
 
-                <div class="records-date">Hoy, turno activo</div>
-                <div id="recordsList">
-                    <div class="history-empty">Aún no hay registros del turno</div>
-                </div>
-
-                <div class="summary-card">
-                    <div class="summary-title">RESUMEN DE TURNO</div>
-                    <div class="summary-grid">
-                        <div>
-                            <div id="totalEntradas" class="summary-number">0</div>
-                            <div class="summary-label">Entradas totales</div>
+                    <!-- Article info -->
+                    <div class="articulo-display" id="articuloDisplay">
+                        <div class="articulo-icon" id="articuloIcon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                                <path d="M16 7V5a2 2 0 0 0-4 0v2"/>
+                            </svg>
                         </div>
-                        <div>
-                            <div id="totalSalidas" class="summary-number">0</div>
-                            <div class="summary-label">Salidas totales</div>
+                        <div class="articulo-info">
+                            <div class="articulo-nombre" id="articuloNombre" style="color:var(--muted);font-weight:500;">
+                                Esperando escaneo de articulo...
+                            </div>
+                            <div class="articulo-stock" id="articuloStock"></div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <section id="viewAjustes" class="app-view">
-                <div class="settings-header">
-                    <div>
-                        <div class="settings-title">TUNICHE</div>
-                        <div class="settings-title">EPP</div>
-                    </div>
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <!-- Confirm Button -->
+            <button class="btn-confirm mode-salida" id="btnConfirm" type="button" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                <span>CONFIRMAR SALIDA</span>
+            </button>
+
+            <!-- Mini Historial -->
+            <div class="section-label">
+                <span>Ultimas operaciones</span>
+                <span id="histCount"></span>
+            </div>
+            <div id="historialList">
+                <div class="empty-state" style="padding:16px;">
+                    <p>Sin operaciones en esta sesion</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ====================================================
+             VIEW: STOCK
+             ==================================================== -->
+        <section id="viewStock" class="view" aria-label="Stock">
+            <div class="search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                </svg>
+                <input type="search" id="stockSearch" class="search-ctrl" placeholder="Buscar articulo...">
+            </div>
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all" onclick="App.filterStock('all')">Todos</button>
+                <button class="filter-tab" data-filter="low" onclick="App.filterStock('low')">Stock bajo</button>
+                <button class="filter-tab" data-filter="zero" onclick="App.filterStock('zero')">Sin stock</button>
+            </div>
+            <div id="stockList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                        <path d="M16 7V5a2 2 0 0 0-4 0v2"/>
                     </svg>
+                    <p>Cargando catalogo...</p>
                 </div>
+            </div>
+        </section>
 
-                <div class="profile-card">
-                    <div class="profile-kicker">Perfil de usuario</div>
-                    <div class="profile-name" id="settingsUserName">Operario Bodega</div>
-                    <div class="profile-meta">RUT: <span id="settingsRut">--</span></div>
-                    <div class="profile-meta">PLANTA: <span id="settingsPlant">Tuniche Central</span></div>
+        <!-- ====================================================
+             VIEW: REGISTROS
+             ==================================================== -->
+        <section id="viewRegistros" class="view" aria-label="Registros">
+            <!-- KPIs -->
+            <div class="kpi-bar">
+                <div class="kpi-card">
+                    <div class="kpi-num kpi-total" id="kpiTotal">0</div>
+                    <div class="kpi-label">Total hoy</div>
                 </div>
-
-                <div class="settings-group-title">Configuración de escaneo</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Intensidad Láser</strong>
-                            <span>Optimizar para luz solar directa</span>
-                        </div>
-                        <input type="range" min="0" max="100" value="82" style="accent-color: var(--green); max-width: 110px;">
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Alertas Sonoras</strong>
-                            <span>Confirmación de escaneo exitoso</span>
-                        </div>
-                        <span class="switch-control on" aria-hidden="true"></span>
-                    </div>
+                <div class="kpi-card">
+                    <div class="kpi-num kpi-terreno" id="kpiTerreno">0</div>
+                    <div class="kpi-label">En terreno</div>
                 </div>
-
-                <div class="settings-group-title">Notificaciones</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Stock Crítico EPP</strong>
-                            <span>Alertar cuando falten tallas M/L</span>
-                        </div>
-                        <span class="switch-control on" aria-hidden="true"></span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Registros Pendientes</strong>
-                            <span>Recordatorio fin de turno</span>
-                        </div>
-                        <span class="switch-control" aria-hidden="true"></span>
-                    </div>
+                <div class="kpi-card">
+                    <div class="kpi-num kpi-devuelto" id="kpiDevueltos">0</div>
+                    <div class="kpi-label">Devueltos</div>
                 </div>
+            </div>
 
-                <div class="settings-group-title">Información legal / versión</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Política de Privacidad</strong>
-                            <span>Gestión de datos biométricos</span>
-                        </div>
-                        <span style="color: var(--muted); font-weight: 900;">›</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-copy">
-                            <strong>Versión de la App</strong>
-                            <span>Build 2.4.0 (Stable)</span>
-                        </div>
-                        <span style="background:#e7e7e2; color:#6c7268; padding:5px 8px; font-size:.7rem; font-weight:900;">LATEST</span>
-                    </div>
+            <div class="search-wrap" style="margin-bottom:10px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                </svg>
+                <input type="search" id="registrosSearch" class="search-ctrl" placeholder="Buscar trabajador o RUT...">
+            </div>
+
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-estado="" onclick="App.filterRegistros('')">Todos</button>
+                <button class="filter-tab" data-estado="EN TERRENO" onclick="App.filterRegistros('EN TERRENO')">En Terreno</button>
+                <button class="filter-tab" data-estado="DEVUELTO" onclick="App.filterRegistros('DEVUELTO')">Devueltos</button>
+            </div>
+
+            <div class="refresh-bar">
+                <button class="btn-refresh" onclick="App.loadRegistros()" type="button">&#8635; Actualizar</button>
+            </div>
+            <div id="registrosList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/>
+                    </svg>
+                    <p>Cargando registros...</p>
                 </div>
+            </div>
+        </section>
 
-                <button class="logout-wide" onclick="cerrarSesion()">Cerrar sesión</button>
-                <div class="settings-footer">TUNICHE FRUITS<br>© 2026 Todos los derechos reservados</div>
-            </section>
-        </div>
+    </main>
 
-        <nav class="bottom-nav" aria-label="Navegación principal">
-            <button class="nav-btn active" type="button" data-view="operacion" onclick="mostrarVista('operacion')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M5 17h14M7 5v14M17 5v14"/><path d="M9 9h6v6H9z"/></svg>
-                Operación
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button class="nav-item active" id="navOperacion" data-view="operacion"
+                onclick="App.showView('operacion')" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-4 0v2M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01"/>
+            </svg>
+            Operacion
+            <div class="nav-dot"></div>
+        </button>
+        <button class="nav-item" id="navStock" data-view="stock"
+                onclick="App.showView('stock')" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                <path d="M16 7V5a2 2 0 0 0-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/>
+                <line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+            Stock
+            <div class="nav-dot"></div>
+        </button>
+        <button class="nav-item" id="navRegistros" data-view="registros"
+                onclick="App.showView('registros')" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/>
+            </svg>
+            Registros
+            <div class="nav-dot"></div>
+        </button>
+    </nav>
+
+</div><!-- #appContent -->
+
+<!-- ============================================================
+     MODAL: Escanear Carnet
+     ============================================================ -->
+<div class="modal-overlay" id="carnetModal" role="dialog" aria-modal="true" aria-label="Escanear credencial">
+    <div class="modal">
+        <div class="modal-hdr">
+            <span class="modal-title">Escanear Credencial</span>
+            <button class="modal-close" id="btnCloseCarnet" type="button" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
             </button>
-            <button class="nav-btn" type="button" data-view="registros" onclick="mostrarVista('registros')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/></svg>
-                Registros
-            </button>
-            <button class="nav-btn" type="button" data-view="ajustes" onclick="mostrarVista('ajustes')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a8 8 0 0 0 .1-1.2 8 8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a7 7 0 0 0-2-1.1L14.7 5h-5.4L9 7.6a7 7 0 0 0-2 1.1l-2.4-1-2 3.4 2 1.5a8 8 0 0 0-.1 1.2 8 8 0 0 0 .1 1.2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 2 1.1l.3 2.6h5.4l.3-2.6a7 7 0 0 0 2-1.1l2.4 1 2-3.4-2-1.5z"/></svg>
-                Ajustes
-            </button>
-        </nav>
-    </div>
-</div>
-
-<div class="carnet-modal-overlay" id="carnetModalOverlay">
-    <div class="carnet-modal">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <strong style="color:white; font-size:1.1rem;">Escanear Carnet</strong>
-            <button onclick="cerrarEscanerCarnet()" style="background:none; border:none; color:#fca5a5; font-size:1.2rem;">Cerrar</button>
         </div>
         <div id="carnetReader"></div>
+        <p class="modal-hint">Apunta la camara al QR o codigo de barras del carnet</p>
     </div>
 </div>
 
-<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+    <div class="spinner"></div>
+</div>
 
-<script>
-    // --- Receptor del Scanner Nativo de Android ---
-    window.onNativeScanResult = function(data, tipo) {
-        if (tipo === 'carnet') {
-            procesarCarnetDesdeScanner(data);
-        } else if (tipo === 'articulo') {
-            routerEscaneo(data);
-        }
-    };
+<!-- TOASTS -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    let CREDENCIALES = { user: "", pass: "", planta: "" };
-    let isProcessing = false;
-    let html5QrCode;
-    let carnetQrScanner = null;
-    let historial = [];
-    let totalEntradas = 0;
-    let totalSalidas = 0;
-    let filtroRegistros = "";
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
-    const iconSalida = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>`;
-    const iconEntrada = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9M7 16l5 5 5-5M5 5v6h14V5"/></svg>`;
-
-    window.onload = () => {
-        const guardado = localStorage.getItem('sgb_session');
-        if (guardado) {
-            CREDENCIALES = JSON.parse(guardado);
-            desbloquearApp();
-        } else {
-            document.getElementById('loginUser').focus();
-        }
-    };
-
-    function iniciarSesion() {
-        const u = document.getElementById('loginUser').value.trim();
-        const p = document.getElementById('loginPass').value.trim();
-        const pl = document.getElementById('loginPlanta').value;
-        const errorDiv = document.getElementById('loginError');
-
-        if(!u || !p) { errorDiv.innerText = "Complete usuario y contraseña."; return; }
-
-        errorDiv.style.color = "var(--green)";
-        errorDiv.innerText = "Conectando al servidor...";
-
-        fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p })
-        })
-        .then(async res => {
-            const contentType = res.headers.get("content-type");
-            if (!res.ok) throw new Error("Error del servidor");
-            return res.json();
-        })
-        .then(data => {
-            if (data.success) {
-                CREDENCIALES = { user: u, pass: p, planta: pl };
-                localStorage.setItem('sgb_session', JSON.stringify(CREDENCIALES));
-                desbloquearApp();
-            } else {
-                errorDiv.style.color = "var(--accent-red)";
-                errorDiv.innerText = data.message || "Usuario o contraseña incorrectos.";
-                vibrarCelular([300]);
-            }
-        })
-        .catch(err => {
-            errorDiv.style.color = "var(--accent-red)";
-            errorDiv.innerText = "Error al conectar.";
-            console.error(err);
-        });
-    }
-
-    function desbloquearApp() {
-        document.getElementById('loginScreen').style.opacity = '0';
-        document.getElementById('loginScreen').style.visibility = 'hidden';
-        document.getElementById('appContent').style.opacity = '1';
-        document.getElementById('appContent').style.visibility = 'visible';
-        document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
-        document.getElementById('settingsPlant').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'Tuniche Central' : 'Puquillay';
-
-        html5QrCode = new Html5Qrcode("reader");
-        activarLaser();
-        mostrarVista('operacion');
-    }
-
-    function cerrarSesion() {
-        localStorage.removeItem('sgb_session');
-        location.reload();
-    }
-
-    function abrirEscanerCarnet() {
-        // Intento de usar el escáner experto nativo de Android (Google Play Services)
-        if (window.AndroidApp && window.AndroidApp.openNativeScanner) {
-            window.AndroidApp.openNativeScanner('carnet');
-            return;
-        }
-        
-        // Fallback: usar cámara web (para PC o navegadores ajenos)
-        document.getElementById('carnetModalOverlay').classList.add('active');
-        
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => iniciarCamaraCarnet()).catch(() => iniciarCamaraCarnet());
-        } else {
-            iniciarCamaraCarnet();
-        }
-    }
-
-    function iniciarCamaraCarnet() {
-        if (!carnetQrScanner) carnetQrScanner = new Html5Qrcode("carnetReader");
-        
-        carnetQrScanner.start(
-            { facingMode: "environment" }, 
-            { 
-                fps: 15,
-                qrbox: 250,
-                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
-            }, 
-            (txt) => procesarCarnetDesdeScanner(txt), 
-            (err) => {}
-        ).then(() => {
-            // Aplicar Zoom x2.5 para que la cámara no necesite pegarse al carnet y pueda enfocar
-            aplicarZoomCamara(carnetQrScanner, 2.5);
-        }).catch((e) => {
-            console.error(e);
-            alert("Error al iniciar cámara: " + e);
-        });
-    }
-
-    function cerrarEscanerCarnet() {
-        document.getElementById('carnetModalOverlay').classList.remove('active');
-        if (carnetQrScanner && carnetQrScanner.isScanning) carnetQrScanner.stop();
-    }
-
-    function procesarCarnetDesdeScanner(data) {
-        let rut = null; 
-        let nombre = null;
-        let textoLimpio = data.trim();
-
-        try {
-            if (textoLimpio.includes('RUN=') || textoLimpio.includes('run=')) {
-                let qs = textoLimpio.includes('?') ? textoLimpio.substring(textoLimpio.indexOf('?') + 1) : textoLimpio;
-                const params = new URLSearchParams(qs);
-                rut = params.get('RUN') || params.get('run');
-                if (params.get('name')) {
-                    nombre = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-                }
-            } 
-            else if (textoLimpio.length >= 70) {
-                let rawRut = textoLimpio.substring(0, 9).trim().replace(/^0+/, '');
-                if (rawRut.length >= 7) { 
-                    rut = rawRut; 
-                    nombre = textoLimpio.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
-                }
-            }
-            if (!rut) {
-                const match = textoLimpio.match(/\b(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])\b/i);
-                if (match) rut = match[1];
-            }
-        } catch(e) {
-            console.error("Error analizando datos del carnet");
-        }
-
-        if (rut) {
-            const rutF = formatearRut(rut);
-            document.getElementById('rut').value = rutF;
-            if (nombre) document.getElementById('trabajador').value = nombre;
-            
-            vibrarCelular([100]); 
-            reproducirSonido('success');
-            cerrarEscanerCarnet();
-
-            fetch('/buscar_trabajador', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    rut: rutF, planta: CREDENCIALES.planta,
-                    username: CREDENCIALES.user, password: CREDENCIALES.pass 
-                })
-            }).then(r => r.json()).then(d => {
-                if(d.success) { 
-                    document.getElementById('trabajador').value = d.nombre; 
-                    document.getElementById('area').value = d.area; 
-                } else if(nombre) { 
-                    document.getElementById('trabajador').value = nombre; 
-                }
-            }).catch(()=>{});
-        } else { 
-            vibrarCelular([300]); 
-            reproducirSonido('error');
-            cerrarEscanerCarnet();
-            alert("No se detectó un RUT válido en el código.");
-        }
-    }
-
-    function cambiarModo() {
-        const toggle = document.getElementById("toggleModo");
-        const texto = document.getElementById("textoModo");
-        const card = document.getElementById("cardModo");
-        const icon = document.getElementById("modeIcon");
-
-        if (toggle.checked) {
-            texto.innerText = "DEVOLUCIÓN"; texto.className = "modo-devolucion-text";
-            icon.innerHTML = iconEntrada; card.className = "glass-card mode-card mode-devolucion";
-        } else {
-            texto.innerText = "SALIDA"; texto.className = "modo-salida-text";
-            icon.innerHTML = iconSalida; card.className = "glass-card mode-card mode-salida";
-        }
-    }
-
-    function routerEscaneo(codigo) {
-        if (isProcessing) return;
-        
-        const resDiv = document.getElementById('resultado');
-        let isCarnet = false;
-        let rutCarnet = null;
-        let nombreCarnet = null;
-
-        if (codigo.includes('RUN=') || codigo.includes('run=')) {
-            let qs = codigo.includes('?') ? codigo.substring(codigo.indexOf('?') + 1) : codigo;
-            const params = new URLSearchParams(qs);
-            rutCarnet = params.get('RUN') || params.get('run');
-            if (params.get('name')) nombreCarnet = decodeURIComponent(params.get('name')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
-            isCarnet = true;
-        } else if (codigo.length >= 70) {
-            let rawRut = codigo.substring(0, 9).trim().replace(/^0+/, '');
-            if (rawRut.length >= 7) { 
-                rutCarnet = rawRut; 
-                nombreCarnet = codigo.substring(19, 49).replace(/[^A-Za-záéíóúñÁÉÍÓÚÑ .]/g, '').trim(); 
-                isCarnet = true;
-            }
-        }
-
-        if (isCarnet && rutCarnet) {
-            const rutF = formatearRut(rutCarnet);
-            document.getElementById('rut').value = rutF;
-            if (nombreCarnet) document.getElementById('trabajador').value = nombreCarnet;
-            vibrarCelular([100]);
-            reproducirSonido('success');
-            
-            resDiv.className = "result-box result-loading"; resDiv.style.display = "block";
-            resDiv.innerText = "Buscando trabajador en BD...";
-            
-            fetch('/buscar_trabajador', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rut: rutF, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
-            }).then(r => r.json()).then(d => {
-                if(d.success) { 
-                    document.getElementById('trabajador').value = d.nombre; 
-                    document.getElementById('area').value = d.area; 
-                    resDiv.className = "result-box result-success"; resDiv.innerText = "Trabajador cargado. Escanea artículo.";
-                } else {
-                    resDiv.className = "result-box result-warning"; resDiv.innerText = "Trabajador nuevo. Selecciona Área.";
-                    document.getElementById('area').focus();
-                }
-            }).catch(()=>{
-                resDiv.className = "result-box result-idle"; resDiv.innerText = "RUT leído. Escanea artículo.";
-            });
-            return; 
-        }
-
-        const rut = document.getElementById('rut').value;
-        const trabajador = document.getElementById('trabajador').value;
-        const area = document.getElementById('area').value;
-        const accion = document.getElementById('toggleModo').checked ? 'DEVOLUCION' : 'SALIDA';
-
-        if(accion === 'SALIDA' && (!rut || !trabajador || !area)) {
-            resDiv.className = "result-box result-warning"; resDiv.style.display = "block";
-            resDiv.innerText = "Faltan datos del trabajador. Escanea carnet.";
-            vibrarCelular([300]); reproducirSonido('error'); return;
-        }
-
-        isProcessing = true; document.getElementById('loadingOverlay').classList.add('active');
-        resDiv.className = "result-box result-loading"; resDiv.style.display = "block"; resDiv.innerText = "Registrando...";
-
-        fetch('/registrar_salida', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: accion, rut: rut, trabajador: trabajador, area: area, articulo_id: codigo, planta: CREDENCIALES.planta, username: CREDENCIALES.user, password: CREDENCIALES.pass })
-        }).then(async res => {
-            if (!res.ok) throw new Error("Error Servidor HTTP " + res.status);
-            return res.json();
-        }).then(data => {
-            document.getElementById('loadingOverlay').classList.remove('active');
-            if(data.success) {
-                resDiv.className = "result-box result-success"; resDiv.innerHTML = data.message;
-                vibrarCelular([100]); reproducirSonido('success'); agregarRegistro(accion, data.message, true);
-            } else {
-                resDiv.className = "result-box result-error"; resDiv.innerHTML = data.message;
-                vibrarCelular([300]); reproducirSonido('error'); agregarRegistro(accion, data.message, false);
-            }
-            setTimeout(() => { resDiv.className = "result-box result-idle"; resDiv.innerText = "[ DISPARA AQUÍ ]"; isProcessing = false; }, 2000);
-        }).catch(err => {
-            document.getElementById('loadingOverlay').classList.remove('active');
-            resDiv.className = "result-box result-error"; resDiv.innerText = "Fallo de conexión.";
-            reproducirSonido('error'); agregarRegistro('ERROR', err.message, false);
-            isProcessing = false;
-        });
-    }
-
-    function activarLaser() {
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        document.getElementById('camara_section').style.display = 'none';
-        document.getElementById('laser_section').style.display = 'block';
-    }
-
-    function activarCamara(modo) {
-        // Intento de usar el escáner experto nativo de Android
-        if (window.AndroidApp && window.AndroidApp.openNativeScanner) {
-            window.AndroidApp.openNativeScanner('articulo');
-            // Como el escáner captura toda la pantalla, regresamos el botón a Láser automáticamente
-            setTimeout(() => { document.getElementById('btn_laser').click(); }, 300);
-            return;
-        }
-
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        document.getElementById('laser_section').style.display = 'none';
-        document.getElementById('camara_section').style.display = 'block';
-        
-        html5QrCode.start(
-            { facingMode: modo }, 
-            { fps: 15 }, // Sin qrbox para usar pantalla completa
-            (txt) => { routerEscaneo(txt); }, 
-            () => {}
-        ).then(() => {
-            // Aplicar Zoom x1.8 para los artículos normales
-            aplicarZoomCamara(html5QrCode, 1.8);
-        }).catch((e) => console.error(e));
-    }
-
-    function aplicarZoomCamara(scannerInstancia, zoomLevel) {
-        setTimeout(() => {
-            try {
-                // Obtiene la señal de video de la cámara
-                const track = scannerInstancia.getRunningTrack();
-                if (track && track.getCapabilities && track.applyConstraints) {
-                    const capabilities = track.getCapabilities();
-                    // Si el lente del celular soporta Zoom digital desde la Web
-                    if (capabilities.zoom) {
-                        // Limitar el zoom al máximo que el lente soporte (para que no de error)
-                        let fZ = Math.min(Math.max(capabilities.zoom.min, zoomLevel), capabilities.zoom.max);
-                        track.applyConstraints({ advanced: [{ zoom: fZ }] }).catch(()=>{});
-                    }
-                }
-            } catch(e) {}
-        }, 600); // 600ms de retraso para asegurar que la cámara encendió por completo
-    }
-
-    let scanTimer;
-    document.getElementById('laser_input').addEventListener('input', (e) => {
-        clearTimeout(scanTimer);
-        if(e.target.value.trim().length > 0) {
-            scanTimer = setTimeout(() => { routerEscaneo(e.target.value.trim()); e.target.value = ''; }, 150);
-        }
-    });
-
-    document.getElementById('laser_input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault(); clearTimeout(scanTimer);
-            if(e.target.value.trim()) { routerEscaneo(e.target.value.trim()); e.target.value = ''; }
-        }
-    });
-
-    function formatearRut(r) {
-        let l = r.replace(/[^0-9kK]/g, '').toUpperCase(); if(l.length<2) return l;
-        return l.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + l.slice(-1);
-    }
-    function vibrarCelular(p) { if(navigator.vibrate) navigator.vibrate(p); }
-
-    let audioCtx = null;
-    function reproducirSonido(tipo) {
-        try {
-            // 1. Intentar sonido nativo Android primero si esta disponible
-            if (window.AndroidApp && window.AndroidApp.playBeep) {
-                window.AndroidApp.playBeep(tipo);
-                return;
-            }
-            // 2. Fallback Web Audio API
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.connect(g); g.connect(audioCtx.destination);
-            if (tipo === 'success') {
-                o.type = 'sine'; o.frequency.value = 1500; // Beep agudo de éxito
-                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                o.start(); o.stop(audioCtx.currentTime + 0.15);
-            } else {
-                o.type = 'square'; o.frequency.value = 250; // Buzz grave de error
-                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                o.start(); o.stop(audioCtx.currentTime + 0.3);
-            }
-        } catch(e){}
-    }
-
-    function agregarRegistro(accion, msg, exito) {
-        const h = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const rut = document.getElementById('rut').value || '--';
-        const trabajador = document.getElementById('trabajador').value || 'Trabajador sin nombre';
-        const area = document.getElementById('area').value || 'Bodega';
-        const planta = CREDENCIALES.planta === 'TUNICHE' ? 'Tuniche Central' : 'Puquillay';
-        historial.unshift({ accion, msg, exito, hora: h, rut, trabajador, area, planta });
-        if (historial.length > 3) historial.pop();
-        if (exito && accion === 'DEVOLUCION') totalEntradas++;
-        if (exito && accion === 'SALIDA') totalSalidas++;
-        document.getElementById('historyList').innerHTML = historial.map(r => `
-            <div class="history-item ${!r.exito ? 'error-item' : (r.accion==='DEVOLUCION'?'devolucion-item':'salida-item')}">
-                <span class="history-status" aria-hidden="true"></span>
-                <div class="history-info">
-                    <div class="history-msg">${r.msg}</div>
-                    <div class="history-meta">
-                        <span class="history-badge ${!r.exito?'badge-error':(r.accion==='DEVOLUCION'?'badge-devolucion':'badge-salida')}">${!r.exito?'Error':(r.accion==='DEVOLUCION'?'Devolución':'Salida')}</span>
-                        <span class="history-time">${r.hora}</span>
-                    </div>
-                </div>
-            </div>`).join('');
-        renderRegistros();
-    }
-
-    function mostrarVista(nombre) {
-        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-        const view = document.getElementById('view' + nombre.charAt(0).toUpperCase() + nombre.slice(1));
-        if (view) view.classList.add('active');
-
-        const nav = document.querySelector(`.nav-btn[data-view="${nombre}"]`);
-        if (nav) nav.classList.add('active');
-
-        if (nombre === 'registros') renderRegistros();
-        if (nombre === 'ajustes') {
-            document.getElementById('settingsUserName').innerText = document.getElementById('trabajador').value || CREDENCIALES.user || 'Operario Bodega';
-            document.getElementById('settingsRut').innerText = document.getElementById('rut').value || '--';
-        }
-    }
-
-    function filtrarRegistros(valor) {
-        filtroRegistros = valor.trim().toLowerCase();
-        renderRegistros();
-    }
-
-    function renderRegistros() {
-        const records = document.getElementById('recordsList');
-        if (!records) return;
-
-        const visibles = historial.filter(r => {
-            if (!filtroRegistros) return true;
-            return `${r.trabajador} ${r.rut} ${r.area} ${r.msg}`.toLowerCase().includes(filtroRegistros);
-        });
-
-        document.getElementById('totalEntradas').innerText = totalEntradas;
-        document.getElementById('totalSalidas').innerText = totalSalidas;
-
-        if (!visibles.length) {
-            records.innerHTML = `<div class="history-empty">Aún no hay registros del turno</div>`;
-            return;
-        }
-
-        records.innerHTML = visibles.map(r => {
-            const salida = r.accion !== 'DEVOLUCION';
-            return `
-                <article class="record-card ${salida ? 'salida' : 'entrada'}">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <div class="record-name">${r.trabajador}</div>
-                            <span class="record-badge">${salida ? 'SALIDA' : 'ENTRADA'}</span>
-                        </div>
-                        <div class="record-rut">RUT: ${r.rut}</div>
-                        <div class="record-meta">
-                            <span>${r.planta}</span>
-                            <span>${r.hora}</span>
-                        </div>
-                    </div>
-                    <span style="color: var(--muted); font-size: 1.7rem; font-weight: 700;">›</span>
-                </article>
-            `;
-        }).join('');
-    }
-</script>
 </body>
 </html>
