@@ -55,6 +55,8 @@ const API = (() => {
         getRegistros: (estado = "", q = "") =>
             _req(`/api/registros?estado=${encodeURIComponent(estado)}&q=${encodeURIComponent(q)}`),
 
+        getCierreTurno: () => _req("/api/cierre_turno"),
+
         registrar: (accion, rut, trabajador, area, articulo_id) =>
             _req("/api/registrar", {
                 method: "POST",

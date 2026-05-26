@@ -344,6 +344,40 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .refresh-bar { text-align: center; padding: 8px; font-size: 0.73rem; color: var(--muted); }
 .btn-refresh { background: none; border: 1px solid var(--border); color: var(--petrol); font-weight: 700; cursor: pointer; font-size: 0.73rem; padding: 5px 12px; border-radius: 999px; font-family: inherit; }
 .btn-refresh:hover { background: #f0f6f8; }
+.registros-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.btn-cierre-turno { background: var(--navy); border-color: var(--navy); color: #fff; }
+.btn-cierre-turno:hover { background: var(--petrol); }
+
+/* ============================================================
+   CIERRE DE TURNO
+   ============================================================ */
+.cierre-modal { max-height: 88dvh; overflow-y: auto; padding-bottom: 20px; }
+.cierre-content { display: flex; flex-direction: column; gap: 10px; }
+.cierre-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+.cierre-eyebrow { font-size: 0.68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.cierre-title { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-top: 2px; }
+.cierre-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cierre-kpi { padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.cierre-kpi strong { display: block; font-size: 1.35rem; line-height: 1; color: var(--navy); }
+.cierre-kpi span { display: block; margin-top: 4px; font-size: 0.65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.cierre-kpi.warning strong { color: var(--warning); }
+.cierre-kpi.danger strong { color: var(--danger); }
+.cierre-section-title { margin-top: 4px; font-size: 0.72rem; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.cierre-list { display: flex; flex-direction: column; gap: 7px; }
+.cierre-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+.cierre-pending { border-left: 4px solid var(--warning); background: var(--warning-bg); }
+.cierre-stock { border-left: 4px solid var(--danger); background: var(--danger-bg); }
+.cierre-item-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cierre-item-main strong { font-size: 0.84rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cierre-item-main span { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+.cierre-time, .cierre-stock-count { flex: 0 0 auto; min-width: 42px; text-align: center; padding: 5px 8px; border-radius: 999px; background: #fff; font-size: 0.75rem; font-weight: 900; color: var(--text); border: 1px solid rgba(15,23,42,0.08); }
+.cierre-stock-count { color: var(--danger); }
+.cierre-empty { padding: 11px 12px; border: 1px dashed var(--border); border-radius: 8px; background: #fafbfc; color: var(--muted); font-size: 0.82rem; font-weight: 700; text-align: center; }
+.cierre-resumen-text { width: 100%; min-height: 118px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; color: var(--text); font: 0.76rem/1.45 "Courier New", monospace; resize: vertical; }
+.cierre-resumen-text:focus { outline: none; border-color: var(--petrol); box-shadow: 0 0 0 3px rgba(11,82,101,0.10); }
+.cierre-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.btn-cierre-copy { background: var(--success); border-color: var(--success); color: #fff; padding: 8px 14px; }
+.btn-cierre-copy:hover { background: var(--success-dark); }
 
 /* ============================================================
    MULTI-SCAN & DEVOLUCIONES PENDIENTES

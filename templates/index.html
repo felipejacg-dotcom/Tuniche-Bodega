@@ -10,7 +10,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-mode-tabs">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-cierre-turno">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
      ============================================================ -->
 <div id="loginScreen">
     <div class="login-card">
-        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-mode-tabs" alt="Tuniche Fruits">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-cierre-turno" alt="Tuniche Fruits">
         <div class="login-brand">
             <h1>SGB Logistic F.C.</h1>
             <p>Sistema de Bodega &mdash; Acceso de Operario</p>
@@ -280,7 +280,10 @@
                 <button class="filter-tab" data-estado="DEVUELTO" onclick="App.filterRegistros('DEVUELTO')">Devueltos</button>
             </div>
 
-            <div class="refresh-bar">
+            <div class="refresh-bar registros-actions">
+                <button class="btn-refresh btn-cierre-turno" onclick="App.openCierreTurno()" type="button">
+                    Cierre de Turno
+                </button>
                 <button class="btn-refresh" onclick="App.loadRegistros()" type="button">&#8635; Actualizar</button>
             </div>
             <div id="registrosList">
@@ -346,6 +349,31 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="cierreModal" role="dialog" aria-modal="true" aria-label="Cierre de turno">
+    <div class="modal cierre-modal">
+        <div class="modal-hdr">
+            <span class="modal-title">Cierre de Turno</span>
+            <button class="modal-close" id="btnCloseCierre" type="button" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div id="cierreContent" class="cierre-content">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 5h16M4 12h16M4 19h10"/>
+                </svg>
+                <p>Generando cierre...</p>
+            </div>
+        </div>
+        <textarea id="cierreResumenText" class="cierre-resumen-text" readonly aria-label="Resumen copiable de cierre"></textarea>
+        <div class="cierre-actions">
+            <button class="btn-refresh btn-cierre-copy" id="btnCopyCierre" type="button">Copiar resumen</button>
+        </div>
+    </div>
+</div>
+
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
@@ -355,9 +383,9 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-mode-tabs"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-mode-tabs"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-mode-tabs"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-cierre-turno"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-cierre-turno"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-cierre-turno"></script>
 
 </body>
 </html>

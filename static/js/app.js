@@ -19,6 +19,7 @@ const App = (() => {
         registros: [],            // loaded from /api/registros
         registrosFilter: "",      // "EN TERRENO" | "DEVUELTO" | ""
         registrosQuery: "",
+        cierreTurno: null,
         stockFilter: "all",
         stockQuery: "",
     };
@@ -65,6 +66,11 @@ const App = (() => {
         kpiTotal: $("kpiTotal"),
         kpiTerreno: $("kpiTerreno"),
         kpiDevueltos: $("kpiDevueltos"),
+        cierreModal: $("cierreModal"),
+        cierreContent: $("cierreContent"),
+        cierreResumenText: $("cierreResumenText"),
+        btnCloseCierre: $("btnCloseCierre"),
+        btnCopyCierre: $("btnCopyCierre"),
         // Modal carnet
         carnetModal: $("carnetModal"),
         btnCloseCarnet: $("btnCloseCarnet"),
@@ -697,6 +703,96 @@ const App = (() => {
         }).join("");
     }
 
+    async function openCierreTurno() {
+        if (!els.cierreModal) return;
+        els.cierreModal.classList.add("active");
+        els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Generando cierre...</p></div>`;
+        els.cierreResumenText.value = "";
+
+        try {
+            const data = await API.getCierreTurno();
+            if (!data.success) throw new Error(data.message || "No se pudo generar el cierre.");
+            state.cierreTurno = data;
+            renderCierreTurno(data);
+        } catch (e) {
+            els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><p>${escHtml(e.message || "Error generando cierre.")}</p></div>`;
+            toast(e.message || "Error generando cierre.", "error", 5000);
+        }
+    }
+
+    function closeCierreTurno() {
+        if (els.cierreModal) els.cierreModal.classList.remove("active");
+    }
+
+    function renderCierreTurno(data) {
+        const kpi = data.kpi || {};
+        const pendientes = data.pendientes || [];
+        const stockCritico = data.stock_critico || [];
+        const pendientesHtml = pendientes.length
+            ? pendientes.slice(0, 20).map(item => `
+                <div class="cierre-item cierre-pending">
+                    <div class="cierre-item-main">
+                        <strong>${escHtml(item.trabajador)}</strong>
+                        <span>${escHtml(item.rut)} · ${escHtml(item.area || "Sin area")}</span>
+                        <span>${escHtml(item.articulo)}</span>
+                    </div>
+                    <div class="cierre-time">${escHtml(item.hora_salida)}</div>
+                </div>
+            `).join("")
+            : `<div class="cierre-empty">Sin pendientes en terreno.</div>`;
+
+        const stockHtml = stockCritico.length
+            ? stockCritico.slice(0, 20).map(item => `
+                <div class="cierre-item cierre-stock">
+                    <div class="cierre-item-main">
+                        <strong>${escHtml(item.descripcion)} ${item.talla ? `[${escHtml(item.talla)}]` : ""}</strong>
+                        <span>ID ${escHtml(item.id)} · Alerta ${escHtml(item.limite_alerta)}</span>
+                    </div>
+                    <div class="cierre-stock-count">${escHtml(item.stock_disponible)}</div>
+                </div>
+            `).join("")
+            : `<div class="cierre-empty">Sin stock critico.</div>`;
+
+        els.cierreContent.innerHTML = `
+            <div class="cierre-head">
+                <div>
+                    <div class="cierre-eyebrow">Generado ${escHtml(data.hora_generacion || "--:--")}</div>
+                    <div class="cierre-title">${escHtml(data.planta || state.planta)} · ${escHtml(data.fecha_display || data.fecha || "")}</div>
+                </div>
+            </div>
+            <div class="cierre-kpi-grid">
+                <div class="cierre-kpi"><strong>${escHtml(kpi.total ?? 0)}</strong><span>Movimientos</span></div>
+                <div class="cierre-kpi"><strong>${escHtml(kpi.salidas ?? 0)}</strong><span>Salidas</span></div>
+                <div class="cierre-kpi"><strong>${escHtml(kpi.devoluciones ?? 0)}</strong><span>Devoluciones</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes ?? 0)}</strong><span>Pendientes</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.trabajadores_pendientes ?? 0)}</strong><span>Trabajadores</span></div>
+                <div class="cierre-kpi danger"><strong>${escHtml(kpi.stock_critico ?? 0)}</strong><span>Stock critico</span></div>
+            </div>
+            <div class="cierre-section-title">Pendientes en terreno</div>
+            <div class="cierre-list">${pendientesHtml}</div>
+            <div class="cierre-section-title">Stock critico</div>
+            <div class="cierre-list">${stockHtml}</div>
+        `;
+        els.cierreResumenText.value = data.resumen_copiable || "";
+    }
+
+    async function copyCierreResumen() {
+        const text = els.cierreResumenText.value || state.cierreTurno?.resumen_copiable || "";
+        if (!text) {
+            toast("Primero genera el cierre.", "warning");
+            return;
+        }
+        try {
+            if (!navigator.clipboard || !window.isSecureContext) throw new Error("Clipboard bloqueado");
+            await navigator.clipboard.writeText(text);
+            toast("Resumen copiado.", "success");
+        } catch (_) {
+            els.cierreResumenText.focus();
+            els.cierreResumenText.select();
+            toast("Selecciona el texto y copialo manualmente.", "info", 5200);
+        }
+    }
+
     // ── Utilities ─────────────────────────────────────────────────
     function escHtml(str) {
         return String(str ?? "")
@@ -782,6 +878,12 @@ const App = (() => {
         els.btnCloseCarnet.addEventListener("click", closeCarnetModal);
         els.carnetModal.addEventListener("click", e => { if (e.target === els.carnetModal) closeCarnetModal(); });
 
+        // Cierre de turno
+        if (els.btnCloseCierre) {
+            els.btnCloseCierre.addEventListener("click", closeCierreTurno);
+            els.btnCopyCierre.addEventListener("click", copyCierreResumen);
+            els.cierreModal.addEventListener("click", e => { if (e.target === els.cierreModal) closeCierreTurno(); });
+        }
 
         // Laser input for articles
         Scanner.initLaser(els.laserInput, onArticuloScanned);
@@ -847,6 +949,9 @@ const App = (() => {
         filterRegistros,
         setScanMethod,
         loadRegistros,
+        openCierreTurno,
+        closeCierreTurno,
+        copyCierreResumen,
         logout,
         removeItemFromMultiScan,
         devolverRapido,

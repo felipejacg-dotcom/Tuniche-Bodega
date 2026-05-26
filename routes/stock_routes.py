@@ -3,8 +3,18 @@ from flask import Blueprint, jsonify, request
 from auth import login_required, get_current_planta
 from db import get_connection
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/api")
+
+
+def _format_hora(value):
+    if value is None:
+        return "---"
+    if isinstance(value, datetime):
+        return value.strftime("%H:%M")
+    text = str(value)
+    return text.split(" ")[1][:5] if " " in text else text[:5]
 
 
 @stock_bp.route("/articulos")
@@ -91,6 +101,128 @@ def get_registros():
                 "en_terreno": en_terreno,
                 "devueltos": devueltos,
             },
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@stock_bp.route("/cierre_turno")
+@login_required
+def get_cierre_turno():
+    planta = get_current_planta()
+    now = datetime.now(ZoneInfo("America/Santiago"))
+    conn = None
+    try:
+        conn = get_connection(planta)
+        cur = conn.cursor(dictionary=True)
+
+        cur.execute("""
+            SELECT t.id, t.rut, t.trabajador, t.area,
+                   CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
+                   t.hora_salida, t.hora_entrada, t.estado
+            FROM transacciones t
+            JOIN articulos a ON t.articulo_id = a.id
+            WHERE DATE(t.hora_salida) = CURDATE()
+            ORDER BY t.hora_salida DESC
+            LIMIT 500
+        """)
+        registros = cur.fetchall()
+
+        cur.execute("""
+            SELECT t.rut, t.trabajador, t.area,
+                   CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
+                   t.hora_salida
+            FROM transacciones t
+            JOIN articulos a ON t.articulo_id = a.id
+            WHERE t.estado = 'EN TERRENO'
+            ORDER BY t.hora_salida DESC
+            LIMIT 200
+        """)
+        pendientes = cur.fetchall()
+
+        cur.execute("""
+            SELECT id, descripcion, talla, medida, stock_disponible, limite_alerta
+            FROM articulos
+            WHERE limite_alerta IS NOT NULL
+              AND stock_disponible <= limite_alerta
+            ORDER BY stock_disponible ASC, descripcion, talla
+            LIMIT 100
+        """)
+        stock_critico = cur.fetchall()
+        cur.close()
+
+        for row in registros:
+            row["hora_salida"] = _format_hora(row.get("hora_salida"))
+            row["hora_entrada"] = _format_hora(row.get("hora_entrada"))
+
+        for row in pendientes:
+            row["hora_salida"] = _format_hora(row.get("hora_salida"))
+
+        salidas = len(registros)
+        devoluciones = sum(1 for row in registros if row.get("estado") == "DEVUELTO")
+        total_movimientos = salidas + devoluciones
+        trabajadores_pendientes = len({row.get("rut") for row in pendientes if row.get("rut")})
+
+        kpi = {
+            "total": total_movimientos,
+            "salidas": salidas,
+            "devoluciones": devoluciones,
+            "pendientes": len(pendientes),
+            "trabajadores_pendientes": trabajadores_pendientes,
+            "stock_critico": len(stock_critico),
+        }
+
+        pendientes_lines = [
+            f"- {p['trabajador']} ({p['rut']}) | {p['articulo']} | {p.get('area') or 'Sin area'} | salida {p['hora_salida']}"
+            for p in pendientes[:25]
+        ]
+        if not pendientes_lines:
+            pendientes_lines = ["Sin pendientes en terreno."]
+        elif len(pendientes) > 25:
+            pendientes_lines.append(f"... y {len(pendientes) - 25} pendientes mas.")
+
+        stock_lines = [
+            f"- {s['descripcion']} [{s.get('talla') or '-'}] stock {s['stock_disponible']} / alerta {s['limite_alerta']}"
+            for s in stock_critico[:25]
+        ]
+        if not stock_lines:
+            stock_lines = ["Sin stock critico."]
+        elif len(stock_critico) > 25:
+            stock_lines.append(f"... y {len(stock_critico) - 25} articulos mas.")
+
+        resumen_copiable = "\n".join([
+            "CIERRE DE TURNO",
+            f"Planta: {planta}",
+            f"Fecha: {now.strftime('%d/%m/%Y')}",
+            f"Hora generacion: {now.strftime('%H:%M')}",
+            "",
+            f"Movimientos: {kpi['total']}",
+            f"Salidas: {kpi['salidas']}",
+            f"Devoluciones: {kpi['devoluciones']}",
+            f"Pendientes en terreno: {kpi['pendientes']}",
+            f"Trabajadores con pendientes: {kpi['trabajadores_pendientes']}",
+            f"Stock critico: {kpi['stock_critico']}",
+            "",
+            "PENDIENTES",
+            *pendientes_lines,
+            "",
+            "STOCK CRITICO",
+            *stock_lines,
+        ])
+
+        return jsonify({
+            "success": True,
+            "fecha": now.strftime("%Y-%m-%d"),
+            "fecha_display": now.strftime("%d/%m/%Y"),
+            "hora_generacion": now.strftime("%H:%M"),
+            "planta": planta,
+            "kpi": kpi,
+            "pendientes": pendientes,
+            "stock_critico": stock_critico,
+            "resumen_copiable": resumen_copiable,
         })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
