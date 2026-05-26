@@ -56,7 +56,7 @@ def get_pendientes():
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
         cur.execute(
-            "SELECT t.id AS transaccion_id, t.articulo_id, "
+            "SELECT t.id AS transaccion_id, t.articulo_id, t.trabajador, t.area, "
             "CONCAT(a.descripcion, ' [', a.talla, ']') AS descripcion, "
             "t.hora_salida "
             "FROM transacciones t "

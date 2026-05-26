@@ -54,6 +54,7 @@ const App = (() => {
         articuloNombre: $("articuloNombre"),
         articuloStock: $("articuloStock"),
         articuloIcon: $("articuloIcon"),
+        articleScanCard: $("articleScanCard"),
         btnConfirm: $("btnConfirm"),
         historialList: $("historialList"),
         histCount: $("histCount"),
@@ -195,7 +196,10 @@ const App = (() => {
         clearArticulo();
 
         if (state.mode === "DEVOLUCION") {
+            Scanner.stopArticleCamera();
+            els.articleScanCard.style.display = "none";
             els.multiScanSection.style.display = "none";
+            els.btnConfirm.style.display = "none";
             const rut = els.inputRut.value.trim();
             if (rut) {
                 cargarPendientes(rut);
@@ -203,7 +207,10 @@ const App = (() => {
                 ocultarPendientes();
             }
         } else {
+            els.articleScanCard.style.display = "block";
+            els.btnConfirm.style.display = "flex";
             ocultarPendientes();
+            setScanMethod(state.scanMethod);
             renderMultiScanList();
         }
 
@@ -248,6 +255,11 @@ const App = (() => {
 
     // ── Articulo scan ─────────────────────────────────────────────
     function onArticuloScanned(rawText) {
+        if (state.mode !== "SALIDA") {
+            toast("El escaneo de articulos solo se usa en modo salida.", "info");
+            return;
+        }
+
         const id = Scanner.parseArticleCode(rawText);
         if (id === null) {
             // Try searching by text
@@ -315,23 +327,6 @@ const App = (() => {
                 els.laserInput.value = "";
                 setTimeout(() => els.laserInput.focus(), 100);
             }
-        } else {
-            // Modo DEVOLUCION: verificar si coincide con la lista de pendientes cargada
-            const pendientesItems = Array.from(document.querySelectorAll(".pending-return-item"));
-            const matchPendiente = pendientesItems.find(el => parseInt(el.dataset.articuloId) === art.id);
-
-            if (matchPendiente && rut && nombre && area) {
-                vibrate([80]);
-                toast(`Procesando devolucion automatica de ${art.descripcion}...`, "info");
-                devolverRapido(art.id, art.descripcion);
-                return;
-            }
-
-            state.currentArticulo = art;
-            vibrate([80]);
-            els.articuloDisplay.className = "articulo-display found";
-            els.articuloNombre.textContent = `${art.descripcion} [${art.talla || ""}]`;
-            els.articuloStock.textContent = "Listo para devolucion";
         }
         updateConfirmButton();
     }
@@ -359,15 +354,18 @@ const App = (() => {
                 ? `CONFIRMAR SALIDA (${n} ITEMS)`
                 : "CONFIRMAR SALIDA";
         } else {
-            const hasArt = state.currentArticulo !== null;
-            canConfirm = rut && nombre && area && hasArt;
-            els.btnConfirm.querySelector("span").textContent = "CONFIRMAR DEVOLUCION";
+            canConfirm = false;
         }
         els.btnConfirm.disabled = !canConfirm;
     }
 
     // ── Scan method switching ─────────────────────────────────────
     function setScanMethod(method) {
+        if (state.mode !== "SALIDA") {
+            Scanner.stopArticleCamera();
+            return;
+        }
+
         state.scanMethod = method;
         els.laserInput.parentElement.style.display = method === "laser" ? "block" : "none";
         els.camaraSection.style.display = method === "camera" ? "block" : "none";
@@ -442,49 +440,6 @@ const App = (() => {
                 hideLoading();
                 toast(e.message || "Error de conexion.", "error", 5000);
             }
-        } else {
-            // Modo DEVOLUCION manual
-            const art = state.currentArticulo;
-            if (!art) {
-                toast("Escanea o selecciona el articulo a devolver.", "warning"); return;
-            }
-
-            showLoading();
-            try {
-                const data = await API.registrar("DEVOLUCION", rut, nombre, area, art.id);
-                hideLoading();
-
-                if (data.success) {
-                    vibrate([100, 50, 100]);
-                    toast(data.message, "success", 3000);
-
-                    const idx = state.articulos.findIndex(a => a.id === art.id);
-                    if (idx !== -1) state.articulos[idx].stock_disponible = data.nuevo_stock;
-
-                    // Reload pending returns list
-                    cargarPendientes(rut);
-
-                    state.historial.unshift({
-                        tipo: "devolucion",
-                        msg: data.message,
-                        rut,
-                        area,
-                        hora: data.hora || "",
-                    });
-                    renderHistorial();
-
-                    clearArticulo();
-                    if (state.scanMethod === "laser") {
-                        setTimeout(() => els.laserInput.focus(), 200);
-                    }
-                } else {
-                    vibrate([300]);
-                    toast(data.message || "Error al registrar devolucion.", "error", 4000);
-                }
-            } catch (e) {
-                hideLoading();
-                toast(e.message || "Error de conexion.", "error", 5000);
-            }
         }
     }
 
@@ -531,13 +486,17 @@ const App = (() => {
             if (data.success && data.pendientes && data.pendientes.length > 0) {
                 els.devolucionesPendientesSection.style.display = "block";
                 els.devolucionesPendientesList.innerHTML = data.pendientes.map(p => `
-                    <div class="pending-return-item" data-articulo-id="${p.articulo_id}" data-transaccion-id="${p.transaccion_id}">
+                    <div class="pending-return-item"
+                         data-articulo-id="${p.articulo_id}"
+                         data-transaccion-id="${p.transaccion_id}"
+                         data-trabajador="${escHtml(p.trabajador || "")}"
+                         data-area="${escHtml(p.area || "")}">
                         <div class="pending-return-info">
                             <div class="pending-return-title">${escHtml(p.descripcion)}</div>
                             <div class="pending-return-date">Retirado el ${escHtml(p.hora_salida)}</div>
                         </div>
                         <button type="button" class="btn-quick-return"
-                                onclick="App.devolverRapido(${p.articulo_id}, '${escHtml(p.descripcion).replace(/'/g, "\\'")}')">
+                                onclick="App.devolverRapido(${p.articulo_id})">
                             Devolver
                         </button>
                     </div>
@@ -556,13 +515,15 @@ const App = (() => {
         els.devolucionesPendientesList.innerHTML = "";
     }
 
-    async function devolverRapido(articuloId, descripcion) {
+    async function devolverRapido(articuloId) {
+        const pendingItem = document.querySelector(`.pending-return-item[data-articulo-id="${articuloId}"]`);
+        const descripcion = pendingItem?.querySelector(".pending-return-title")?.textContent || "articulo";
         const rut = els.inputRut.value.trim();
-        const nombre = els.inputNombre.value.trim();
-        const area = els.inputArea.value;
+        const nombre = els.inputNombre.value.trim() || pendingItem?.dataset.trabajador || "Trabajador";
+        const area = els.inputArea.value || pendingItem?.dataset.area || "BODEGA";
 
-        if (!rut || !nombre || !area) {
-            toast("Completa el RUT y datos del trabajador.", "warning");
+        if (!rut) {
+            toast("Ingresa o escanea el RUT del trabajador.", "warning");
             return;
         }
 
