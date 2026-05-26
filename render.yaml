@@ -20,6 +20,6 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: LOGIN_USERS
-        sync: false
+        value: admin:admin123,bodega:123456
       - key: FLASK_DEBUG
         value: "0"
