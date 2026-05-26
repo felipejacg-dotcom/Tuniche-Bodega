@@ -38,10 +38,8 @@ const App = (() => {
         headerPlantaBadge: $("headerPlantaBadge"),
         btnLogout: $("btnLogout"),
         // Operacion
-        modeBanner: $("modeBanner"),
-        modeIcon: $("modeIcon"),
-        modeName: $("modeName"),
-        modeToggle: $("modeToggle"),
+        modeSalidaBtn: $("modeSalidaBtn"),
+        modeDevolucionBtn: $("modeDevolucionBtn"),
         btnScanCarnet: $("btnScanCarnet"),
         inputRut: $("inputRut"),
         inputNombre: $("inputNombre"),
@@ -182,14 +180,13 @@ const App = (() => {
     }
 
     // ── Mode (SALIDA / DEVOLUCION) ────────────────────────────────
-    function updateMode(isDevolucion) {
-        state.mode = isDevolucion ? "DEVOLUCION" : "SALIDA";
-        const b = els.modeBanner;
-        b.className = `mode-banner mode-${state.mode.toLowerCase()}`;
-        els.modeName.textContent = state.mode;
-        els.modeIcon.innerHTML = isDevolucion
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M12 21V9M7 16l5 5 5-5M5 5v6h14V5"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>`;
+    function updateMode(mode) {
+        state.mode = mode === "DEVOLUCION" ? "DEVOLUCION" : "SALIDA";
+        const isDevolucion = state.mode === "DEVOLUCION";
+        els.modeSalidaBtn.classList.toggle("active", !isDevolucion);
+        els.modeDevolucionBtn.classList.toggle("active", isDevolucion);
+        els.modeSalidaBtn.setAttribute("aria-pressed", String(!isDevolucion));
+        els.modeDevolucionBtn.setAttribute("aria-pressed", String(isDevolucion));
         els.btnConfirm.className = `btn-confirm mode-${state.mode.toLowerCase()}`;
         els.btnConfirm.querySelector("span").textContent = state.mode === "SALIDA" ? "CONFIRMAR SALIDA" : "CONFIRMAR DEVOLUCION";
 
@@ -776,8 +773,9 @@ const App = (() => {
         // Logout
         els.btnLogout.addEventListener("click", logout);
 
-        // Mode toggle
-        els.modeToggle.addEventListener("change", () => updateMode(els.modeToggle.checked));
+        // Mode selector
+        els.modeSalidaBtn.addEventListener("click", () => updateMode("SALIDA"));
+        els.modeDevolucionBtn.addEventListener("click", () => updateMode("DEVOLUCION"));
 
         // Carnet modal
         els.btnScanCarnet.addEventListener("click", openCarnetModal);
@@ -833,7 +831,7 @@ const App = (() => {
         }
 
         // Init confirm button state
-        updateMode(false);
+        updateMode("SALIDA");
         renderHistorial();
 
         // Check session on load

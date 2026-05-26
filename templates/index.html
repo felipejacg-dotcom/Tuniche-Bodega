@@ -10,7 +10,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-devolucion-menu">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260526-mode-tabs">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
      ============================================================ -->
 <div id="loginScreen">
     <div class="login-card">
-        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-devolucion-menu" alt="Tuniche Fruits">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-mode-tabs" alt="Tuniche Fruits">
         <div class="login-brand">
             <h1>SGB Logistic F.C.</h1>
             <p>Sistema de Bodega &mdash; Acceso de Operario</p>
@@ -56,7 +56,7 @@
     <header class="app-header">
         <div class="header-left">
             <div class="header-logo-box">
-                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-devolucion-menu" alt="Tuniche">
+                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260526-mode-tabs" alt="Tuniche">
             </div>
             <div class="header-brand">
                 <strong>SGB LOGISTIC F.C.</strong>
@@ -77,23 +77,26 @@
              ==================================================== -->
         <section id="viewOperacion" class="view active" aria-label="Operacion">
 
-            <!-- Mode Banner -->
-            <div class="mode-banner mode-salida" id="modeBanner">
-                <div class="mode-info">
-                    <span class="mode-icon" id="modeIcon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+            <!-- Mode Selector -->
+            <div class="mode-segmented" id="modeSegmented" role="group" aria-label="Modo de operacion">
+                <button class="mode-option active mode-option-salida" id="modeSalidaBtn" type="button"
+                        data-mode="SALIDA" aria-pressed="true">
+                    <span class="mode-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" width="19" height="19">
                             <path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/>
                         </svg>
                     </span>
-                    <div>
-                        <div class="mode-label">Modo activo</div>
-                        <div class="mode-name" id="modeName">SALIDA</div>
-                    </div>
-                </div>
-                <label class="toggle-wrap" aria-label="Cambiar a devolucion">
-                    <input type="checkbox" class="toggle-input" id="modeToggle">
-                    <span class="toggle-slider"></span>
-                </label>
+                    <span>SALIDA</span>
+                </button>
+                <button class="mode-option mode-option-devolucion" id="modeDevolucionBtn" type="button"
+                        data-mode="DEVOLUCION" aria-pressed="false">
+                    <span class="mode-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" width="19" height="19">
+                            <path d="M12 21V9M7 16l5 5 5-5M5 5v6h14V5"/>
+                        </svg>
+                    </span>
+                    <span>DEVOLUCION</span>
+                </button>
             </div>
 
             <!-- Card 1: Trabajador -->
@@ -352,9 +355,9 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-devolucion-menu"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-devolucion-menu"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-devolucion-menu"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260526-mode-tabs"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260526-mode-tabs"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260526-mode-tabs"></script>
 
 </body>
 </html>
