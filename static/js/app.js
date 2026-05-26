@@ -84,6 +84,10 @@ const App = (() => {
         toastContainer: $("toastContainer"),
     };
 
+    function getSucursalLabel(planta) {
+        return planta === "TUNICHE" ? "Graneros" : planta;
+    }
+
     // ── Toast ─────────────────────────────────────────────────────
     function toast(msg, type = "info", duration = 3200) {
         const el = document.createElement("div");
@@ -154,8 +158,9 @@ const App = (() => {
     function unlockApp() {
         els.loginScreen.classList.add("hidden");
         els.appContent.classList.add("visible");
-        els.headerPlanta.textContent = `Planta: ${state.planta}`;
-        els.headerPlantaBadge.textContent = state.planta;
+        const sucursalLabel = getSucursalLabel(state.planta);
+        els.headerPlanta.textContent = `Sucursal: ${sucursalLabel}`;
+        els.headerPlantaBadge.textContent = sucursalLabel;
         showView("operacion");
         loadArticulos();
     }
