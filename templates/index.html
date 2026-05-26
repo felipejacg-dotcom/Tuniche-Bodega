@@ -9,29 +9,28 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         :root {
-            --bg-primary: #07111f;
-            --bg-secondary: #0d1b2d;
-            --bg-card: #101d31;
-            --bg-field: #0a1626;
-            --border-subtle: rgba(148, 163, 184, 0.18);
-            --border-strong: rgba(148, 163, 184, 0.32);
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #8190a5;
-            --accent-blue: #3b82f6;
-            --accent-emerald: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-red: #ef4444;
+            --app-bg: #fbfaf8;
+            --ink: #121412;
+            --muted: #6f7d6d;
+            --line: #b8c9b6;
+            --line-soft: #dce5da;
+            --green: #007a21;
+            --green-soft: #e8f6e9;
+            --green-card: #18451f;
+            --red: #c9151e;
+            --red-soft: #fde8e8;
+            --black: #1c1f1d;
+            --field: #ffffff;
             --radius-lg: 14px;
             --radius-md: 10px;
-            --radius-sm: 7px;
+            --radius-sm: 6px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: var(--app-bg);
+            color: var(--ink);
             min-height: 100vh;
             overflow-x: hidden;
         }
@@ -102,89 +101,136 @@
         .login-error { color: #b91c1c; font-size: 0.85rem; text-align: center; margin-bottom: 10px; min-height: 20px;}
 
         #appContent { opacity: 0; visibility: hidden; transition: opacity 0.6s ease; }
+        .app-shell { min-height: 100vh; padding-bottom: 92px; background: var(--app-bg); }
+        .top-bar { position: sticky; top: 0; z-index: 20; background: var(--black); border-bottom: 1px solid #2e332f; padding: 16px 0; }
+        .brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 520px; margin: 0 auto; padding: 0 20px; }
+        .brand-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-logo-box { width: 54px; height: 54px; border-radius: 7px; background: #123f1c; display: flex; align-items: center; justify-content: center; padding: 7px; flex: 0 0 auto; }
+        .brand-logo { max-width: 100%; height: auto; display: block; }
+        .brand-text { color: white; font-weight: 800; font-size: 1.18rem; line-height: 1.1; }
+        .brand-sub { color: #52624f; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.11em; margin-top: 5px; text-transform: uppercase; }
+        .btn-logout { background: transparent; border: none; color: #ff3944; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; cursor: pointer; text-align: right; text-transform: none; }
 
-        .top-bar { position: relative; z-index: 10; background: #0b1728; border-bottom: 1px solid var(--border-subtle); padding: 14px 0; }
-        .brand { display: flex; align-items: center; justify-content: space-between; }
-        .brand-left { display: flex; align-items: center; gap: 12px; }
-        .brand-mark { width: 38px; height: 38px; border-radius: 10px; font-size: 0.76rem; }
-        .brand-text { font-weight: 700; font-size: 1.15rem; color: var(--text-primary); }
-        .brand-sub { font-size: 0.7rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+        .main-container { position: relative; z-index: 5; max-width: 520px; margin: 0 auto; padding: 20px 20px 24px; }
+        .app-view { display: none; }
+        .app-view.active { display: block; }
 
-        .btn-logout { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.22); color: #fca5a5; font-size: 0.75rem; font-weight: 700; cursor: pointer; border-radius: 999px; padding: 7px 10px; }
+        .planta-bloqueada { background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 15px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .planta-label { display: inline-flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #243323; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+        .planta-bloqueada-badge { background: #49b958; color: #132716; padding: 8px 15px; border-radius: 999px; font-weight: 900; font-size: 0.84rem; letter-spacing: 0.05em; text-align: right; white-space: nowrap; }
 
-        .main-container { position: relative; z-index: 5; max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
-
-        .planta-bloqueada { background: #0f2137; border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        .planta-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-        .planta-bloqueada-badge { background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.34); color: #a7f3d0; padding: 5px 10px; border-radius: 999px; font-weight: 800; font-size: 0.78rem; letter-spacing: 0.04em; text-align: right; }
-
-        .glass-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; }
-        .card-inner { padding: 20px; }
-        .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-        .section-number { width: 28px; height: 28px; border-radius: 8px; background: #1f3a5f; border: 1px solid rgba(148, 163, 184, 0.24); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; }
-        .section-title { font-size: 0.95rem; font-weight: 600; }
+        .glass-card { background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius-md); margin-bottom: 26px; overflow: hidden; }
+        .card-inner { padding: 26px; }
+        .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .section-number { width: 42px; height: 42px; border-radius: 13px; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 900; color: white; flex: 0 0 auto; }
+        .section-title { font-size: 1.17rem; font-weight: 800; color: #111111; }
 
         .mode-card { position: relative; overflow: hidden; }
-        .mode-inner { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .mode-card.mode-salida { border-left: 4px solid var(--accent-amber); }
-        .mode-card.mode-devolucion { border-left: 4px solid var(--accent-emerald);}
-        .mode-symbol { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; }
-        .mode-card.mode-salida .mode-symbol { color: #fbbf24; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.32); }
-        .mode-card.mode-devolucion .mode-symbol { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.32); }
-        #textoModo { font-weight: 800; font-size: 1.05rem; }
-        .modo-salida-text { color: var(--accent-amber); }
-        .modo-devolucion-text { color: var(--accent-emerald); }
+        .mode-inner { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .mode-card.mode-salida { border-left: 5px solid var(--red); }
+        .mode-card.mode-devolucion { border-left: 5px solid var(--green); }
+        .mode-symbol { width: 60px; height: 60px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--red); background: var(--red-soft); margin-right: 14px; }
+        .mode-card.mode-devolucion .mode-symbol { color: var(--green); background: var(--green-soft); }
+        #textoModo { font-weight: 900; font-size: 1.35rem; letter-spacing: 0.02em; }
+        .modo-salida-text { color: var(--red); }
+        .modo-devolucion-text { color: var(--green); }
+        .mode-caption { font-size: 0.72rem; color: #3f493e; text-transform: uppercase; }
 
-        .switch-ios { position: relative; display: inline-block; width: 56px; height: 30px; }
+        .switch-ios { position: relative; display: inline-block; width: 74px; height: 42px; }
         .switch-ios input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--accent-amber); border-radius: 30px; transition: 0.4s; }
-        .slider:before { position: absolute; content: ""; height: 24px; width: 24px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.4s; }
-        input:checked + .slider { background-color: var(--accent-emerald); }
-        input:checked + .slider:before { transform: translateX(26px); }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--red); border-radius: 14px; transition: 0.25s; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08); }
+        .slider:before { position: absolute; content: ""; height: 30px; width: 30px; right: 6px; bottom: 6px; background: #2f80ed; border-radius: 999px; transition: 0.25s; }
+        .slider:after { content: ""; position: absolute; right: 16px; top: 14px; width: 10px; height: 6px; border-left: 3px solid white; border-bottom: 3px solid white; transform: rotate(-45deg); z-index: 1; }
+        input:checked + .slider { background-color: var(--green); }
+        input:checked + .slider:before { transform: translateX(-32px); }
+        input:checked + .slider:after { right: 48px; }
 
-        .form-input { width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--bg-field); color: white; margin-bottom: 10px; outline: none; }
-        .form-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14); }
-        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
-        select.form-input option { background: var(--bg-secondary); }
+        .form-input { width: 100%; padding: 15px 20px; border-radius: 4px; border: 1px solid var(--line); background: var(--field); color: #141414; margin-bottom: 16px; outline: none; font-size: 1rem; }
+        .form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0, 122, 33, 0.12); }
+        select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' fill='none' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%23364236' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 20px center; padding-right: 48px; }
+        select.form-input option { background: #ffffff; color: #141414; }
 
-        .method-pills { display: flex; gap: 6px; background: var(--bg-field); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 4px; margin-bottom: 16px; }
+        .method-pills { display: flex; gap: 6px; background: #f8f7f5; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 5px; margin-bottom: 24px; }
         .method-pills input[type="radio"] { display: none; }
-        .method-pill { flex: 1; text-align: center; padding: 10px 8px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
-        .method-pills input[type="radio"]:checked + .method-pill { background: #1f3a5f; color: white; }
+        .method-pill { flex: 1; text-align: center; padding: 12px 8px; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 900; color: #2f3d2f; cursor: pointer; letter-spacing: 0.08em; }
+        .method-pills input[type="radio"]:checked + .method-pill { background: var(--green); color: white; }
 
-        .laser-box { width: 100%; padding: 18px 16px; border-radius: var(--radius-md); border: 2px dashed rgba(59, 130, 246, 0.34); background: rgba(59, 130, 246, 0.06); color: #bfdbfe; font-size: 1.05rem; font-weight: 800; text-align: center; outline: none; letter-spacing: 0.04em; }
+        .laser-box { width: 100%; padding: 34px 16px; border-radius: var(--radius-md); border: 2px dashed var(--line); background: #fffdfa; color: #223220; font-size: 1rem; font-weight: 900; text-align: center; outline: none; letter-spacing: 0.12em; }
         #reader { width: 100%; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; }
 
-        .result-box { border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.88rem; font-weight: 600; margin-top: 16px; display: none; }
-        .result-idle { background: rgba(100, 116, 139, 0.08); color: var(--text-muted); }
-        .result-loading { background: rgba(59, 130, 246, 0.08); color: #bfdbfe; }
-        .result-success { background: rgba(16, 185, 129, 0.08); color: var(--accent-emerald); }
-        .result-error { background: rgba(239, 68, 68, 0.08); color: var(--accent-red); }
-        .result-warning { background: rgba(245, 158, 11, 0.08); color: var(--accent-amber); }
+        .result-box { border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.9rem; font-weight: 700; margin-top: 16px; display: none; }
+        .result-idle { background: #f4f6f3; color: var(--muted); }
+        .result-loading { background: #edf7ef; color: var(--green); }
+        .result-success { background: #e8f6e9; color: var(--green); }
+        .result-error { background: #fde8e8; color: var(--red); }
+        .result-warning { background: #fff7dd; color: #8a5b00; }
 
-        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; margin-bottom: 12px; border-radius: var(--radius-md); border: 1px solid rgba(59, 130, 246, 0.32); background: rgba(59, 130, 246, 0.08); color: #bfdbfe; font-weight: 700; cursor: pointer; }
-        .btn-badge { background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.3); color: #dbeafe; padding: 2px 6px; border-radius: 4px; font-size: 0.62rem; font-weight: 800; }
+        .scan-carnet-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px; margin-bottom: 18px; border-radius: 3px; border: 2px solid var(--green); background: #ffffff; color: var(--green); font-weight: 900; letter-spacing: 0.08em; cursor: pointer; }
+        .btn-badge { background: #e8eee7; color: var(--green); padding: 6px 10px; border-radius: 3px; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; }
+
+        .records-toolbar { display: flex; flex-direction: column; gap: 18px; margin-bottom: 26px; }
+        .search-box { position: relative; }
+        .search-box svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #6f7d6d; }
+        .search-box input { width: 100%; padding: 18px 18px 18px 54px; border: 1px solid var(--line); border-radius: 4px; background: #ffffff; font-size: 1rem; color: var(--ink); outline: none; }
+        .filter-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 3px; }
+        .filter-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border: 2px solid #111111; border-radius: 13px; background: #ffffff; color: #111111; font-weight: 900; letter-spacing: 0.08em; }
+        .records-date { margin: 26px 0 12px; color: var(--muted); font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+        .record-card { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: #ffffff; border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: var(--radius-md); padding: 20px 18px; margin-bottom: 14px; }
+        .record-card.salida { border-left-color: var(--red); }
+        .record-name { font-weight: 900; font-size: 1.1rem; color: #111111; margin-bottom: 6px; }
+        .record-rut { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 700; margin-bottom: 12px; }
+        .record-meta { display: flex; flex-wrap: wrap; gap: 14px; color: #2e3a2e; font-size: 0.9rem; }
+        .record-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 13px; border-radius: 999px; background: #dff3e1; border: 1px solid #acd9b0; color: var(--green); font-size: 0.75rem; font-weight: 900; letter-spacing: 0.08em; }
+        .record-card.salida .record-badge { background: var(--red-soft); border-color: #efa9ad; color: var(--red); }
+        .summary-card { background: var(--black); color: #ffffff; border: 2px solid #050505; border-radius: var(--radius-md); padding: 28px 34px; margin-top: 28px; }
+        .summary-title { color: #9cff9d; font-size: 0.92rem; letter-spacing: 0.16em; font-weight: 900; margin-bottom: 26px; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .summary-number { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .summary-label { margin-top: 10px; color: #f5f5f5; font-size: 0.78rem; text-transform: uppercase; }
+
+        .settings-header { display: flex; justify-content: space-between; align-items: center; margin: 2px 0 20px; }
+        .settings-title { color: var(--green); font-size: 1.18rem; font-weight: 900; letter-spacing: 0.07em; }
+        .settings-group-title { color: #324033; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.05em; margin: 24px 0 12px; text-transform: uppercase; }
+        .profile-card, .settings-card { background: #ffffff; border: 1px solid var(--line-soft); border-left: 4px solid var(--green); border-radius: var(--radius-md); padding: 22px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
+        .profile-kicker { color: var(--green); font-size: 0.76rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+        .profile-name { font-size: 1.35rem; font-weight: 900; margin: 8px 0; }
+        .profile-meta { color: #596356; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.85rem; }
+        .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 19px 4px; border-bottom: 1px solid #ecefec; }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-copy strong { display: block; font-weight: 700; color: #1e241e; margin-bottom: 3px; }
+        .setting-copy span { color: #596356; font-size: 0.9rem; }
+        .switch-control { width: 44px; height: 24px; border-radius: 999px; background: #dedede; position: relative; flex: 0 0 auto; }
+        .switch-control.on { background: var(--green); }
+        .switch-control::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 999px; right: 2px; top: 2px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .switch-control:not(.on)::after { right: 22px; }
+        .logout-wide { width: 100%; margin-top: 28px; padding: 16px; border: none; border-radius: 7px; background: var(--red); color: #ffffff; font-weight: 800; }
+        .settings-footer { text-align: center; color: #a0a0a0; font-size: 0.78rem; margin: 42px 0 18px; }
+
+        .bottom-nav { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 30; width: min(520px, 100%); background: var(--black); border-radius: 8px 8px 0 0; padding: 12px 20px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; box-shadow: 0 -4px 18px rgba(0,0,0,0.18); }
+        .nav-btn { border: none; background: transparent; color: #ffffff; border-radius: 13px; padding: 9px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 800; letter-spacing: 0.03em; }
+        .nav-btn svg { width: 24px; height: 24px; }
+        .nav-btn.active { background: #1f4a24; color: #7dff7f; }
+
+        .icon { width: 22px; height: 22px; display: inline-block; vertical-align: middle; }
 
         .carnet-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; visibility: hidden; transition: 0.3s; }
         .carnet-modal-overlay.active { opacity: 1; visibility: visible; }
-        .carnet-modal { width: 100%; max-width: 440px; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 20px; }
-
-        .history-list { display: flex; flex-direction: column; gap: 8px; }
-        .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); }
-        .history-item.salida-item { border-left: 3px solid var(--accent-amber); }
-        .history-item.devolucion-item { border-left: 3px solid var(--accent-emerald); }
-        .history-item.error-item { border-left: 3px solid var(--accent-red); opacity: 0.7; }
-        .history-status { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; margin-top: 4px; background: var(--accent-amber); }
-        .devolucion-item .history-status { background: var(--accent-emerald); }
-        .error-item .history-status { background: var(--accent-red); }
-        .history-msg { font-size: 0.82rem; font-weight: 600; }
+        .carnet-modal { width: 100%; max-width: 440px; background: #ffffff; border-radius: var(--radius-lg); padding: 20px; }
+        .history-list { display: flex; flex-direction: column; gap: 10px; }
+        .history-empty { color: #2f3d2f; font-style: italic; padding: 12px 16px; }
+        .history-item { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-md); background: #fffdfa; border: 1px solid var(--line-soft); }
+        .history-item.salida-item { border-left: 4px solid var(--red); }
+        .history-item.devolucion-item { border-left: 4px solid var(--green); }
+        .history-item.error-item { border-left: 4px solid var(--red); opacity: 0.75; }
+        .history-status { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; margin-top: 4px; background: var(--red); }
+        .devolucion-item .history-status { background: var(--green); }
+        .history-msg { font-size: 0.84rem; font-weight: 700; color: #111111; }
         .history-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
-        .history-badge { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; color: var(--text-secondary); }
-        .history-time { font-size: 0.7rem; color: var(--text-muted); }
-
+        .history-badge { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 900; color: var(--muted); }
+        .history-time { font-size: 0.72rem; color: var(--muted); }
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; }
         .loading-overlay.active { opacity: 1; visibility: visible; }
-        .loading-spinner { width: 56px; height: 56px; border: 4px solid rgba(59, 130, 246, 0.2); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loading-spinner { width: 56px; height: 56px; border: 4px solid rgba(255,255,255, 0.25); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -227,11 +273,13 @@
 </div>
 
 <div id="appContent">
-    <div class="top-bar">
-        <div class="container" style="max-width:520px;">
+    <div class="app-shell">
+        <div class="top-bar">
             <div class="brand">
                 <div class="brand-left">
-                    <div class="brand-mark" aria-hidden="true">TF</div>
+                    <div class="brand-logo-box">
+                        <img class="brand-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}" alt="Tuniche">
+                    </div>
                     <div>
                         <div class="brand-text">Tuniche Móvil</div>
                         <div class="brand-sub">Sistema de Bodega</div>
@@ -240,82 +288,228 @@
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
             </div>
         </div>
-    </div>
 
-    <div class="main-container">
+        <div class="main-container">
+            <section id="viewOperacion" class="app-view active">
+                <div class="planta-bloqueada">
+                    <span class="planta-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 21h18M5 21V5h10v16M9 8h2M9 12h2M9 16h2M15 11h4v10"/>
+                        </svg>
+                        Planta activa
+                    </span>
+                    <span id="lblPlantaActiva" class="planta-bloqueada-badge">TUNICHE</span>
+                </div>
 
-        <div class="planta-bloqueada">
-            <span class="planta-label">Planta activa</span>
-            <span id="lblPlantaActiva" class="planta-bloqueada-badge">TUNICHE</span>
-        </div>
-
-        <div class="glass-card mode-card mode-salida" id="cardModo">
-            <div class="mode-inner">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span id="modeIcon" class="mode-symbol">OUT</span>
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.65rem; color:var(--text-muted);">MODO ACTIVO</span>
-                        <span id="textoModo" class="modo-salida-text">SALIDA</span>
+                <div class="glass-card mode-card mode-salida" id="cardModo">
+                    <div class="mode-inner">
+                        <div style="display:flex; align-items:center;">
+                            <span id="modeIcon" class="mode-symbol">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/>
+                                </svg>
+                            </span>
+                            <div style="display:flex; flex-direction:column;">
+                                <span class="mode-caption">Modo activo</span>
+                                <span id="textoModo" class="modo-salida-text">SALIDA</span>
+                            </div>
+                        </div>
+                        <label class="switch-ios">
+                            <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
+                            <span class="slider"></span>
+                        </label>
                     </div>
                 </div>
-                <label class="switch-ios">
-                    <input type="checkbox" id="toggleModo" onchange="cambiarModo()">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
 
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">1</div> <span class="section-title">Datos del Trabajador</span>
-                </div>
-                <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
-                    Escanear Carnet <span class="btn-badge">QR / PDF417</span>
-                </button>
-                <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)" oninput="this.value = formatearRut(this.value)">
-                <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
-                <select id="area" class="form-input">
-                    <option value="" disabled selected>Seleccione Área...</option>
-                    {% for area in areas %}
-                    <option value="{{ area }}">{{ area }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">2</div> <span class="section-title">Método de Escaneo</span>
-                </div>
-                <div class="method-pills">
-                    <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
-                    <label class="method-pill" for="btn_laser">Láser</label>
-                    <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
-                    <label class="method-pill" for="btn_cam_trasera">Cámara trasera</label>
+                <div class="glass-card">
+                    <div class="card-inner">
+                        <div class="section-header">
+                            <div class="section-number">1</div>
+                            <span class="section-title">Datos del Trabajador</span>
+                        </div>
+                        <button type="button" class="scan-carnet-btn" onclick="abrirEscanerCarnet()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="6" width="16" height="12" rx="2"/>
+                                <path d="M8 10h3M8 14h8M15 10h1"/>
+                                <path d="M12 3v5M9 3h6"/>
+                            </svg>
+                            Escanear Carnet <span class="btn-badge">QR / PDF417</span>
+                        </button>
+                        <input type="text" id="rut" class="form-input" placeholder="RUT (Ej: 12.345.678-9)" oninput="this.value = formatearRut(this.value)">
+                        <input type="text" id="trabajador" class="form-input" placeholder="Nombre completo">
+                        <select id="area" class="form-input">
+                            <option value="" disabled selected>Seleccione Área...</option>
+                            {% for area in areas %}
+                            <option value="{{ area }}">{{ area }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <div id="laser_section">
-                    <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+                <div class="glass-card">
+                    <div class="card-inner">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <span class="section-title">Método de Escaneo</span>
+                        </div>
+                        <div class="method-pills">
+                            <input type="radio" name="btnradio" id="btn_laser" checked onclick="activarLaser()">
+                            <label class="method-pill" for="btn_laser">Láser</label>
+                            <input type="radio" name="btnradio" id="btn_cam_trasera" onclick="activarCamara('environment')">
+                            <label class="method-pill" for="btn_cam_trasera">Trasera</label>
+                        </div>
+
+                        <div id="laser_section">
+                            <input type="text" id="laser_input" class="laser-box" placeholder="[ DISPARA AQUÍ ]" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+                        </div>
+                        <div id="camara_section" style="display: none;">
+                            <div id="reader"></div>
+                        </div>
+                        <div id="resultado" class="result-box result-idle">Esperando escaneo...</div>
+                    </div>
                 </div>
-                <div id="camara_section" style="display: none;">
-                    <div id="reader"></div>
+
+                <div class="glass-card">
+                    <div class="card-inner">
+                        <div class="section-header">
+                            <div class="section-number">3</div>
+                            <span class="section-title">Últimos Registros</span>
+                        </div>
+                        <div id="historyList" class="history-list">
+                            <div class="history-empty">Aún no hay registros</div>
+                        </div>
+                    </div>
                 </div>
-                <div id="resultado" class="result-box result-idle">Esperando escaneo...</div>
-            </div>
+            </section>
+
+            <section id="viewRegistros" class="app-view">
+                <div class="records-toolbar">
+                    <div class="search-box">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="M20 20l-3.5-3.5"/>
+                        </svg>
+                        <input type="text" placeholder="Buscar trabajador por nombre o RUT..." oninput="filtrarRegistros(this.value)">
+                    </div>
+                    <div class="filter-row">
+                        <button class="filter-chip" type="button">Fecha</button>
+                        <button class="filter-chip" type="button">Entrada/Salida</button>
+                        <button class="filter-chip" type="button">Filtros</button>
+                    </div>
+                </div>
+
+                <div class="records-date">Hoy, turno activo</div>
+                <div id="recordsList">
+                    <div class="history-empty">Aún no hay registros del turno</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-title">RESUMEN DE TURNO</div>
+                    <div class="summary-grid">
+                        <div>
+                            <div id="totalEntradas" class="summary-number">0</div>
+                            <div class="summary-label">Entradas totales</div>
+                        </div>
+                        <div>
+                            <div id="totalSalidas" class="summary-number">0</div>
+                            <div class="summary-label">Salidas totales</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="viewAjustes" class="app-view">
+                <div class="settings-header">
+                    <div>
+                        <div class="settings-title">TUNICHE</div>
+                        <div class="settings-title">EPP</div>
+                    </div>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                </div>
+
+                <div class="profile-card">
+                    <div class="profile-kicker">Perfil de usuario</div>
+                    <div class="profile-name" id="settingsUserName">Operario Bodega</div>
+                    <div class="profile-meta">RUT: <span id="settingsRut">--</span></div>
+                    <div class="profile-meta">PLANTA: <span id="settingsPlant">Tuniche Central</span></div>
+                </div>
+
+                <div class="settings-group-title">Configuración de escaneo</div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Intensidad Láser</strong>
+                            <span>Optimizar para luz solar directa</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="82" style="accent-color: var(--green); max-width: 110px;">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Alertas Sonoras</strong>
+                            <span>Confirmación de escaneo exitoso</span>
+                        </div>
+                        <span class="switch-control on" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <div class="settings-group-title">Notificaciones</div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Stock Crítico EPP</strong>
+                            <span>Alertar cuando falten tallas M/L</span>
+                        </div>
+                        <span class="switch-control on" aria-hidden="true"></span>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Registros Pendientes</strong>
+                            <span>Recordatorio fin de turno</span>
+                        </div>
+                        <span class="switch-control" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <div class="settings-group-title">Información legal / versión</div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Política de Privacidad</strong>
+                            <span>Gestión de datos biométricos</span>
+                        </div>
+                        <span style="color: var(--muted); font-weight: 900;">›</span>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-copy">
+                            <strong>Versión de la App</strong>
+                            <span>Build 2.4.0 (Stable)</span>
+                        </div>
+                        <span style="background:#e7e7e2; color:#6c7268; padding:5px 8px; font-size:.7rem; font-weight:900;">LATEST</span>
+                    </div>
+                </div>
+
+                <button class="logout-wide" onclick="cerrarSesion()">Cerrar sesión</button>
+                <div class="settings-footer">TUNICHE FRUITS<br>© 2026 Todos los derechos reservados</div>
+            </section>
         </div>
 
-        <div class="glass-card">
-            <div class="card-inner">
-                <div class="section-header">
-                    <div class="section-number">3</div> <span class="section-title">Últimos Registros</span>
-                </div>
-                <div id="historyList" class="history-list">
-                    <div class="history-empty">Aún no hay registros</div>
-                </div>
-            </div>
-        </div>
+        <nav class="bottom-nav" aria-label="Navegación principal">
+            <button class="nav-btn active" type="button" data-view="operacion" onclick="mostrarVista('operacion')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M5 17h14M7 5v14M17 5v14"/><path d="M9 9h6v6H9z"/></svg>
+                Operación
+            </button>
+            <button class="nav-btn" type="button" data-view="registros" onclick="mostrarVista('registros')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/></svg>
+                Registros
+            </button>
+            <button class="nav-btn" type="button" data-view="ajustes" onclick="mostrarVista('ajustes')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a8 8 0 0 0 .1-1.2 8 8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a7 7 0 0 0-2-1.1L14.7 5h-5.4L9 7.6a7 7 0 0 0-2 1.1l-2.4-1-2 3.4 2 1.5a8 8 0 0 0-.1 1.2 8 8 0 0 0 .1 1.2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 2 1.1l.3 2.6h5.4l.3-2.6a7 7 0 0 0 2-1.1l2.4 1 2-3.4-2-1.5z"/></svg>
+                Ajustes
+            </button>
+        </nav>
     </div>
 </div>
 
@@ -345,6 +539,13 @@
     let isProcessing = false;
     let html5QrCode;
     let carnetQrScanner = null;
+    let historial = [];
+    let totalEntradas = 0;
+    let totalSalidas = 0;
+    let filtroRegistros = "";
+
+    const iconSalida = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>`;
+    const iconEntrada = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9M7 16l5 5 5-5M5 5v6h14V5"/></svg>`;
 
     window.onload = () => {
         const guardado = localStorage.getItem('sgb_session');
@@ -364,7 +565,7 @@
 
         if(!u || !p) { errorDiv.innerText = "Complete usuario y contraseña."; return; }
 
-        errorDiv.style.color = "var(--accent-blue)";
+        errorDiv.style.color = "var(--green)";
         errorDiv.innerText = "Conectando al servidor...";
 
         fetch('/login', {
@@ -401,9 +602,11 @@
         document.getElementById('appContent').style.opacity = '1';
         document.getElementById('appContent').style.visibility = 'visible';
         document.getElementById('lblPlantaActiva').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'TUNICHE (CENTRAL)' : 'PUQUILLAY';
+        document.getElementById('settingsPlant').innerText = CREDENCIALES.planta === 'TUNICHE' ? 'Tuniche Central' : 'Puquillay';
 
         html5QrCode = new Html5Qrcode("reader");
         activarLaser();
+        mostrarVista('operacion');
     }
 
     function cerrarSesion() {
@@ -522,10 +725,10 @@
 
         if (toggle.checked) {
             texto.innerText = "DEVOLUCIÓN"; texto.className = "modo-devolucion-text";
-            icon.innerText = "IN"; card.className = "glass-card mode-card mode-devolucion";
+            icon.innerHTML = iconEntrada; card.className = "glass-card mode-card mode-devolucion";
         } else {
             texto.innerText = "SALIDA"; texto.className = "modo-salida-text";
-            icon.innerText = "OUT"; card.className = "glass-card mode-card mode-salida";
+            icon.innerHTML = iconSalida; card.className = "glass-card mode-card mode-salida";
         }
     }
 
@@ -713,11 +916,16 @@
         } catch(e){}
     }
 
-    let historial = [];
     function agregarRegistro(accion, msg, exito) {
         const h = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        historial.unshift({ accion, msg, exito, hora: h });
+        const rut = document.getElementById('rut').value || '--';
+        const trabajador = document.getElementById('trabajador').value || 'Trabajador sin nombre';
+        const area = document.getElementById('area').value || 'Bodega';
+        const planta = CREDENCIALES.planta === 'TUNICHE' ? 'Tuniche Central' : 'Puquillay';
+        historial.unshift({ accion, msg, exito, hora: h, rut, trabajador, area, planta });
         if (historial.length > 3) historial.pop();
+        if (exito && accion === 'DEVOLUCION') totalEntradas++;
+        if (exito && accion === 'SALIDA') totalSalidas++;
         document.getElementById('historyList').innerHTML = historial.map(r => `
             <div class="history-item ${!r.exito ? 'error-item' : (r.accion==='DEVOLUCION'?'devolucion-item':'salida-item')}">
                 <span class="history-status" aria-hidden="true"></span>
@@ -729,6 +937,67 @@
                     </div>
                 </div>
             </div>`).join('');
+        renderRegistros();
+    }
+
+    function mostrarVista(nombre) {
+        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+        const view = document.getElementById('view' + nombre.charAt(0).toUpperCase() + nombre.slice(1));
+        if (view) view.classList.add('active');
+
+        const nav = document.querySelector(`.nav-btn[data-view="${nombre}"]`);
+        if (nav) nav.classList.add('active');
+
+        if (nombre === 'registros') renderRegistros();
+        if (nombre === 'ajustes') {
+            document.getElementById('settingsUserName').innerText = document.getElementById('trabajador').value || CREDENCIALES.user || 'Operario Bodega';
+            document.getElementById('settingsRut').innerText = document.getElementById('rut').value || '--';
+        }
+    }
+
+    function filtrarRegistros(valor) {
+        filtroRegistros = valor.trim().toLowerCase();
+        renderRegistros();
+    }
+
+    function renderRegistros() {
+        const records = document.getElementById('recordsList');
+        if (!records) return;
+
+        const visibles = historial.filter(r => {
+            if (!filtroRegistros) return true;
+            return `${r.trabajador} ${r.rut} ${r.area} ${r.msg}`.toLowerCase().includes(filtroRegistros);
+        });
+
+        document.getElementById('totalEntradas').innerText = totalEntradas;
+        document.getElementById('totalSalidas').innerText = totalSalidas;
+
+        if (!visibles.length) {
+            records.innerHTML = `<div class="history-empty">Aún no hay registros del turno</div>`;
+            return;
+        }
+
+        records.innerHTML = visibles.map(r => {
+            const salida = r.accion !== 'DEVOLUCION';
+            return `
+                <article class="record-card ${salida ? 'salida' : 'entrada'}">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <div class="record-name">${r.trabajador}</div>
+                            <span class="record-badge">${salida ? 'SALIDA' : 'ENTRADA'}</span>
+                        </div>
+                        <div class="record-rut">RUT: ${r.rut}</div>
+                        <div class="record-meta">
+                            <span>${r.planta}</span>
+                            <span>${r.hora}</span>
+                        </div>
+                    </div>
+                    <span style="color: var(--muted); font-size: 1.7rem; font-weight: 700;">›</span>
+                </article>
+            `;
+        }).join('');
     }
 </script>
 </body>
