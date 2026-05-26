@@ -15,6 +15,10 @@ def _get_users() -> dict:
     return users
 
 
+def has_login_users() -> bool:
+    return bool(_get_users())
+
+
 def login_user(username: str, password: str, planta: str) -> bool:
     users = _get_users()
     if users.get(username.strip().lower()) == password.strip():

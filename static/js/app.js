@@ -133,7 +133,7 @@ const App = (() => {
                 vibrate([300]);
             }
         } catch (e) {
-            els.loginError.textContent = "Error de conexion. Verifica la red.";
+            els.loginError.textContent = e.message || "Error de conexion. Verifica la red.";
         } finally {
             els.btnLogin.disabled = false;
             els.btnLogin.textContent = "INGRESAR AL SISTEMA";

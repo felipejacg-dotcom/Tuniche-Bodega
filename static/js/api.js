@@ -16,17 +16,31 @@ const API = (() => {
             config.body = JSON.stringify(config.body);
         }
         const res = await fetch(url, config);
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (_) {
+            data = {};
+        }
+
         if (res.status === 401) {
             // Sesion expirada — forzar logout
             if (!skipAuthHandler && typeof App !== "undefined") App.logout();
-            throw new Error("Sesion expirada");
+            throw new Error(data.message || "Sesion expirada");
         }
-        return res.json();
+        if (!res.ok) {
+            throw new Error(data.message || `Error HTTP ${res.status}`);
+        }
+        return data;
     }
 
     return {
         login: (username, password, planta) =>
-            _req("/api/login", { method: "POST", body: { username, password, planta } }),
+            _req("/api/login", {
+                method: "POST",
+                body: { username, password, planta },
+                skipAuthHandler: true,
+            }),
 
         logout: () =>
             _req("/api/logout", { method: "POST" }),
