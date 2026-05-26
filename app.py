@@ -3,7 +3,7 @@ from flask import Flask, render_template
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION")

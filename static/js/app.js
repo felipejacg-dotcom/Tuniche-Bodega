@@ -440,7 +440,7 @@ const App = (() => {
                 }
             } catch (e) {
                 hideLoading();
-                toast("Error de conexion.", "error");
+                toast(e.message || "Error de conexion.", "error", 5000);
             }
         } else {
             // Modo DEVOLUCION manual
@@ -483,7 +483,7 @@ const App = (() => {
                 }
             } catch (e) {
                 hideLoading();
-                toast("Error de conexion.", "error");
+                toast(e.message || "Error de conexion.", "error", 5000);
             }
         }
     }
@@ -589,7 +589,7 @@ const App = (() => {
             }
         } catch (e) {
             hideLoading();
-            toast("Error de conexion.", "error");
+            toast(e.message || "Error de conexion.", "error", 5000);
         }
     }
 
@@ -641,6 +641,7 @@ const App = (() => {
             if (data.success) state.articulos = data.articulos;
         } catch (e) {
             console.error("Error loading articulos:", e);
+            toast(e.message || "Error cargando articulos.", "error", 5000);
         }
     }
 
@@ -697,7 +698,7 @@ const App = (() => {
                 renderRegistros();
             }
         } catch (e) {
-            toast("Error cargando registros.", "error");
+            toast(e.message || "Error cargando registros.", "error", 5000);
         }
     }
 
