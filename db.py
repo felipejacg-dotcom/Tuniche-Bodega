@@ -4,16 +4,26 @@ import os
 
 _pool = None
 
+DEFAULT_DB_HOST = "gateway01.us-east-1.prod.aws.tidbcloud.com"
+DEFAULT_DB_PORT = 4000
+
+
+def _required_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Variable de entorno requerida no configurada: {name}")
+    return value
+
 
 def _create_pool():
     global _pool
     _pool = mysql.connector.pooling.MySQLConnectionPool(
         pool_name="tuniche_pool",
         pool_size=5,
-        host=os.environ["DB_HOST"],
-        port=int(os.environ.get("DB_PORT", 4000)),
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
+        host=os.environ.get("DB_HOST", DEFAULT_DB_HOST),
+        port=int(os.environ.get("DB_PORT", DEFAULT_DB_PORT)),
+        user=_required_env("DB_USER"),
+        password=_required_env("DB_PASSWORD"),
         ssl_verify_cert=False,
         ssl_verify_identity=False,
         use_pure=True,

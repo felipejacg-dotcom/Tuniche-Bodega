@@ -6,7 +6,7 @@ services:
     startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 30 --log-level info
     envVars:
       - key: DB_HOST
-        sync: false
+        value: gateway01.us-east-1.prod.aws.tidbcloud.com
       - key: DB_PORT
         value: "4000"
       - key: DB_USER
