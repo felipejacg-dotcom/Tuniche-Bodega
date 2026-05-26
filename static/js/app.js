@@ -100,7 +100,7 @@ const App = (() => {
     // ── Auth ──────────────────────────────────────────────────────
     async function checkSession() {
         try {
-            const data = await API.me();
+            const data = await API.me({ skipAuthHandler: true });
             if (data.success) {
                 state.user = data.user;
                 state.planta = data.planta;
@@ -117,7 +117,7 @@ const App = (() => {
         const pl = els.loginPlanta.value;
 
         els.loginError.textContent = "";
-        if (!u || !p) { els.loginError.textContent = "Completa usuario y contrasena."; return; }
+        if (!u || !p) { els.loginError.textContent = "Completa usuario y contraseña."; return; }
 
         els.btnLogin.disabled = true;
         els.btnLogin.textContent = "Conectando...";

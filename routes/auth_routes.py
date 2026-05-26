@@ -13,7 +13,7 @@ def login():
     planta = data.get("planta", "TUNICHE").strip()
 
     if not username or not password:
-        return jsonify({"success": False, "message": "Usuario y contrasena requeridos."}), 400
+        return jsonify({"success": False, "message": "Usuario y contraseña requeridos."}), 400
 
     if planta not in ("TUNICHE", "PUQUILLAY"):
         return jsonify({"success": False, "message": "Planta invalida."}), 400
@@ -21,7 +21,7 @@ def login():
     if login_user(username, password, planta):
         return jsonify({"success": True, "user": username, "planta": planta})
 
-    return jsonify({"success": False, "message": "Usuario o contrasena incorrectos."}), 401
+    return jsonify({"success": False, "message": "Usuario o contraseña incorrectos."}), 401
 
 
 @auth_bp.route("/logout", methods=["POST"])

@@ -6,10 +6,11 @@
  */
 const API = (() => {
     async function _req(url, options = {}) {
+        const { skipAuthHandler = false, ...fetchOptions } = options;
         const config = {
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
-            ...options,
+            ...fetchOptions,
         };
         if (config.body && typeof config.body === "object") {
             config.body = JSON.stringify(config.body);
@@ -17,7 +18,7 @@ const API = (() => {
         const res = await fetch(url, config);
         if (res.status === 401) {
             // Sesion expirada — forzar logout
-            if (typeof App !== "undefined") App.logout();
+            if (!skipAuthHandler && typeof App !== "undefined") App.logout();
             throw new Error("Sesion expirada");
         }
         return res.json();
@@ -30,7 +31,7 @@ const API = (() => {
         logout: () =>
             _req("/api/logout", { method: "POST" }),
 
-        me: () => _req("/api/me"),
+        me: (options = {}) => _req("/api/me", options),
 
         buscarTrabajador: (rut) =>
             _req("/api/buscar_trabajador", { method: "POST", body: { rut } }),
