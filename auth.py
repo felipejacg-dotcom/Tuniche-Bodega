@@ -3,9 +3,11 @@ from flask import session, jsonify
 import os
 from functools import wraps
 
+DEFAULT_LOGIN_USERS = "admin:admin123,bodega:123456"
+
 
 def _get_users() -> dict:
-    raw = os.environ.get("LOGIN_USERS", "")
+    raw = os.environ.get("LOGIN_USERS", "").strip() or DEFAULT_LOGIN_USERS
     users = {}
     for pair in raw.split(","):
         pair = pair.strip()
