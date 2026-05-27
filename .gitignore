@@ -31,3 +31,14 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Android specific
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/.idea/
+android/**/*.apk
+android/**/*.aab
+android/**/*.keystore
+android/**/*.jks

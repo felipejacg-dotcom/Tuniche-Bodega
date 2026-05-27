@@ -790,25 +790,32 @@ const App = (() => {
                 els.btnDownloadCierre.textContent = "Generando PDF...";
             }
             const { blob, filename } = await API.downloadCierreTurnoPdf();
-            const finalFilename = filename || "cierre-turno.pdf";
-            const file = new File([blob], finalFilename, { type: "application/pdf" });
+            const sanitizedFilename = (filename || "cierre-turno.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+            const file = new File([blob], sanitizedFilename, { type: "application/pdf" });
             const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
 
             // 1. Caso: Ejecución dentro de la App de Android Nativa
             if (window.AndroidApp && window.AndroidApp.sharePdf) {
                 const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = function() {
-                    const base64data = reader.result.split(',')[1];
-                    window.AndroidApp.sharePdf(base64data, finalFilename);
+                reader.onerror = function() {
+                    toast("Error al leer el archivo PDF.", "error");
                 };
+                reader.onloadend = function() {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        window.AndroidApp.sharePdf(base64data, sanitizedFilename);
+                    } catch (e) {
+                        toast("Error al procesar el archivo en la aplicación.", "error");
+                    }
+                };
+                reader.readAsDataURL(blob);
                 toast("Abriendo compartir...", "success");
             }
             // 2. Caso: Navegador móvil compatible con Web Share
             else if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
                     files: [file],
-                    title: finalFilename,
+                    title: sanitizedFilename,
                     text: `Cierre de turno de la sucursal ${sucursal}`,
                 });
                 toast("Cierre compartido.", "success");
@@ -818,7 +825,7 @@ const App = (() => {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = finalFilename;
+                link.download = sanitizedFilename;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
