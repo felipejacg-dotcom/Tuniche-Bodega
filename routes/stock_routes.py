@@ -34,6 +34,53 @@ def _display_planta(planta):
     return "Graneros" if planta == "TUNICHE" else planta
 
 
+def _format_fecha_hora(value):
+    if value is None:
+        return "---"
+    if isinstance(value, datetime):
+        return value.strftime("%d/%m/%Y %H:%M")
+    text = str(value)
+    if " " in text:
+        parts = text.split(" ")
+        date_part = parts[0]
+        time_part = parts[1][:5]
+        try:
+            dt = datetime.strptime(date_part, "%Y-%m-%d")
+            return f"{dt.strftime('%d/%m/%Y')} {time_part}"
+        except ValueError:
+            return f"{date_part} {time_part}"
+    return text[:16]
+
+
+def _group_pendientes(items, is_historico=False):
+    grouped = {}
+    for item in items:
+        rut = item.get("rut") or ""
+        trabajador = item.get("trabajador") or "Desconocido"
+        area = item.get("area") or "Sin area"
+        
+        key = (rut, trabajador, area)
+        if key not in grouped:
+            grouped[key] = {
+                "rut": rut,
+                "trabajador": trabajador,
+                "area": area,
+                "articulos": []
+            }
+        
+        val_hora = item.get("hora_salida")
+        if is_historico:
+            hora_str = _format_fecha_hora(val_hora)
+        else:
+            hora_str = _format_hora(val_hora)
+            
+        grouped[key]["articulos"].append({
+            "articulo": item.get("articulo"),
+            "hora_salida": hora_str
+        })
+    return list(grouped.values())
+
+
 def _build_cierre_turno_data(planta):
     now = datetime.now(ZoneInfo("America/Santiago"))
     conn = None
@@ -41,6 +88,7 @@ def _build_cierre_turno_data(planta):
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
 
+        # 1. Movimientos del día
         cur.execute("""
             SELECT t.id, t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
@@ -53,6 +101,7 @@ def _build_cierre_turno_data(planta):
         """)
         registros = cur.fetchall()
 
+        # 2. Pendientes de HOY (del turno)
         cur.execute("""
             SELECT t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
@@ -60,15 +109,33 @@ def _build_cierre_turno_data(planta):
             FROM (
                 SELECT rut, trabajador, area, articulo_id, hora_salida
                 FROM transacciones
-                WHERE estado = 'EN TERRENO'
+                WHERE estado = 'EN TERRENO' AND hora_salida >= CURDATE()
                 ORDER BY hora_salida DESC
                 LIMIT 200
             ) t
             JOIN articulos a ON t.articulo_id = a.id
             ORDER BY t.hora_salida DESC
         """)
-        pendientes = cur.fetchall()
+        raw_pendientes_hoy = cur.fetchall()
 
+        # 3. Pendientes HISTORICOS (días anteriores)
+        cur.execute("""
+            SELECT t.rut, t.trabajador, t.area,
+                   CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
+                   t.hora_salida
+            FROM (
+                SELECT rut, trabajador, area, articulo_id, hora_salida
+                FROM transacciones
+                WHERE estado = 'EN TERRENO' AND hora_salida < CURDATE()
+                ORDER BY hora_salida DESC
+                LIMIT 200
+            ) t
+            JOIN articulos a ON t.articulo_id = a.id
+            ORDER BY t.hora_salida DESC
+        """)
+        raw_pendientes_historicos = cur.fetchall()
+
+        # 4. Stock crítico
         cur.execute("""
             SELECT id, descripcion, talla, medida, stock_disponible, limite_alerta
             FROM articulos
@@ -83,35 +150,58 @@ def _build_cierre_turno_data(planta):
         if conn:
             conn.close()
 
+    # Formatear horas del log de registros del día
     for row in registros:
         row["hora_salida"] = _format_hora(row.get("hora_salida"))
         row["hora_entrada"] = _format_hora(row.get("hora_entrada"))
 
-    for row in pendientes:
-        row["hora_salida"] = _format_hora(row.get("hora_salida"))
-
     salidas = len(registros)
     devoluciones = sum(1 for row in registros if row.get("estado") == "DEVUELTO")
     total_movimientos = salidas + devoluciones
-    trabajadores_pendientes = len({row.get("rut") for row in pendientes if row.get("rut")})
+
+    # Calcular KPIs
+    pendientes_hoy_count = len(raw_pendientes_hoy)
+    pendientes_historicos_count = len(raw_pendientes_historicos)
+    total_pendientes = pendientes_hoy_count + pendientes_historicos_count
+
+    # Trabajadores únicos con pendientes (unión de hoy e históricos)
+    ruts_unicos = {row.get("rut") for row in raw_pendientes_hoy if row.get("rut")} | \
+                  {row.get("rut") for row in raw_pendientes_historicos if row.get("rut")}
+    trabajadores_pendientes = len(ruts_unicos)
 
     kpi = {
         "total": total_movimientos,
         "salidas": salidas,
         "devoluciones": devoluciones,
-        "pendientes": len(pendientes),
+        "pendientes_hoy": pendientes_hoy_count,
+        "pendientes_historicos": pendientes_historicos_count,
+        "pendientes": total_pendientes,
         "trabajadores_pendientes": trabajadores_pendientes,
         "stock_critico": len(stock_critico),
     }
 
-    pendientes_lines = [
-        f"- {p['trabajador']} ({p['rut']}) | {p['articulo']} | {p.get('area') or 'Sin area'} | salida {p['hora_salida']}"
-        for p in pendientes[:25]
-    ]
-    if not pendientes_lines:
-        pendientes_lines = ["Sin pendientes en terreno."]
-    elif len(pendientes) > 25:
-        pendientes_lines.append(f"... y {len(pendientes) - 25} pendientes mas.")
+    # Agrupar pendientes por trabajador
+    gp_hoy = _group_pendientes(raw_pendientes_hoy, is_historico=False)
+    gp_hist = _group_pendientes(raw_pendientes_historicos, is_historico=True)
+
+    # Construir resumen en texto plano (copiable)
+    resumen_hoy_lines = []
+    for w in gp_hoy[:15]:
+        arts = ", ".join([f"{a['articulo']} ({a['hora_salida']})" for a in w["articulos"]])
+        resumen_hoy_lines.append(f"- {w['trabajador']} ({w['rut']}): {arts}")
+    if not resumen_hoy_lines:
+        resumen_hoy_lines = ["Sin pendientes hoy."]
+    elif len(gp_hoy) > 15:
+        resumen_hoy_lines.append(f"... y {len(gp_hoy) - 15} trabajadores mas.")
+
+    resumen_hist_lines = []
+    for w in gp_hist[:15]:
+        arts = ", ".join([f"{a['articulo']} ({a['hora_salida']})" for a in w["articulos"]])
+        resumen_hist_lines.append(f"- {w['trabajador']} ({w['rut']}): {arts}")
+    if not resumen_hist_lines:
+        resumen_hist_lines = ["Sin pendientes de dias anteriores."]
+    elif len(gp_hist) > 15:
+        resumen_hist_lines.append(f"... y {len(gp_hist) - 15} trabajadores mas.")
 
     stock_lines = [
         f"- {s['descripcion']} [{s.get('talla') or '-'}] stock {s['stock_disponible']} / alerta {s['limite_alerta']}"
@@ -128,15 +218,19 @@ def _build_cierre_turno_data(planta):
         f"Fecha: {now.strftime('%d/%m/%Y')}",
         f"Hora generacion: {now.strftime('%H:%M')}",
         "",
-        f"Movimientos: {kpi['total']}",
-        f"Salidas: {kpi['salidas']}",
-        f"Devoluciones: {kpi['devoluciones']}",
-        f"Pendientes en terreno: {kpi['pendientes']}",
+        f"Movimientos hoy: {kpi['total']}",
+        f"Salidas hoy: {kpi['salidas']}",
+        f"Devoluciones hoy: {kpi['devoluciones']}",
+        f"Pendientes hoy: {kpi['pendientes_hoy']}",
+        f"Pendientes historicos: {kpi['pendientes_historicos']}",
         f"Trabajadores con pendientes: {kpi['trabajadores_pendientes']}",
         f"Stock critico: {kpi['stock_critico']}",
         "",
-        "PENDIENTES",
-        *pendientes_lines,
+        "PENDIENTES DE HOY",
+        *resumen_hoy_lines,
+        "",
+        "PENDIENTES HISTORICOS (DIAS ANTERIORES)",
+        *resumen_hist_lines,
         "",
         "STOCK CRITICO",
         *stock_lines,
@@ -150,7 +244,8 @@ def _build_cierre_turno_data(planta):
         "planta": planta,
         "planta_display": _display_planta(planta),
         "kpi": kpi,
-        "pendientes": pendientes,
+        "pendientes_hoy": gp_hoy,
+        "pendientes_historicos": gp_hist,
         "stock_critico": stock_critico,
         "resumen_copiable": resumen_copiable,
     }
@@ -240,7 +335,6 @@ def _build_cierre_turno_pdf(data):
         Paragraph("Sistema de Bodega - Cierre operacional", styles["Muted"]),
     ]
     if logo_path.exists():
-        # Usamos el aspect ratio conocido del logo (280/232 = 1.2069) para evitar I/O de disco y carga de PIL
         aspect = 1.206896551724138
         max_w = 48 * mm
         max_h = 40 * mm
@@ -277,35 +371,39 @@ def _build_cierre_turno_pdf(data):
             Paragraph("Movimientos", styles["KpiTitle"]),
             Paragraph("Salidas", styles["KpiTitle"]),
             Paragraph("Devoluciones", styles["KpiTitle"]),
+            Paragraph("Stock Critico", styles["KpiTitle"]),
         ],
         [
             Paragraph(str(kpi.get("total", 0)), styles["KpiValue"]),
             Paragraph(str(kpi.get("salidas", 0)), styles["KpiValue"]),
             Paragraph(str(kpi.get("devoluciones", 0)), styles["KpiValue"]),
-        ],
-        [
-            Paragraph("Pendientes", styles["KpiTitle"]),
-            Paragraph("Trabajadores con pendientes", styles["KpiTitle"]),
-            Paragraph("Stock critico", styles["KpiTitle"]),
-        ],
-        [
-            Paragraph(str(kpi.get("pendientes", 0)), styles["KpiValue"]),
-            Paragraph(str(kpi.get("trabajadores_pendientes", 0)), styles["KpiValue"]),
             Paragraph(str(kpi.get("stock_critico", 0)), styles["KpiValue"]),
         ],
+        [
+            Paragraph("Pendientes Hoy", styles["KpiTitle"]),
+            Paragraph("Pendientes Hist.", styles["KpiTitle"]),
+            Paragraph("Total Pendientes", styles["KpiTitle"]),
+            Paragraph("Trabajadores c/ Pend.", styles["KpiTitle"]),
+        ],
+        [
+            Paragraph(str(kpi.get("pendientes_hoy", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("pendientes_historicos", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("pendientes", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("trabajadores_pendientes", 0)), styles["KpiValue"]),
+        ],
     ]
-    kpi_table = Table(kpi_rows, colWidths=[57 * mm, 57 * mm, 57 * mm])
+    kpi_table = Table(kpi_rows, colWidths=[45.5 * mm, 45.5 * mm, 45.5 * mm, 45.5 * mm])
     kpi_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f7f7f2")),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d9ded7")),
         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d9ded7")),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.extend([kpi_table, Spacer(1, 5 * mm)])
 
-    def section_table(title, headers, rows, empty_text, widths):
+    def section_table(title, headers, rows, empty_text, widths, styles_to_apply=None):
         story.append(Paragraph(title, styles["SectionTitle"]))
         if not rows:
             story.append(Paragraph(empty_text, styles["Muted"]))
@@ -315,7 +413,7 @@ def _build_cierre_turno_pdf(data):
         table_rows = [headers]
         table_rows.extend(rows)
         table = Table(table_rows, colWidths=widths, repeatRows=1)
-        table.setStyle(TableStyle([
+        base_styles = [
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#151515")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
@@ -327,28 +425,86 @@ def _build_cierre_turno_pdf(data):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ("LEFTPADDING", (0, 0), (-1, -1), 5),
             ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ]))
+        ]
+        if styles_to_apply:
+            base_styles.extend(styles_to_apply)
+        table.setStyle(TableStyle(base_styles))
         story.append(table)
         story.append(Spacer(1, 3 * mm))
 
-    pendientes_rows = [
-        [
-            Paragraph(_safe_pdf_text(item.get("trabajador")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("rut")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("articulo")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("area") or "Sin area"), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("hora_salida")), styles["TableCell"]),
-        ]
-        for item in (data.get("pendientes") or [])
-    ]
+    # PENDIENTES DE HOY
+    pendientes_hoy_list = data.get("pendientes_hoy") or []
+    pendientes_hoy_rows = []
+    hoy_styles = []
+    row_idx = 1
+    for w in pendientes_hoy_list:
+        pendientes_hoy_rows.append([
+            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])})", styles["TableCell"]),
+            "",
+            ""
+        ])
+        hoy_styles.extend([
+            ("SPAN", (0, row_idx), (2, row_idx)),
+            ("BACKGROUND", (0, row_idx), (-1, row_idx), colors.HexColor("#f9fafb")),
+            ("TOPPADDING", (0, row_idx), (-1, row_idx), 4),
+            ("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 4),
+        ])
+        row_idx += 1
+        for art in w["articulos"]:
+            pendientes_hoy_rows.append([
+                "",
+                Paragraph(_safe_pdf_text(art["articulo"]), styles["TableCell"]),
+                Paragraph(_safe_pdf_text(art["hora_salida"]), styles["TableCell"])
+            ])
+            hoy_styles.append(("LEFTPADDING", (1, row_idx), (1, row_idx), 12))
+            row_idx += 1
+
     section_table(
-        "Pendientes en terreno",
-        ["Trabajador", "RUT", "Articulo", "Area", "Salida"],
-        pendientes_rows,
-        "Sin pendientes en terreno.",
-        [40 * mm, 27 * mm, 54 * mm, 30 * mm, 20 * mm],
+        "Pendientes de Hoy (del Turno)",
+        ["Trabajador / Area", "Articulo Pendiente", "Salida (Hora)"],
+        pendientes_hoy_rows,
+        "Sin pendientes hoy.",
+        [75 * mm, 72 * mm, 35 * mm],
+        hoy_styles,
     )
 
+    # PENDIENTES HISTORICOS
+    pendientes_hist_list = data.get("pendientes_historicos") or []
+    pendientes_hist_rows = []
+    hist_styles = []
+    row_idx = 1
+    for w in pendientes_hist_list:
+        pendientes_hist_rows.append([
+            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])})", styles["TableCell"]),
+            "",
+            ""
+        ])
+        hist_styles.extend([
+            ("SPAN", (0, row_idx), (2, row_idx)),
+            ("BACKGROUND", (0, row_idx), (-1, row_idx), colors.HexColor("#f9fafb")),
+            ("TOPPADDING", (0, row_idx), (-1, row_idx), 4),
+            ("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 4),
+        ])
+        row_idx += 1
+        for art in w["articulos"]:
+            pendientes_hist_rows.append([
+                "",
+                Paragraph(_safe_pdf_text(art["articulo"]), styles["TableCell"]),
+                Paragraph(_safe_pdf_text(art["hora_salida"]), styles["TableCell"])
+            ])
+            hist_styles.append(("LEFTPADDING", (1, row_idx), (1, row_idx), 12))
+            row_idx += 1
+
+    section_table(
+        "Pendientes Historicos (Dias Anteriores)",
+        ["Trabajador / Area", "Articulo Pendiente", "Salida (Fecha/Hora)"],
+        pendientes_hist_rows,
+        "Sin pendientes de dias anteriores.",
+        [75 * mm, 72 * mm, 35 * mm],
+        hist_styles,
+    )
+
+    # STOCK CRITICO
     stock_rows = [
         [
             Paragraph(_safe_pdf_text(item.get("id")), styles["TableCell"]),

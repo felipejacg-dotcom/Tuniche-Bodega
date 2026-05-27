@@ -729,20 +729,38 @@ const App = (() => {
 
     function renderCierreTurno(data) {
         const kpi = data.kpi || {};
-        const pendientes = data.pendientes || [];
+        const pendientesHoy = data.pendientes_hoy || [];
+        const pendientesHistoricos = data.pendientes_historicos || [];
         const stockCritico = data.stock_critico || [];
-        const pendientesHtml = pendientes.length
-            ? pendientes.slice(0, 20).map(item => `
-                <div class="cierre-item cierre-pending">
-                    <div class="cierre-item-main">
-                        <strong>${escHtml(item.trabajador)}</strong>
-                        <span>${escHtml(item.rut)} · ${escHtml(item.area || "Sin area")}</span>
-                        <span>${escHtml(item.articulo)}</span>
+
+        function buildPendientesHtml(list, isHistorico) {
+            if (!list.length) {
+                return `<div class="cierre-empty">${isHistorico ? "Sin pendientes de días anteriores." : "Sin pendientes hoy."}</div>`;
+            }
+            return list.map(worker => {
+                const artsHtml = worker.articulos.map(art => `
+                    <div class="cierre-sub-item">
+                        <div class="cierre-sub-item-name">${escHtml(art.articulo)}</div>
+                        <div class="cierre-sub-item-time">${escHtml(art.hora_salida)}</div>
                     </div>
-                    <div class="cierre-time">${escHtml(item.hora_salida)}</div>
-                </div>
-            `).join("")
-            : `<div class="cierre-empty">Sin pendientes en terreno.</div>`;
+                `).join("");
+
+                return `
+                    <div class="cierre-worker-card">
+                        <div class="cierre-worker-info">
+                            <strong>${escHtml(worker.trabajador)}</strong>
+                            <span>${escHtml(worker.rut)} · ${escHtml(worker.area || "Sin área")}</span>
+                        </div>
+                        <div class="cierre-worker-items">
+                            ${artsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        const hoyHtml = buildPendientesHtml(pendientesHoy, false);
+        const histHtml = buildPendientesHtml(pendientesHistoricos, true);
 
         const stockHtml = stockCritico.length
             ? stockCritico.slice(0, 20).map(item => `
@@ -767,12 +785,15 @@ const App = (() => {
                 <div class="cierre-kpi"><strong>${escHtml(kpi.total ?? 0)}</strong><span>Movimientos</span></div>
                 <div class="cierre-kpi"><strong>${escHtml(kpi.salidas ?? 0)}</strong><span>Salidas</span></div>
                 <div class="cierre-kpi"><strong>${escHtml(kpi.devoluciones ?? 0)}</strong><span>Devoluciones</span></div>
-                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes ?? 0)}</strong><span>Pendientes</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes_hoy ?? 0)}</strong><span>Pendientes Hoy</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes_historicos ?? 0)}</strong><span>Pendientes Hist.</span></div>
                 <div class="cierre-kpi warning"><strong>${escHtml(kpi.trabajadores_pendientes ?? 0)}</strong><span>Trabajadores</span></div>
                 <div class="cierre-kpi danger"><strong>${escHtml(kpi.stock_critico ?? 0)}</strong><span>Stock critico</span></div>
             </div>
-            <div class="cierre-section-title">Pendientes en terreno</div>
-            <div class="cierre-list">${pendientesHtml}</div>
+            <div class="cierre-section-title">Pendientes de Hoy (del Turno)</div>
+            <div class="cierre-list">${hoyHtml}</div>
+            <div class="cierre-section-title">Pendientes Históricos (Días Anteriores)</div>
+            <div class="cierre-list">${histHtml}</div>
             <div class="cierre-section-title">Stock critico</div>
             <div class="cierre-list">${stockHtml}</div>
         `;

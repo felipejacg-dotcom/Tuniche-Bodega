@@ -368,6 +368,15 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .cierre-kpi.danger strong { color: var(--danger); }
 .cierre-section-title { margin-top: 4px; font-size: 0.72rem; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .cierre-list { display: flex; flex-direction: column; gap: 7px; }
+.cierre-worker-card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-sm); overflow: hidden; }
+.cierre-worker-info { padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+.cierre-worker-info strong { font-size: 0.82rem; color: var(--text); font-weight: 800; }
+.cierre-worker-info span { font-size: 0.68rem; color: var(--muted); font-weight: 700; }
+.cierre-worker-items { display: flex; flex-direction: column; }
+.cierre-sub-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-bottom: 1px solid rgba(15,15,15,0.04); }
+.cierre-sub-item:last-child { border-bottom: none; }
+.cierre-sub-item-name { font-size: 0.78rem; color: var(--text); font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.cierre-sub-item-time { font-size: 0.7rem; font-weight: 800; color: var(--muted); background: #f3f4f6; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
 .cierre-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
 .cierre-pending { border-left: 4px solid var(--warning); background: var(--warning-bg); }
 .cierre-stock { border-left: 4px solid var(--danger); background: var(--danger-bg); }
