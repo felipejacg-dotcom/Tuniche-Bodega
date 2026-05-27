@@ -241,8 +241,8 @@ def _build_cierre_turno_pdf(data):
             with PILImage.open(logo_path) as img:
                 orig_w, orig_h = img.size
             aspect = orig_w / orig_h
-            max_w = 28 * mm
-            max_h = 12 * mm
+            max_w = 42 * mm
+            max_h = 20 * mm
             if max_w / aspect <= max_h:
                 w = max_w
                 h = max_w / aspect
