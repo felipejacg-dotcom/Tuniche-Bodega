@@ -790,17 +790,32 @@ const App = (() => {
                 els.btnDownloadCierre.textContent = "Generando PDF...";
             }
             const { blob, filename } = await API.downloadCierreTurnoPdf();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = filename || "cierre-turno.pdf";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(url);
-            toast("PDF descargado.", "success");
+            const finalFilename = filename || "cierre-turno.pdf";
+            const file = new File([blob], finalFilename, { type: "application/pdf" });
+            const sucursal = state.cierreTurno?.planta_display || getSucursalLabel(state.planta);
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: finalFilename,
+                    text: `Cierre de turno de la sucursal ${sucursal}`,
+                });
+                toast("Cierre compartido.", "success");
+            } else {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = finalFilename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                toast("PDF descargado.", "success");
+            }
         } catch (e) {
-            toast(e.message || "No se pudo descargar el PDF.", "error", 5000);
+            if (e.name !== "AbortError") {
+                toast(e.message || "No se pudo descargar o compartir el PDF.", "error", 5000);
+            }
         } finally {
             if (els.btnDownloadCierre) {
                 els.btnDownloadCierre.disabled = false;
