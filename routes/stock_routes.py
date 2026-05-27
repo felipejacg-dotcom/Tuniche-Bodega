@@ -211,6 +211,24 @@ def _build_cierre_turno_pdf(data):
         parent=styles["Muted"],
         alignment=TA_RIGHT,
     ))
+    styles.add(ParagraphStyle(
+        name="KpiTitle",
+        parent=styles["Normal"],
+        alignment=1,  # Center
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#6b7280"),
+    ))
+    styles.add(ParagraphStyle(
+        name="KpiValue",
+        parent=styles["Normal"],
+        alignment=1,  # Center
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=21,
+        textColor=colors.HexColor("#151515"),
+    ))
 
     logo_path = Path(__file__).resolve().parents[1] / "static" / "logo-tuniche.png"
     header_left = [
@@ -241,26 +259,35 @@ def _build_cierre_turno_pdf(data):
 
     kpi = data.get("kpi") or {}
     kpi_rows = [
-        ["Movimientos", "Salidas", "Devoluciones"],
-        [kpi.get("total", 0), kpi.get("salidas", 0), kpi.get("devoluciones", 0)],
-        ["Pendientes", "Trabajadores con pendientes", "Stock critico"],
-        [kpi.get("pendientes", 0), kpi.get("trabajadores_pendientes", 0), kpi.get("stock_critico", 0)],
+        [
+            Paragraph("Movimientos", styles["KpiTitle"]),
+            Paragraph("Salidas", styles["KpiTitle"]),
+            Paragraph("Devoluciones", styles["KpiTitle"]),
+        ],
+        [
+            Paragraph(str(kpi.get("total", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("salidas", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("devoluciones", 0)), styles["KpiValue"]),
+        ],
+        [
+            Paragraph("Pendientes", styles["KpiTitle"]),
+            Paragraph("Trabajadores con pendientes", styles["KpiTitle"]),
+            Paragraph("Stock critico", styles["KpiTitle"]),
+        ],
+        [
+            Paragraph(str(kpi.get("pendientes", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("trabajadores_pendientes", 0)), styles["KpiValue"]),
+            Paragraph(str(kpi.get("stock_critico", 0)), styles["KpiValue"]),
+        ],
     ]
     kpi_table = Table(kpi_rows, colWidths=[57 * mm, 57 * mm, 57 * mm])
     kpi_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f7f7f2")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#6b7280")),
-        ("TEXTCOLOR", (0, 2), (-1, 2), colors.HexColor("#6b7280")),
-        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("FONTSIZE", (0, 1), (-1, 1), 18),
-        ("FONTSIZE", (0, 3), (-1, 3), 18),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#d9ded7")),
         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d9ded7")),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     story.extend([kpi_table, Spacer(1, 5 * mm)])
 
