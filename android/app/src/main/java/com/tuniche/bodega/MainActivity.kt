@@ -125,10 +125,10 @@ class WebAppInterface(private val mContext: Context) {
 
     @JavascriptInterface
     fun sharePdf(base64Data: String, filename: String) {
-        if (!checkSecureOrigin()) return
-
-        val activity = mContext as AppCompatActivity
+        val activity = mContext as? AppCompatActivity ?: return
         activity.runOnUiThread {
+            if (!isAllowedAppUrl(activity.findViewById<WebView>(R.id.webView)?.url)) return@runOnUiThread
+
             try {
                 val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
                 val file = writePdfToCache(pdfBytes, filename)
@@ -141,38 +141,40 @@ class WebAppInterface(private val mContext: Context) {
 
     @JavascriptInterface
     fun shareCierreTurnoPdf(filename: String) {
-        if (!checkSecureOrigin()) return
+        val activity = mContext as? AppCompatActivity ?: return
+        activity.runOnUiThread {
+            if (!isAllowedAppUrl(activity.findViewById<WebView>(R.id.webView)?.url)) return@runOnUiThread
 
-        val activity = mContext as AppCompatActivity
-        thread(name = "cierre-pdf-share") {
-            try {
-                val pdfUrl = "$ALLOWED_ORIGIN$CIERRE_PDF_PATH"
-                val connection = (URL(pdfUrl).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = 15000
-                    readTimeout = 30000
-                    val cookies = CookieManager.getInstance().getCookie(ALLOWED_ORIGIN)
-                    if (!cookies.isNullOrBlank()) {
-                        setRequestProperty("Cookie", cookies)
+            thread(name = "cierre-pdf-share") {
+                try {
+                    val pdfUrl = "$ALLOWED_ORIGIN$CIERRE_PDF_PATH"
+                    val connection = (URL(pdfUrl).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 15000
+                        readTimeout = 30000
+                        val cookies = CookieManager.getInstance().getCookie(ALLOWED_ORIGIN)
+                        if (!cookies.isNullOrBlank()) {
+                            setRequestProperty("Cookie", cookies)
+                        }
                     }
-                }
 
-                val code = connection.responseCode
-                if (code !in 200..299) {
-                    throw IllegalStateException("HTTP $code al descargar PDF")
-                }
-
-                val bytes = connection.inputStream.use { it.readBytes() }
-                val file = writePdfToCache(bytes, filename)
-                activity.runOnUiThread {
-                    try {
-                        openPdfShareSheet(file)
-                    } catch (e: Exception) {
-                        showShareError(activity, e)
+                    val code = connection.responseCode
+                    if (code !in 200..299) {
+                        throw IllegalStateException("HTTP $code al descargar PDF")
                     }
+
+                    val bytes = connection.inputStream.use { it.readBytes() }
+                    val file = writePdfToCache(bytes, filename)
+                    activity.runOnUiThread {
+                        try {
+                            openPdfShareSheet(file)
+                        } catch (e: Exception) {
+                            showShareError(activity, e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    activity.runOnUiThread { showShareError(activity, e) }
                 }
-            } catch (e: Exception) {
-                activity.runOnUiThread { showShareError(activity, e) }
             }
         }
     }
