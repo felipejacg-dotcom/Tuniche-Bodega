@@ -127,14 +127,26 @@ class WebAppInterface(private val mContext: Context) {
     fun sharePdf(base64Data: String, filename: String) {
         val activity = mContext as? AppCompatActivity ?: return
         activity.runOnUiThread {
-            if (!isAllowedAppUrl(activity.findViewById<WebView>(R.id.webView)?.url)) return@runOnUiThread
+            val webView = activity.findViewById<WebView>(R.id.webView)
+            if (!isAllowedAppUrl(webView?.url)) return@runOnUiThread
 
-            try {
-                val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
-                val file = writePdfToCache(pdfBytes, filename)
-                openPdfShareSheet(file)
-            } catch (e: Exception) {
-                showShareError(activity, e)
+            // Ejecutar la decodificación y escritura de archivo en segundo plano para no congelar la UI
+            thread(name = "pdf-base64-decode") {
+                try {
+                    val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
+                    val file = writePdfToCache(pdfBytes, filename)
+                    
+                    // Mostrar la hoja de compartir nativa en el hilo principal
+                    activity.runOnUiThread {
+                        try {
+                            openPdfShareSheet(file)
+                        } catch (e: Exception) {
+                            showShareError(activity, e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    activity.runOnUiThread { showShareError(activity, e) }
+                }
             }
         }
     }
@@ -228,8 +240,12 @@ class MainActivity : AppCompatActivity() {
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
-        webSettings.cacheMode = WebSettings.LOAD_NO_CACHE // Forzar actualización siempre
+        webSettings.cacheMode = WebSettings.LOAD_DEFAULT // Permite usar la caché local para velocidad, con cache-busting en HTML
+        webSettings.databaseEnabled = true
         webSettings.mediaPlaybackRequiresUserGesture = false
+
+        // Forzar aceleración por hardware para suavizar animaciones y rendimiento de dibujado
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
 
         // Deshabilitar acceso a archivos locales para endurecer seguridad
         webSettings.allowFileAccess = false
