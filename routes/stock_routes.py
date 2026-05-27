@@ -236,7 +236,22 @@ def _build_cierre_turno_pdf(data):
         Paragraph("Sistema de Bodega - Cierre operacional", styles["Muted"]),
     ]
     if logo_path.exists():
-        header_left.insert(0, Image(str(logo_path), width=28 * mm, height=13 * mm))
+        try:
+            from PIL import Image as PILImage
+            with PILImage.open(logo_path) as img:
+                orig_w, orig_h = img.size
+            aspect = orig_w / orig_h
+            max_w = 28 * mm
+            max_h = 12 * mm
+            if max_w / aspect <= max_h:
+                w = max_w
+                h = max_w / aspect
+            else:
+                h = max_h
+                w = max_h * aspect
+            header_left.insert(0, Image(str(logo_path), width=w, height=h))
+        except Exception:
+            header_left.insert(0, Image(str(logo_path), width=28 * mm, height=13 * mm))
 
     header_table = Table(
         [[header_left, Paragraph(f"{data.get('fecha_display') or '-'}<br/>Generado {data.get('hora_generacion') or '--:--'}", styles["RightMuted"])]],
