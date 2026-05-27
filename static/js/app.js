@@ -792,16 +792,29 @@ const App = (() => {
             const { blob, filename } = await API.downloadCierreTurnoPdf();
             const finalFilename = filename || "cierre-turno.pdf";
             const file = new File([blob], finalFilename, { type: "application/pdf" });
-            const sucursal = state.cierreTurno?.planta_display || getSucursalLabel(state.planta);
+            const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // 1. Caso: Ejecución dentro de la App de Android Nativa
+            if (window.AndroidApp && window.AndroidApp.sharePdf) {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = function() {
+                    const base64data = reader.result.split(',')[1];
+                    window.AndroidApp.sharePdf(base64data, finalFilename);
+                };
+                toast("Abriendo compartir...", "success");
+            }
+            // 2. Caso: Navegador móvil compatible con Web Share
+            else if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
                     files: [file],
                     title: finalFilename,
                     text: `Cierre de turno de la sucursal ${sucursal}`,
                 });
                 toast("Cierre compartido.", "success");
-            } else {
+            }
+            // 3. Fallback: Descarga clásica de archivo en escritorio
+            else {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = url;
