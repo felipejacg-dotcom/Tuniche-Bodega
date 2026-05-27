@@ -783,6 +783,19 @@ const App = (() => {
             toast("Primero genera el cierre.", "warning");
             return;
         }
+
+        // 1. Caso: ejecucion dentro de la app Android nativa con descarga directa.
+        // Evitamos descargar el PDF en JS y volver a descargarlo en Android (ahorra doble tráfico y procesamiento).
+        if (window.AndroidApp && typeof window.AndroidApp.shareCierreTurnoPdf === "function") {
+            const sucursal = (state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "bodega")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "-");
+            const fecha = state.cierreTurno?.fecha || new Date().toISOString().slice(0, 10);
+            const filename = `cierre-turno-${fecha}-${sucursal}.pdf`;
+            window.AndroidApp.shareCierreTurnoPdf(filename);
+            return;
+        }
+
         const originalText = els.btnDownloadCierre ? els.btnDownloadCierre.textContent : "";
         try {
             if (els.btnDownloadCierre) {
@@ -793,15 +806,8 @@ const App = (() => {
             const sanitizedFilename = (filename || "cierre-turno.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
             const file = new File([blob], sanitizedFilename, { type: "application/pdf" });
             const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
-
-            // 1. Caso: ejecucion dentro de la app Android nativa.
-            // La app nueva descarga el PDF desde Android usando la cookie del WebView,
-            // evitando pasar archivos grandes como Base64 por el puente JavaScript.
-            if (window.AndroidApp && typeof window.AndroidApp.shareCierreTurnoPdf === "function") {
-                window.AndroidApp.shareCierreTurnoPdf(sanitizedFilename);
-            }
             // Fallback para APKs antiguos que aun no tienen shareCierreTurnoPdf.
-            else if (window.AndroidApp && typeof window.AndroidApp.sharePdf === "function") {
+            if (window.AndroidApp && typeof window.AndroidApp.sharePdf === "function") {
                 const reader = new FileReader();
                 reader.onerror = function() {
                     toast("Error al leer el archivo PDF.", "error");
