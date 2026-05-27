@@ -283,6 +283,9 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
         }
 
+        // Limpiar la caché local al iniciar para asegurar que se carguen los últimos archivos JS y estilos
+        webView.clearCache(true)
+
         // Carga la URL oficial de producción
         webView.loadUrl("https://tuniche-bodega.onrender.com/")
 

@@ -799,7 +799,6 @@ const App = (() => {
             // evitando pasar archivos grandes como Base64 por el puente JavaScript.
             if (window.AndroidApp && typeof window.AndroidApp.shareCierreTurnoPdf === "function") {
                 window.AndroidApp.shareCierreTurnoPdf(sanitizedFilename);
-                toast("Abriendo compartir...", "success");
             }
             // Fallback para APKs antiguos que aun no tienen shareCierreTurnoPdf.
             else if (window.AndroidApp && typeof window.AndroidApp.sharePdf === "function") {
@@ -818,7 +817,6 @@ const App = (() => {
                     }
                 };
                 reader.readAsDataURL(blob);
-                toast("Abriendo compartir...", "success");
             }
             // 2. Caso: navegador movil compatible con Web Share
             else if (navigator.canShare && navigator.canShare({ files: [file] })) {

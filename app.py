@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template
+from flask import Flask, render_template, make_response
 from dotenv import load_dotenv
 import os
 
@@ -41,7 +41,11 @@ def index():
         "SEGURIDAD", "SERV GRALES CENTRAL", "SERVICIOS GENERALES", "TALLER",
         "TODAS LAS AREAS", "UNITEC",
     ]
-    return render_template("index.html", areas=areas)
+    response = make_response(render_template("index.html", areas=areas))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 if __name__ == "__main__":
