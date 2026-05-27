@@ -377,11 +377,11 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .cierre-time, .cierre-stock-count { flex: 0 0 auto; min-width: 42px; text-align: center; padding: 5px 8px; border-radius: 999px; background: #fff; font-size: 0.75rem; font-weight: 900; color: var(--text); border: 1px solid rgba(15,15,15,0.08); }
 .cierre-stock-count { color: var(--danger); }
 .cierre-empty { padding: 11px 12px; border: 1px dashed var(--border); border-radius: 8px; background: #fafaf8; color: var(--muted); font-size: 0.82rem; font-weight: 700; text-align: center; }
-.cierre-resumen-text { width: 100%; min-height: 118px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fafaf8; color: var(--text); font: 0.76rem/1.45 "Courier New", monospace; resize: vertical; }
-.cierre-resumen-text:focus { outline: none; border-color: var(--petrol); box-shadow: 0 0 0 3px rgba(21,21,21,0.10); }
 .cierre-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-.btn-cierre-copy { background: var(--success); border-color: var(--success); color: #fff; padding: 8px 14px; }
-.btn-cierre-copy:hover { background: var(--success-dark); }
+.btn-cierre-download { display: inline-flex; align-items: center; gap: 7px; background: var(--success); border-color: var(--success); color: #fff; padding: 8px 14px; box-shadow: 0 8px 18px rgba(0, 139, 58, 0.18); }
+.btn-cierre-download::before { content: "PDF"; display: inline-grid; place-items: center; min-width: 28px; height: 18px; border-radius: 4px; background: rgba(255,255,255,0.18); color: #fff; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.04em; }
+.btn-cierre-download:hover { background: var(--success-dark); }
+.btn-cierre-download:disabled { opacity: 0.7; cursor: wait; }
 
 /* ============================================================
    MULTI-SCAN & DEVOLUCIONES PENDIENTES

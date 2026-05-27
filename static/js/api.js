@@ -34,6 +34,12 @@ const API = (() => {
         return data;
     }
 
+    function _filenameFromDisposition(disposition) {
+        if (!disposition) return "cierre-turno.pdf";
+        const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+        return match ? decodeURIComponent(match[1].replace(/"/g, "")) : "cierre-turno.pdf";
+    }
+
     return {
         login: (username, password, planta) =>
             _req("/api/login", {
@@ -56,6 +62,27 @@ const API = (() => {
             _req(`/api/registros?estado=${encodeURIComponent(estado)}&q=${encodeURIComponent(q)}`),
 
         getCierreTurno: () => _req("/api/cierre_turno"),
+
+        downloadCierreTurnoPdf: async () => {
+            const res = await fetch("/api/cierre_turno/pdf", {
+                credentials: "same-origin",
+            });
+            if (res.status === 401) {
+                if (typeof App !== "undefined") App.logout();
+                throw new Error("Sesion expirada");
+            }
+            if (!res.ok) {
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (_) {}
+                throw new Error(data.message || `Error HTTP ${res.status}`);
+            }
+            return {
+                blob: await res.blob(),
+                filename: _filenameFromDisposition(res.headers.get("Content-Disposition")),
+            };
+        },
 
         registrar: (accion, rut, trabajador, area, articulo_id) =>
             _req("/api/registrar", {

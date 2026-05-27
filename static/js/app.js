@@ -68,9 +68,8 @@ const App = (() => {
         kpiDevueltos: $("kpiDevueltos"),
         cierreModal: $("cierreModal"),
         cierreContent: $("cierreContent"),
-        cierreResumenText: $("cierreResumenText"),
         btnCloseCierre: $("btnCloseCierre"),
-        btnCopyCierre: $("btnCopyCierre"),
+        btnDownloadCierre: $("btnDownloadCierre"),
         // Modal carnet
         carnetModal: $("carnetModal"),
         btnCloseCarnet: $("btnCloseCarnet"),
@@ -712,7 +711,6 @@ const App = (() => {
         if (!els.cierreModal) return;
         els.cierreModal.classList.add("active");
         els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Generando cierre...</p></div>`;
-        els.cierreResumenText.value = "";
 
         try {
             const data = await API.getCierreTurno();
@@ -762,7 +760,7 @@ const App = (() => {
             <div class="cierre-head">
                 <div>
                     <div class="cierre-eyebrow">Generado ${escHtml(data.hora_generacion || "--:--")}</div>
-                    <div class="cierre-title">${escHtml(data.planta || state.planta)} · ${escHtml(data.fecha_display || data.fecha || "")}</div>
+                    <div class="cierre-title">${escHtml(data.planta_display || data.planta || state.planta)} · ${escHtml(data.fecha_display || data.fecha || "")}</div>
                 </div>
             </div>
             <div class="cierre-kpi-grid">
@@ -778,23 +776,36 @@ const App = (() => {
             <div class="cierre-section-title">Stock critico</div>
             <div class="cierre-list">${stockHtml}</div>
         `;
-        els.cierreResumenText.value = data.resumen_copiable || "";
     }
 
-    async function copyCierreResumen() {
-        const text = els.cierreResumenText.value || state.cierreTurno?.resumen_copiable || "";
-        if (!text) {
+    async function downloadCierrePdf() {
+        if (!state.cierreTurno) {
             toast("Primero genera el cierre.", "warning");
             return;
         }
+        const originalText = els.btnDownloadCierre ? els.btnDownloadCierre.textContent : "";
         try {
-            if (!navigator.clipboard || !window.isSecureContext) throw new Error("Clipboard bloqueado");
-            await navigator.clipboard.writeText(text);
-            toast("Resumen copiado.", "success");
-        } catch (_) {
-            els.cierreResumenText.focus();
-            els.cierreResumenText.select();
-            toast("Selecciona el texto y copialo manualmente.", "info", 5200);
+            if (els.btnDownloadCierre) {
+                els.btnDownloadCierre.disabled = true;
+                els.btnDownloadCierre.textContent = "Generando PDF...";
+            }
+            const { blob, filename } = await API.downloadCierreTurnoPdf();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = filename || "cierre-turno.pdf";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            toast("PDF descargado.", "success");
+        } catch (e) {
+            toast(e.message || "No se pudo descargar el PDF.", "error", 5000);
+        } finally {
+            if (els.btnDownloadCierre) {
+                els.btnDownloadCierre.disabled = false;
+                els.btnDownloadCierre.textContent = originalText || "Descargar PDF";
+            }
         }
     }
 
@@ -886,7 +897,7 @@ const App = (() => {
         // Cierre de turno
         if (els.btnCloseCierre) {
             els.btnCloseCierre.addEventListener("click", closeCierreTurno);
-            els.btnCopyCierre.addEventListener("click", copyCierreResumen);
+            els.btnDownloadCierre.addEventListener("click", downloadCierrePdf);
             els.cierreModal.addEventListener("click", e => { if (e.target === els.cierreModal) closeCierreTurno(); });
         }
 
@@ -956,7 +967,7 @@ const App = (() => {
         loadRegistros,
         openCierreTurno,
         closeCierreTurno,
-        copyCierreResumen,
+        downloadCierrePdf,
         logout,
         removeItemFromMultiScan,
         devolverRapido,
