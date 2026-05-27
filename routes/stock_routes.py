@@ -57,11 +57,15 @@ def _build_cierre_turno_data(planta):
             SELECT t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida
-            FROM transacciones t
+            FROM (
+                SELECT rut, trabajador, area, articulo_id, hora_salida
+                FROM transacciones
+                WHERE estado = 'EN TERRENO'
+                ORDER BY hora_salida DESC
+                LIMIT 200
+            ) t
             JOIN articulos a ON t.articulo_id = a.id
-            WHERE t.estado = 'EN TERRENO'
             ORDER BY t.hora_salida DESC
-            LIMIT 200
         """)
         pendientes = cur.fetchall()
 
