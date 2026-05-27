@@ -61,10 +61,18 @@ const API = (() => {
         getRegistros: (estado = "", q = "") =>
             _req(`/api/registros?estado=${encodeURIComponent(estado)}&q=${encodeURIComponent(q)}`),
 
-        getCierreTurno: () => _req("/api/cierre_turno"),
+        getCierreTurno: (desde = "", hasta = "") => {
+            const params = new URLSearchParams();
+            if (desde) params.append("desde", desde);
+            if (hasta) params.append("hasta", hasta);
+            return _req(`/api/cierre_turno?${params.toString()}`);
+        },
 
-        downloadCierreTurnoPdf: async () => {
-            const res = await fetch("/api/cierre_turno/pdf", {
+        downloadCierreTurnoPdf: async (desde = "", hasta = "") => {
+            const params = new URLSearchParams();
+            if (desde) params.append("desde", desde);
+            if (hasta) params.append("hasta", hasta);
+            const res = await fetch(`/api/cierre_turno/pdf?${params.toString()}`, {
                 credentials: "same-origin",
             });
             if (res.status === 401) {

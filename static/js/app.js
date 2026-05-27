@@ -707,19 +707,44 @@ const App = (() => {
         }).join("");
     }
 
-    async function openCierreTurno() {
+    async function openCierreTurno(desde = null, hasta = null) {
         if (!els.cierreModal) return;
         els.cierreModal.classList.add("active");
-        els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Generando cierre...</p></div>`;
+        
+        const inputDesdeEl = document.getElementById("cierreDesde");
+        const inputHastaEl = document.getElementById("cierreHasta");
+        
+        const isReloading = inputDesdeEl && inputHastaEl;
+        if (!isReloading) {
+            els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Generando cierre...</p></div>`;
+        } else {
+            inputDesdeEl.disabled = true;
+            inputHastaEl.disabled = true;
+            const btnUpdate = document.getElementById("btnUpdateCierre");
+            if (btnUpdate) {
+                btnUpdate.disabled = true;
+                btnUpdate.textContent = "Cargando...";
+            }
+        }
 
         try {
-            const data = await API.getCierreTurno();
+            const data = await API.getCierreTurno(desde, hasta);
             if (!data.success) throw new Error(data.message || "No se pudo generar el cierre.");
             state.cierreTurno = data;
             renderCierreTurno(data);
         } catch (e) {
-            els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><p>${escHtml(e.message || "Error generando cierre.")}</p></div>`;
-            toast(e.message || "Error generando cierre.", "error", 5000);
+            if (!isReloading) {
+                els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><p>${escHtml(e.message || "Error generando cierre.")}</p></div>`;
+            } else {
+                toast(e.message || "Error al actualizar cierre.", "error", 5000);
+                inputDesdeEl.disabled = false;
+                inputHastaEl.disabled = false;
+                const btnUpdate = document.getElementById("btnUpdateCierre");
+                if (btnUpdate) {
+                    btnUpdate.disabled = false;
+                    btnUpdate.textContent = "Actualizar";
+                }
+            }
         }
     }
 
@@ -729,13 +754,12 @@ const App = (() => {
 
     function renderCierreTurno(data) {
         const kpi = data.kpi || {};
-        const pendientesHoy = data.pendientes_hoy || [];
-        const pendientesHistoricos = data.pendientes_historicos || [];
+        const pendientes = data.pendientes || [];
         const stockCritico = data.stock_critico || [];
 
-        function buildPendientesHtml(list, isHistorico) {
+        function buildPendientesHtml(list) {
             if (!list.length) {
-                return `<div class="cierre-empty">${isHistorico ? "Sin pendientes de días anteriores." : "Sin pendientes hoy."}</div>`;
+                return `<div class="cierre-empty">Sin pendientes en este turno.</div>`;
             }
             return list.map(worker => {
                 const artsHtml = worker.articulos.map(art => `
@@ -759,8 +783,7 @@ const App = (() => {
             }).join("");
         }
 
-        const hoyHtml = buildPendientesHtml(pendientesHoy, false);
-        const histHtml = buildPendientesHtml(pendientesHistoricos, true);
+        const pendientesHtml = buildPendientesHtml(pendientes);
 
         const stockHtml = stockCritico.length
             ? stockCritico.slice(0, 20).map(item => `
@@ -775,28 +798,45 @@ const App = (() => {
             : `<div class="cierre-empty">Sin stock critico.</div>`;
 
         els.cierreContent.innerHTML = `
-            <div class="cierre-head">
+            <div class="cierre-range-ctrls">
+                <div class="cierre-ctrl-group">
+                    <label class="cierre-ctrl-label" for="cierreDesde">Desde</label>
+                    <input type="datetime-local" id="cierreDesde" class="cierre-datetime-input" value="${data.desde_iso}">
+                </div>
+                <div class="cierre-ctrl-group">
+                    <label class="cierre-ctrl-label" for="cierreHasta">Hasta</label>
+                    <input type="datetime-local" id="cierreHasta" class="cierre-datetime-input" value="${data.hasta_iso}">
+                </div>
+                <button type="button" id="btnUpdateCierre" class="btn-refresh btn-cierre-update">Actualizar</button>
+            </div>
+            <div class="cierre-head" style="margin-top: 4px;">
                 <div>
                     <div class="cierre-eyebrow">Generado ${escHtml(data.hora_generacion || "--:--")}</div>
-                    <div class="cierre-title">${escHtml(data.planta_display || data.planta || state.planta)} · ${escHtml(data.fecha_display || data.fecha || "")}</div>
+                    <div class="cierre-title">Turno ${escHtml(data.turno || "")} · ${escHtml(data.planta_display || data.planta || state.planta)}</div>
                 </div>
             </div>
             <div class="cierre-kpi-grid">
                 <div class="cierre-kpi"><strong>${escHtml(kpi.total ?? 0)}</strong><span>Movimientos</span></div>
                 <div class="cierre-kpi"><strong>${escHtml(kpi.salidas ?? 0)}</strong><span>Salidas</span></div>
                 <div class="cierre-kpi"><strong>${escHtml(kpi.devoluciones ?? 0)}</strong><span>Devoluciones</span></div>
-                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes_hoy ?? 0)}</strong><span>Pendientes Hoy</span></div>
-                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes_historicos ?? 0)}</strong><span>Pendientes Hist.</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes ?? 0)}</strong><span>Pendientes</span></div>
                 <div class="cierre-kpi warning"><strong>${escHtml(kpi.trabajadores_pendientes ?? 0)}</strong><span>Trabajadores</span></div>
                 <div class="cierre-kpi danger"><strong>${escHtml(kpi.stock_critico ?? 0)}</strong><span>Stock critico</span></div>
             </div>
-            <div class="cierre-section-title">Pendientes de Hoy (del Turno)</div>
-            <div class="cierre-list">${hoyHtml}</div>
-            <div class="cierre-section-title">Pendientes Históricos (Días Anteriores)</div>
-            <div class="cierre-list">${histHtml}</div>
+            <div class="cierre-section-title">Pendientes del Turno</div>
+            <div class="cierre-list">${pendientesHtml}</div>
             <div class="cierre-section-title">Stock critico</div>
             <div class="cierre-list">${stockHtml}</div>
         `;
+
+        const btnUpdate = document.getElementById("btnUpdateCierre");
+        if (btnUpdate) {
+            btnUpdate.addEventListener("click", () => {
+                const desdeVal = document.getElementById("cierreDesde")?.value;
+                const hastaVal = document.getElementById("cierreHasta")?.value;
+                openCierreTurno(desdeVal, hastaVal);
+            });
+        }
     }
 
     async function downloadCierrePdf() {
@@ -805,13 +845,16 @@ const App = (() => {
             return;
         }
 
+        const desdeVal = document.getElementById("cierreDesde")?.value || "";
+        const hastaVal = document.getElementById("cierreHasta")?.value || "";
+
         const originalText = els.btnDownloadCierre ? els.btnDownloadCierre.textContent : "";
         try {
             if (els.btnDownloadCierre) {
                 els.btnDownloadCierre.disabled = true;
                 els.btnDownloadCierre.textContent = "Generando PDF...";
             }
-            const { blob, filename } = await API.downloadCierreTurnoPdf();
+            const { blob, filename } = await API.downloadCierreTurnoPdf(desdeVal, hastaVal);
             const sanitizedFilename = (filename || "cierre-turno.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
             const file = new File([blob], sanitizedFilename, { type: "application/pdf" });
             const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
