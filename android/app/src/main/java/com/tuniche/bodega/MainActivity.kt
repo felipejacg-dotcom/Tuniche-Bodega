@@ -3,9 +3,11 @@ package com.tuniche.bodega
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -13,6 +15,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -25,15 +28,33 @@ import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 
+private const val ALLOWED_ORIGIN = "https://tuniche-bodega.onrender.com"
+private const val ALLOWED_HOST = "tuniche-bodega.onrender.com"
+
+private fun isAllowedAppUrl(url: String?): Boolean {
+    val parsed = runCatching { Uri.parse(url ?: "") }.getOrNull() ?: return false
+    return parsed.scheme == "https" && parsed.host == ALLOWED_HOST
+}
+
+private fun isAllowedExternalUrl(url: String?): Boolean {
+    val parsed = runCatching { Uri.parse(url ?: "") }.getOrNull() ?: return false
+    return parsed.scheme in setOf("https", "mailto", "tel")
+}
+
+private fun sanitizePdfFilename(filename: String): String {
+    val cleaned = filename.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_')
+    val withFallback = cleaned.ifBlank { "cierre-turno.pdf" }
+    return if (withFallback.endsWith(".pdf", ignoreCase = true)) withFallback else "$withFallback.pdf"
+}
+
 class WebAppInterface(private val mContext: Context) {
     private var toneGen: ToneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
 
-    // Validar el origen del WebView antes de ejecutar cualquier acción nativa
+    // Validar el origen del WebView antes de ejecutar cualquier accion nativa
     private fun checkSecureOrigin(): Boolean {
         val activity = mContext as? AppCompatActivity ?: return false
         val webView = activity.findViewById<WebView>(R.id.webView) ?: return false
-        val url = webView.url ?: ""
-        return url.startsWith("https://tuniche-bodega.onrender.com/") || url.startsWith("http://tuniche-bodega.onrender.com/")
+        return isAllowedAppUrl(webView.url)
     }
 
     @JavascriptInterface
@@ -107,7 +128,7 @@ class WebAppInterface(private val mContext: Context) {
                 
                 // Guardar en la carpeta cache temporal de la app
                 val cacheDir = mContext.cacheDir
-                val file = java.io.File(cacheDir, filename)
+                val file = java.io.File(cacheDir, sanitizePdfFilename(filename))
                 java.io.FileOutputStream(file).use { fos ->
                     fos.write(pdfBytes)
                 }
@@ -166,18 +187,22 @@ class MainActivity : AppCompatActivity() {
 
         // Restringir navegación estrictamente al dominio autorizado
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: ""
-                // Permitir navegación solo si es el host de producción
-                if (url.startsWith("https://tuniche-bodega.onrender.com/") || url.startsWith("http://tuniche-bodega.onrender.com/")) {
+                // Permitir navegacion solo si es el host de produccion por HTTPS.
+                if (isAllowedAppUrl(url)) {
                     return false // Permite la navegación dentro del WebView
                 }
-                // Si es un enlace externo, abrirlo en el navegador del sistema para seguridad
-                try {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "No se puede abrir enlace externo", Toast.LENGTH_SHORT).show()
+
+                if (isAllowedExternalUrl(url)) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "No se puede abrir enlace externo", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this@MainActivity, "Enlace bloqueado por seguridad", Toast.LENGTH_SHORT).show()
                 }
                 return true // Bloquea la navegación dentro del WebView
             }
@@ -188,9 +213,17 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest) {
-                // Conceder permisos de cámara al WebView
                 runOnUiThread {
-                    request.grant(request.resources)
+                    val originAllowed = request.origin?.toString()?.trimEnd('/') == ALLOWED_ORIGIN
+                    val cameraResources = request.resources.filter {
+                        it == PermissionRequest.RESOURCE_VIDEO_CAPTURE
+                    }.toTypedArray()
+
+                    if (originAllowed && cameraResources.isNotEmpty()) {
+                        request.grant(cameraResources)
+                    } else {
+                        request.deny()
+                    }
                 }
             }
         }

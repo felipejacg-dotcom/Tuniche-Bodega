@@ -44,7 +44,8 @@ El APK resultante se guardará en:
 
 ## 🔒 Endurecimiento y Seguridad Implementada
 * **`android:allowBackup="false"`**: Deshabilitado en el `AndroidManifest.xml` para evitar fugas de datos y manipulación de cookies locales.
-* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente (`playBeep`, `openNativeScanner`, `sharePdf`) al dominio autorizado `https://tuniche-bodega.onrender.com/`. Cualquier intento de carga o inyección desde orígenes externos bloqueará la ejecución del puente y forzará la apertura del enlace en el navegador del sistema.
+* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente (`playBeep`, `openNativeScanner`, `sharePdf`) al dominio autorizado `https://tuniche-bodega.onrender.com/`. No se permite `http://` para el host productivo.
+* **Enlaces externos controlados**: Los enlaces fuera del host autorizado solo se derivan al sistema si usan esquemas seguros conocidos (`https`, `mailto`, `tel`). Esquemas como `javascript`, `file`, `content` e `intent` quedan bloqueados dentro del WebView.
 * **Deshabilitado de Acceso Local**: Se deshabilitó el acceso a archivos de contenido del dispositivo (`allowFileAccess = false` y `allowContentAccess = false`) desde la configuración del WebView.
 
 ---
