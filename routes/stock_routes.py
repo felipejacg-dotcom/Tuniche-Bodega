@@ -47,7 +47,7 @@ def _build_cierre_turno_data(planta):
                    t.hora_salida, t.hora_entrada, t.estado
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
-            WHERE DATE(t.hora_salida) = CURDATE()
+            WHERE t.hora_salida >= CURDATE()
             ORDER BY t.hora_salida DESC
             LIMIT 500
         """)
@@ -236,22 +236,17 @@ def _build_cierre_turno_pdf(data):
         Paragraph("Sistema de Bodega - Cierre operacional", styles["Muted"]),
     ]
     if logo_path.exists():
-        try:
-            from PIL import Image as PILImage
-            with PILImage.open(logo_path) as img:
-                orig_w, orig_h = img.size
-            aspect = orig_w / orig_h
-            max_w = 48 * mm
-            max_h = 40 * mm
-            if max_w / aspect <= max_h:
-                w = max_w
-                h = max_w / aspect
-            else:
-                h = max_h
-                w = max_h * aspect
-            header_left.insert(0, Image(str(logo_path), width=w, height=h))
-        except Exception:
-            header_left.insert(0, Image(str(logo_path), width=36 * mm, height=30 * mm))
+        # Usamos el aspect ratio conocido del logo (280/232 = 1.2069) para evitar I/O de disco y carga de PIL
+        aspect = 1.206896551724138
+        max_w = 48 * mm
+        max_h = 40 * mm
+        if max_w / aspect <= max_h:
+            w = max_w
+            h = max_w / aspect
+        else:
+            h = max_h
+            w = max_h * aspect
+        header_left.insert(0, Image(str(logo_path), width=w, height=h))
 
     header_table = Table(
         [[header_left, Paragraph(f"{data.get('fecha_display') or '-'}<br/>Generado {data.get('hora_generacion') or '--:--'}", styles["RightMuted"])]],
@@ -418,7 +413,7 @@ def get_registros():
                    t.hora_salida, t.hora_entrada, t.estado
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
-            WHERE DATE(t.hora_salida) = CURDATE()
+            WHERE t.hora_salida >= CURDATE()
         """
         params = []
 
