@@ -794,24 +794,33 @@ const App = (() => {
             const file = new File([blob], sanitizedFilename, { type: "application/pdf" });
             const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
 
-            // 1. Caso: Ejecución dentro de la App de Android Nativa
-            if (window.AndroidApp && window.AndroidApp.sharePdf) {
+            // 1. Caso: ejecucion dentro de la app Android nativa.
+            // La app nueva descarga el PDF desde Android usando la cookie del WebView,
+            // evitando pasar archivos grandes como Base64 por el puente JavaScript.
+            if (window.AndroidApp && typeof window.AndroidApp.shareCierreTurnoPdf === "function") {
+                window.AndroidApp.shareCierreTurnoPdf(sanitizedFilename);
+                toast("Abriendo compartir...", "success");
+            }
+            // Fallback para APKs antiguos que aun no tienen shareCierreTurnoPdf.
+            else if (window.AndroidApp && typeof window.AndroidApp.sharePdf === "function") {
                 const reader = new FileReader();
                 reader.onerror = function() {
                     toast("Error al leer el archivo PDF.", "error");
                 };
                 reader.onloadend = function() {
                     try {
-                        const base64data = reader.result.split(',')[1];
+                        const result = typeof reader.result === "string" ? reader.result : "";
+                        const base64data = result.split(",")[1];
+                        if (!base64data) throw new Error("PDF vacio");
                         window.AndroidApp.sharePdf(base64data, sanitizedFilename);
                     } catch (e) {
-                        toast("Error al procesar el archivo en la aplicación.", "error");
+                        toast("Error al procesar el archivo en la aplicacion.", "error");
                     }
                 };
                 reader.readAsDataURL(blob);
                 toast("Abriendo compartir...", "success");
             }
-            // 2. Caso: Navegador móvil compatible con Web Share
+            // 2. Caso: navegador movil compatible con Web Share
             else if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
                     files: [file],
@@ -820,7 +829,7 @@ const App = (() => {
                 });
                 toast("Cierre compartido.", "success");
             }
-            // 3. Fallback: Descarga clásica de archivo en escritorio
+            // 3. Fallback: descarga clasica de archivo en escritorio
             else {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");

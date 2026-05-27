@@ -14,6 +14,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.webkit.JavascriptInterface
+import android.webkit.CookieManager
 import android.webkit.PermissionRequest
 import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
@@ -27,9 +28,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 
 private const val ALLOWED_ORIGIN = "https://tuniche-bodega.onrender.com"
 private const val ALLOWED_HOST = "tuniche-bodega.onrender.com"
+private const val CIERRE_PDF_PATH = "/api/cierre_turno/pdf"
 
 private fun isAllowedAppUrl(url: String?): Boolean {
     val parsed = runCatching { Uri.parse(url ?: "") }.getOrNull() ?: return false
@@ -123,43 +130,84 @@ class WebAppInterface(private val mContext: Context) {
         val activity = mContext as AppCompatActivity
         activity.runOnUiThread {
             try {
-                // Decodificar los bytes del PDF desde Base64
                 val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
-                
-                // Guardar en la carpeta cache temporal de la app
-                val cacheDir = mContext.cacheDir
-                val file = java.io.File(cacheDir, sanitizePdfFilename(filename))
-                java.io.FileOutputStream(file).use { fos ->
-                    fos.write(pdfBytes)
-                }
-
-                // Generar URI seguro usando el FileProvider
-                val fileUri = androidx.core.content.FileProvider.getUriForFile(
-                    mContext,
-                    "com.tuniche.bodega.fileprovider",
-                    file
-                )
-
-                // Crear el Intent nativo de compartir
-                val shareIntent = android.content.Intent().apply {
-                    action = android.content.Intent.ACTION_SEND
-                    putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
-                    type = "application/pdf"
-                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                
-                // Abrir selector nativo (WhatsApp, Gmail, etc.)
-                mContext.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir Cierre de Turno"))
+                val file = writePdfToCache(pdfBytes, filename)
+                openPdfShareSheet(file)
             } catch (e: Exception) {
-                val webView = activity.findViewById<WebView>(R.id.webView)
-                val safeError = e.message?.replace("'", "\\'")?.replace("\n", "") ?: "Error al compartir"
-                webView.evaluateJavascript(
-                    "javascript:if(typeof toast === 'function') { toast('Error al compartir PDF: $safeError', 'error'); } else { alert('Error al compartir PDF: $safeError'); }",
-                    null
-                )
-                Toast.makeText(mContext, "Error al compartir PDF: $safeError", Toast.LENGTH_LONG).show()
+                showShareError(activity, e)
             }
         }
+    }
+
+    @JavascriptInterface
+    fun shareCierreTurnoPdf(filename: String) {
+        if (!checkSecureOrigin()) return
+
+        val activity = mContext as AppCompatActivity
+        thread(name = "cierre-pdf-share") {
+            try {
+                val pdfUrl = "$ALLOWED_ORIGIN$CIERRE_PDF_PATH"
+                val connection = (URL(pdfUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    val cookies = CookieManager.getInstance().getCookie(ALLOWED_ORIGIN)
+                    if (!cookies.isNullOrBlank()) {
+                        setRequestProperty("Cookie", cookies)
+                    }
+                }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("HTTP $code al descargar PDF")
+                }
+
+                val bytes = connection.inputStream.use { it.readBytes() }
+                val file = writePdfToCache(bytes, filename)
+                activity.runOnUiThread {
+                    try {
+                        openPdfShareSheet(file)
+                    } catch (e: Exception) {
+                        showShareError(activity, e)
+                    }
+                }
+            } catch (e: Exception) {
+                activity.runOnUiThread { showShareError(activity, e) }
+            }
+        }
+    }
+
+    private fun writePdfToCache(pdfBytes: ByteArray, filename: String): File {
+        val file = File(mContext.cacheDir, sanitizePdfFilename(filename))
+        FileOutputStream(file).use { fos -> fos.write(pdfBytes) }
+        return file
+    }
+
+    private fun openPdfShareSheet(file: File) {
+        val fileUri = androidx.core.content.FileProvider.getUriForFile(
+            mContext,
+            "com.tuniche.bodega.fileprovider",
+            file
+        )
+
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_STREAM, fileUri)
+            type = "application/pdf"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        mContext.startActivity(Intent.createChooser(shareIntent, "Compartir Cierre de Turno"))
+    }
+
+    private fun showShareError(activity: AppCompatActivity, e: Exception) {
+        val webView = activity.findViewById<WebView>(R.id.webView)
+        val safeError = e.message?.replace("'", "\\'")?.replace("\n", "") ?: "Error al compartir"
+        webView.evaluateJavascript(
+            "javascript:if(typeof toast === 'function') { toast('Error al compartir PDF: $safeError', 'error'); } else { alert('Error al compartir PDF: $safeError'); }",
+            null
+        )
+        Toast.makeText(mContext, "Error al compartir PDF: $safeError", Toast.LENGTH_LONG).show()
     }
 }
 

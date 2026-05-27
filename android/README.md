@@ -44,7 +44,8 @@ El APK resultante se guardará en:
 
 ## 🔒 Endurecimiento y Seguridad Implementada
 * **`android:allowBackup="false"`**: Deshabilitado en el `AndroidManifest.xml` para evitar fugas de datos y manipulación de cookies locales.
-* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente (`playBeep`, `openNativeScanner`, `sharePdf`) al dominio autorizado `https://tuniche-bodega.onrender.com/`. No se permite `http://` para el host productivo.
+* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente (`playBeep`, `openNativeScanner`, `sharePdf`, `shareCierreTurnoPdf`) al dominio autorizado `https://tuniche-bodega.onrender.com/`. No se permite `http://` para el host productivo.
+* **Compartir PDF nativo**: El cierre de turno se descarga desde Android con la cookie activa del WebView y luego se comparte con el selector nativo. Esto evita pasar PDFs grandes como Base64 por el puente JavaScript.
 * **Enlaces externos controlados**: Los enlaces fuera del host autorizado solo se derivan al sistema si usan esquemas seguros conocidos (`https`, `mailto`, `tel`). Esquemas como `javascript`, `file`, `content` e `intent` quedan bloqueados dentro del WebView.
 * **Deshabilitado de Acceso Local**: Se deshabilitó el acceso a archivos de contenido del dispositivo (`allowFileAccess = false` y `allowContentAccess = false`) desde la configuración del WebView.
 
