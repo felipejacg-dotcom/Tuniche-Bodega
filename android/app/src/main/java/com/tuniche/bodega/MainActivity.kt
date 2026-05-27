@@ -256,6 +256,32 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true // Bloquea la navegación dentro del WebView
             }
+
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                super.onReceivedError(view, request, error)
+                // Solo reintentar para la carga de la página principal (main frame)
+                if (request?.isForMainFrame == true) {
+                    val errorCode = error?.errorCode
+                    // Reintentar si es error de conexión, timeout o DNS
+                    if (errorCode == WebViewClient.ERROR_CONNECT || errorCode == WebViewClient.ERROR_TIMEOUT || errorCode == WebViewClient.ERROR_HOST_LOOKUP) {
+                        runOnUiThread {
+                            Toast.makeText(this@MainActivity, "Conexión lenta o fallida. Reintentando...", Toast.LENGTH_SHORT).show()
+                            view?.postDelayed({
+                                view.loadUrl("https://tuniche-bodega.onrender.com/")
+                            }, 4000)
+                        }
+                    }
+                }
+            }
+
+            override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                // Si el proceso de renderizado del WebView se destruye (pantalla negra), recargamos
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Recuperando pantalla...", Toast.LENGTH_SHORT).show()
+                    view?.loadUrl("https://tuniche-bodega.onrender.com/")
+                }
+                return true // Retornar true evita que la aplicación se cierre (crash)
+            }
         }
 
         // Agregar la interfaz JS para el puente de comunicación nativo

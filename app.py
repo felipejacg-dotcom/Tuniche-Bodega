@@ -2,11 +2,13 @@
 from flask import Flask, render_template, make_response
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
 
 load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION")
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 
 from routes.auth_routes import auth_bp
 from routes.worker_routes import worker_bp

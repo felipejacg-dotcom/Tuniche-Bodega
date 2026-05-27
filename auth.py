@@ -24,6 +24,7 @@ def has_login_users() -> bool:
 def login_user(username: str, password: str, planta: str) -> bool:
     users = _get_users()
     if users.get(username.strip().lower()) == password.strip():
+        session.permanent = True
         session["user"] = username.strip().lower()
         session["planta"] = planta
         return True
