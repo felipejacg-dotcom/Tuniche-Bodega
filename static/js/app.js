@@ -65,6 +65,10 @@ App.logout = function() {
     App.els.loginScreen.classList.remove("hidden");
     App.els.loginPass.value = "";
     App.els.loginError.textContent = "";
+
+    if (window.AndroidApp && typeof window.AndroidApp.clearSessionCookies === "function") {
+        window.AndroidApp.clearSessionCookies();
+    }
 };
 
 App.formatRutLive = function(raw) {

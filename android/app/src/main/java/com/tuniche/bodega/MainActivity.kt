@@ -240,6 +240,20 @@ class WebAppInterface(private val mContext: Context) {
         )
         Toast.makeText(mContext, "Error al compartir PDF: $safeError", Toast.LENGTH_LONG).show()
     }
+
+    @JavascriptInterface
+    fun clearSessionCookies() {
+        val activity = mContext as? AppCompatActivity ?: return
+        activity.runOnUiThread {
+            val webView = activity.findViewById<WebView>(R.id.webView)
+            CookieManager.getInstance().removeAllCookies {
+                activity.runOnUiThread {
+                    CookieManager.getInstance().flush()
+                    webView?.loadUrl("$ALLOWED_ORIGIN/")
+                }
+            }
+        }
+    }
 }
 
 class MainActivity : AppCompatActivity() {
@@ -362,8 +376,13 @@ class MainActivity : AppCompatActivity() {
             sharedPrefs.edit { putInt("last_version_code", currentVersionCode) }
         }
 
-        // Carga la URL oficial de producción
-        webView.loadUrl("$ALLOWED_ORIGIN/")
+        // Limpiar cookies de sesión en cada apertura para forzar siempre login
+        CookieManager.getInstance().removeAllCookies {
+            runOnUiThread {
+                CookieManager.getInstance().flush()
+                webView.loadUrl("$ALLOWED_ORIGIN/")
+            }
+        }
 
         // Manejo del botón atrás moderno
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
