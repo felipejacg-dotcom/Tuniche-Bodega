@@ -21,11 +21,15 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceError
+import android.webkit.RenderProcessGoneDetail
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.core.content.edit
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import java.io.File
@@ -39,12 +43,12 @@ private const val ALLOWED_HOST = "tuniche-bodega.onrender.com"
 private const val CIERRE_PDF_PATH = "/api/cierre_turno/pdf"
 
 private fun isAllowedAppUrl(url: String?): Boolean {
-    val parsed = runCatching { Uri.parse(url ?: "") }.getOrNull() ?: return false
+    val parsed = runCatching { (url ?: "").toUri() }.getOrNull() ?: return false
     return parsed.scheme == "https" && parsed.host == ALLOWED_HOST
 }
 
 private fun isAllowedExternalUrl(url: String?): Boolean {
-    val parsed = runCatching { Uri.parse(url ?: "") }.getOrNull() ?: return false
+    val parsed = runCatching { (url ?: "").toUri() }.getOrNull() ?: return false
     return parsed.scheme in setOf("https", "mailto", "tel")
 }
 
@@ -54,6 +58,7 @@ private fun sanitizePdfFilename(filename: String): String {
     return if (withFallback.endsWith(".pdf", ignoreCase = true)) withFallback else "$withFallback.pdf"
 }
 
+@Suppress("unused", "UnusedParameters")
 class WebAppInterface(private val mContext: Context) {
     private var toneGen: ToneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
 
@@ -240,7 +245,6 @@ class WebAppInterface(private val mContext: Context) {
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private val CAMERA_PERMISSION_CODE = 100
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -274,9 +278,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (isAllowedExternalUrl(url)) {
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                         startActivity(intent)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         Toast.makeText(this@MainActivity, "No se puede abrir enlace externo", Toast.LENGTH_SHORT).show()
                     }
                 } else {
@@ -285,7 +289,7 @@ class MainActivity : AppCompatActivity() {
                 return true // Bloquea la navegación dentro del WebView
             }
 
-            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                 super.onReceivedError(view, request, error)
                 // Solo reintentar para la carga de la página principal (main frame)
                 if (request?.isForMainFrame == true) {
@@ -304,7 +308,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+            override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
                 // Si el proceso de renderizado del WebView se destruye (pantalla negra), recargamos
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "Recuperando pantalla...", Toast.LENGTH_SHORT).show()
@@ -350,12 +354,12 @@ class MainActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION")
                 pInfo.versionCode
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             1
         }
         if (currentVersionCode != lastVersionCode) {
             webView.clearCache(true)
-            sharedPrefs.edit().putInt("last_version_code", currentVersionCode).apply()
+            sharedPrefs.edit { putInt("last_version_code", currentVersionCode) }
         }
 
         // Carga la URL oficial de producción
@@ -372,5 +376,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    companion object {
+        private const val CAMERA_PERMISSION_CODE = 100
     }
 }
