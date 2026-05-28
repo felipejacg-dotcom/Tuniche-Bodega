@@ -95,6 +95,7 @@ App.initEls = function() {
         cierreTurnoDia: $("cierreTurnoDia"),
         cierreTurnoNoche: $("cierreTurnoNoche"),
         btnGenerarCierre: $("btnGenerarCierre"),
+        btnConfirmarCierre: $("btnConfirmarCierre"),
         btnDownloadCierre: $("btnDownloadCierre"),
         // Modal carnet
         carnetModal: $("carnetModal"),

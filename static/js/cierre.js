@@ -22,6 +22,20 @@ App.updateCierreTurnoTabs = function() {
 App.renderCierrePlaceholder = function() {
     if (!App.els.cierreContent) return;
     App.els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Selecciona turno y rango para generar el cierre.</p></div>`;
+    App.updateCierreActions();
+};
+
+App.updateCierreActions = function() {
+    const data = App.state.cierreTurno;
+    const isGenerated = !!data;
+    const isClosed = !!data?.cerrado;
+    if (App.els.btnConfirmarCierre) {
+        App.els.btnConfirmarCierre.disabled = !isGenerated || isClosed;
+        App.els.btnConfirmarCierre.textContent = isClosed ? "Turno cerrado" : "Confirmar cierre";
+    }
+    if (App.els.btnDownloadCierre) {
+        App.els.btnDownloadCierre.disabled = !isClosed;
+    }
 };
 
 App.setSuggestedCierreRange = function(tipo = App.state.cierreTipoTurno) {
@@ -54,6 +68,7 @@ App.initCierreView = function() {
         App.setSuggestedCierreRange(App.state.cierreTipoTurno);
     }
     App.updateCierreTurnoTabs();
+    App.updateCierreActions();
 };
 
 App.setCierreTurno = function(tipoTurno) {
@@ -94,7 +109,7 @@ App.generateCierreTurno = async function() {
         if (!data.success) throw new Error(data.message || "No se pudo generar el cierre.");
         App.state.cierreTurno = data;
         App.renderCierreTurno(data);
-        App.toast("Cierre generado.", "success");
+        App.toast(data.cerrado ? "Este turno ya estaba cerrado." : "Vista previa generada.", data.cerrado ? "warning" : "success");
     } catch (e) {
         App.state.cierreTurno = null;
         App.els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><p>${App.escHtml(e.message || "Error generando cierre.")}</p></div>`;
@@ -104,13 +119,48 @@ App.generateCierreTurno = async function() {
             App.els.btnGenerarCierre.disabled = false;
             App.els.btnGenerarCierre.textContent = "Generar cierre";
         }
+        App.updateCierreActions();
+    }
+};
+
+App.confirmCierreTurno = async function() {
+    let values;
+    try {
+        values = App.getCierreFormValues();
+    } catch (e) {
+        App.toast(e.message, "warning", 4200);
+        return;
+    }
+
+    const originalText = App.els.btnConfirmarCierre ? App.els.btnConfirmarCierre.textContent : "";
+    try {
+        if (App.els.btnConfirmarCierre) {
+            App.els.btnConfirmarCierre.disabled = true;
+            App.els.btnConfirmarCierre.textContent = "Confirmando...";
+        }
+        const data = await API.confirmarCierreTurno(values.tipoTurno, values.desde, values.hasta);
+        if (!data.success) throw new Error(data.message || "No se pudo confirmar el cierre.");
+        App.state.cierreTurno = data;
+        App.renderCierreTurno(data);
+        App.toast("Cierre confirmado.", "success");
+    } catch (e) {
+        App.toast(e.message || "No se pudo confirmar el cierre.", "error", 5200);
+        await App.generateCierreTurno();
+    } finally {
+        if (App.els.btnConfirmarCierre) {
+            App.els.btnConfirmarCierre.textContent = originalText || "Confirmar cierre";
+        }
+        App.updateCierreActions();
     }
 };
 
 App.renderCierreTurno = function(data) {
     const kpi = data.kpi || {};
     const pendientes = data.pendientes || [];
-    const stockCritico = data.stock_critico || [];
+    const cierre = data.cierre || {};
+    const isClosed = !!data.cerrado;
+    const responsable = cierre.responsable || data.responsable || App.state.user || "Sin responsable";
+    const horaCierre = cierre.hora_cierre || data.hora_generacion || "--:--";
 
     function buildPendientesHtml(list) {
         if (!list.length) {
@@ -140,18 +190,6 @@ App.renderCierreTurno = function(data) {
 
     const pendientesHtml = buildPendientesHtml(pendientes);
 
-    const stockHtml = stockCritico.length
-        ? stockCritico.slice(0, 20).map(item => `
-            <div class="cierre-item cierre-stock">
-                <div class="cierre-item-main">
-                    <strong>${App.escHtml(item.descripcion)} ${item.talla ? `[${App.escHtml(item.talla)}]` : ""}</strong>
-                    <span>ID ${App.escHtml(item.id)} · Alerta ${App.escHtml(item.limite_alerta)}</span>
-                </div>
-                <div class="cierre-stock-count">${App.escHtml(item.stock_disponible)}</div>
-            </div>
-        `).join("")
-        : `<div class="cierre-empty">Sin stock crítico.</div>`;
-
     App.els.cierreContent.innerHTML = `
         <!-- SECCIÓN 1: RESUMEN GENERADO Y KPIS -->
         <div class="card" style="margin-top:10px;">
@@ -164,7 +202,13 @@ App.renderCierreTurno = function(data) {
                         <div class="cierre-eyebrow">Generado ${App.escHtml(data.hora_generacion || "--:--")}</div>
                         <div class="cierre-title">Turno ${App.escHtml(data.turno || "")} - ${App.escHtml(data.planta_display || data.planta || App.state.planta)}</div>
                         <div class="cierre-range-text">Rango: ${App.escHtml(data.desde || "")} a ${App.escHtml(data.hasta || "")}</div>
+                        <div class="cierre-range-text">Responsable: ${App.escHtml(responsable)}</div>
                     </div>
+                </div>
+                <div class="cierre-status ${isClosed ? "is-closed" : "is-preview"}">
+                    ${isClosed
+                        ? `Turno cerrado por ${App.escHtml(responsable)} el ${App.escHtml(horaCierre)}.`
+                        : "Vista previa sin cerrar. Confirma el cierre para bloquear este turno y habilitar el PDF."}
                 </div>
                 <div class="cierre-kpi-grid">
                     <div class="cierre-kpi"><strong>${App.escHtml(kpi.total ?? 0)}</strong><span>Movimientos</span></div>
@@ -172,7 +216,6 @@ App.renderCierreTurno = function(data) {
                     <div class="cierre-kpi"><strong>${App.escHtml(kpi.devoluciones ?? 0)}</strong><span>Devoluciones</span></div>
                     <div class="cierre-kpi warning"><strong>${App.escHtml(kpi.pendientes ?? 0)}</strong><span>Pendientes</span></div>
                     <div class="cierre-kpi warning"><strong>${App.escHtml(kpi.trabajadores_pendientes ?? 0)}</strong><span>Trabajadores</span></div>
-                    <div class="cierre-kpi danger"><strong>${App.escHtml(kpi.stock_critico ?? 0)}</strong><span>Stock crítico</span></div>
                 </div>
                 
             </div>
@@ -187,23 +230,17 @@ App.renderCierreTurno = function(data) {
                 ${pendientesHtml}
             </div>
         </div>
-
-        <!-- SECCIÓN 3: STOCK CRÍTICO -->
-        <div class="card">
-            <div class="card-header" style="background:#fff1f2; border-bottom-color:#ffc9cf;">
-                <span class="card-title" style="color:var(--danger); font-weight:800;">Stock Crítico</span>
-            </div>
-            <div class="card-body cierre-list">
-                ${stockHtml}
-            </div>
-        </div>
     `;
-
+    App.updateCierreActions();
 };
 
 App.downloadCierrePdf = async function() {
     if (!App.state.cierreTurno) {
         App.toast("Primero genera el cierre.", "warning");
+        return;
+    }
+    if (!App.state.cierreTurno.cerrado) {
+        App.toast("Primero confirma el cierre para habilitar el PDF.", "warning", 4200);
         return;
     }
 

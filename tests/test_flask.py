@@ -88,6 +88,7 @@ class FlaskTestCase(unittest.TestCase):
         
         # Simular respuestas SQL para múltiples llamadas en el mismo test
         mock_cur.fetchall.return_value = []
+        mock_cur.fetchone.return_value = None
 
         with self.app.session_transaction() as sess:
             sess['user'] = 'admin'
@@ -106,6 +107,67 @@ class FlaskTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data["success"])
         self.assertEqual(data["turno"], "Noche")
+
+    @patch('routes.stock_routes.get_connection')
+    def test_cierre_preview_responsable_sin_stock_critico(self, mock_get_conn):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+        mock_cur.fetchall.return_value = []
+        mock_cur.fetchone.return_value = None
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        response = self.app.get('/api/cierre_turno?tipo_turno=dia&desde=2026-05-28T08:00&hasta=2026-05-28T20:00')
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["responsable"], "admin")
+        self.assertFalse(data["cerrado"])
+        self.assertNotIn("stock_critico", data)
+        self.assertNotIn("stock_critico", data["kpi"])
+
+    @patch('routes.stock_routes.get_connection')
+    def test_confirmar_cierre_y_bloquear_repetido(self, mock_get_conn):
+        cierre_row = {
+            "id": 1,
+            "planta": "TUNICHE",
+            "tipo_turno": "dia",
+            "fecha_operativa": "2026-05-28",
+            "desde": "2026-05-28 08:00",
+            "hasta": "2026-05-28 20:00",
+            "responsable": "admin",
+            "hora_cierre": "2026-05-28 20:05",
+            "total": 0,
+            "salidas": 0,
+            "devoluciones": 0,
+            "pendientes": 0,
+            "trabajadores_pendientes": 0,
+        }
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+        mock_cur.fetchall.return_value = []
+        mock_cur.fetchone.side_effect = [None, cierre_row, cierre_row]
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        payload = {"tipo_turno": "dia", "desde": "2026-05-28T08:00", "hasta": "2026-05-28T20:00"}
+        response = self.app.post('/api/cierre_turno', json=payload)
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["cerrado"])
+        self.assertEqual(data["cierre"]["responsable"], "admin")
+
+        response = self.app.post('/api/cierre_turno', json=payload)
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("ya fue cerrado", data["message"])
 
     @patch('routes.operation_routes.get_connection')
     def test_registrar_masivo(self, mock_get_conn):

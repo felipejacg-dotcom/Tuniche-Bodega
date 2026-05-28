@@ -372,6 +372,9 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .cierre-kpi span { display: block; margin-top: 4px; font-size: 0.65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .cierre-kpi.warning strong { color: var(--warning); }
 .cierre-kpi.danger strong { color: var(--danger); }
+.cierre-status { padding: 9px 11px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; line-height: 1.35; border: 1px solid var(--border); }
+.cierre-status.is-preview { color: #8a5a00; background: var(--warning-bg); border-color: #f4d87a; }
+.cierre-status.is-closed { color: var(--success-dark); background: var(--success-bg); border-color: rgba(0, 139, 58, 0.25); }
 .cierre-section-title { margin-top: 4px; font-size: 0.72rem; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .cierre-list { display: flex; flex-direction: column; gap: 7px; }
 .cierre-worker-card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-sm); overflow: hidden; }
@@ -405,6 +408,9 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .btn-cierre-update { height: 32px; font-size: 0.72rem; padding: 0 14px; background: var(--petrol); border-color: var(--petrol); color: #fff; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--petrol); transition: background 0.15s, border-color 0.15s; }
 .btn-cierre-update:hover { background: var(--navy); border-color: var(--navy); }
 .btn-cierre-update:disabled { opacity: 0.6; cursor: wait; }
+.btn-cierre-confirm { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 800; }
+.btn-cierre-confirm:hover { background: var(--danger-dark); border-color: var(--danger-dark); }
+.btn-cierre-confirm:disabled { opacity: 0.62; cursor: not-allowed; }
 .cierre-page-actions .btn-cierre-update { height: 38px; }
 
 /* ============================================================

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, jsonify, request, send_file
-from auth import login_required, get_current_planta
+from auth import login_required, get_current_planta, get_current_user
 from db import get_connection
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import mysql.connector
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT
@@ -82,6 +83,84 @@ def _validate_cierre_range(start_time, end_time):
         raise ValueError("El rango del cierre no puede superar 24 horas.")
 
 
+def _fecha_operativa(start_time):
+    return start_time.date()
+
+
+def _format_dt(value):
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M")
+    text = str(value)
+    return text[:16].replace("T", " ")
+
+
+def _format_fecha(value):
+    if value is None:
+        return ""
+    if hasattr(value, "strftime"):
+        return value.strftime("%Y-%m-%d")
+    return str(value)[:10]
+
+
+def _ensure_cierres_table(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS cierres_turno (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            planta VARCHAR(32) NOT NULL,
+            tipo_turno VARCHAR(16) NOT NULL,
+            fecha_operativa DATE NOT NULL,
+            desde DATETIME NOT NULL,
+            hasta DATETIME NOT NULL,
+            responsable VARCHAR(100) NOT NULL,
+            hora_cierre DATETIME NOT NULL,
+            total INT NOT NULL DEFAULT 0,
+            salidas INT NOT NULL DEFAULT 0,
+            devoluciones INT NOT NULL DEFAULT 0,
+            pendientes INT NOT NULL DEFAULT 0,
+            trabajadores_pendientes INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cierre_turno_operativo (planta, tipo_turno, fecha_operativa)
+        )
+    """)
+
+
+def _serialize_cierre_row(row):
+    if not row:
+        return None
+    return {
+        "id": row.get("id"),
+        "planta": row.get("planta"),
+        "tipo_turno": row.get("tipo_turno"),
+        "fecha_operativa": _format_fecha(row.get("fecha_operativa")),
+        "desde": _format_dt(row.get("desde")),
+        "hasta": _format_dt(row.get("hasta")),
+        "responsable": row.get("responsable") or "",
+        "hora_cierre": _format_dt(row.get("hora_cierre")),
+        "kpi": {
+            "total": row.get("total") or 0,
+            "salidas": row.get("salidas") or 0,
+            "devoluciones": row.get("devoluciones") or 0,
+            "pendientes": row.get("pendientes") or 0,
+            "trabajadores_pendientes": row.get("trabajadores_pendientes") or 0,
+        }
+    }
+
+
+def _get_cierre_row(cur, planta, tipo_turno, fecha_operativa):
+    _ensure_cierres_table(cur)
+    cur.execute("""
+        SELECT id, planta, tipo_turno, fecha_operativa, desde, hasta,
+               responsable, hora_cierre, total, salidas, devoluciones,
+               pendientes, trabajadores_pendientes
+        FROM cierres_turno
+        WHERE planta = %s AND tipo_turno = %s AND fecha_operativa = %s
+        LIMIT 1
+    """, (planta, tipo_turno, fecha_operativa))
+    return cur.fetchone()
+
+
 def _group_pendientes(items):
     grouped = {}
     for item in items:
@@ -108,17 +187,21 @@ def _group_pendientes(items):
     return list(grouped.values())
 
 
-def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
+def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsable=None):
     now = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
     turno_key, turno_name = _normalize_tipo_turno(tipo_turno)
     start_time = _parse_datetime(desde_str)
     end_time = _parse_datetime(hasta_str)
     _validate_cierre_range(start_time, end_time)
+    fecha_operativa = _fecha_operativa(start_time)
+    responsable = responsable or get_current_user()
+    cierre_existente = None
 
     conn = None
     try:
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
+        cierre_existente = _serialize_cierre_row(_get_cierre_row(cur, planta, turno_key, fecha_operativa))
 
         # 1. Eventos del turno. Una transaccion devuelta puede sumar como salida
         # y como devolucion si ambos eventos caen dentro del rango manual.
@@ -174,16 +257,6 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         """, (start_time, end_time))
         raw_pendientes = cur.fetchall()
 
-        # 3. Stock crítico
-        cur.execute("""
-            SELECT id, descripcion, talla, medida, stock_disponible, limite_alerta
-            FROM articulos
-            WHERE limite_alerta IS NOT NULL
-              AND stock_disponible <= limite_alerta
-            ORDER BY stock_disponible ASC, descripcion, talla
-            LIMIT 100
-        """)
-        stock_critico = cur.fetchall()
         cur.close()
     finally:
         if conn:
@@ -219,7 +292,6 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         "devoluciones": devoluciones_count,
         "pendientes": pendientes_count,
         "trabajadores_pendientes": trabajadores_pendientes,
-        "stock_critico": len(stock_critico),
     }
 
     # Agrupar pendientes
@@ -235,15 +307,6 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
     elif len(gp_pendientes) > 15:
         resumen_pendientes_lines.append(f"... y {len(gp_pendientes) - 15} trabajadores más.")
 
-    stock_lines = [
-        f"- {s['descripcion']} [{s.get('talla') or '-'}] stock {s['stock_disponible']} / alerta {s['limite_alerta']}"
-        for s in stock_critico[:25]
-    ]
-    if not stock_lines:
-        stock_lines = ["Sin stock crítico."]
-    elif len(stock_critico) > 25:
-        stock_lines.append(f"... y {len(stock_critico) - 25} artículos más.")
-
     rango_display = f"{start_time.strftime('%d/%m/%Y %H:%M')} a {end_time.strftime('%d/%m/%Y %H:%M')}"
 
     resumen_copiable = "\n".join([
@@ -251,6 +314,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         f"Planta: {planta}",
         f"Turno: {turno_name}",
         f"Rango: {rango_display}",
+        f"Responsable: {responsable}",
         f"Hora generación: {now.strftime('%H:%M')}",
         "",
         f"Movimientos turno: {kpi['total']}",
@@ -258,24 +322,24 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         f"Devoluciones turno: {kpi['devoluciones']}",
         f"Pendientes turno: {kpi['pendientes']}",
         f"Trabajadores con pendientes: {kpi['trabajadores_pendientes']}",
-        f"Stock crítico: {kpi['stock_critico']}",
         "",
         "PENDIENTES DEL TURNO",
         *resumen_pendientes_lines,
-        "",
-        "STOCK CRÍTICO",
-        *stock_lines,
     ])
 
     return {
         "success": True,
         "fecha": now.strftime("%Y-%m-%d"),
         "fecha_display": now.strftime("%d/%m/%Y"),
+        "fecha_operativa": fecha_operativa.strftime("%Y-%m-%d"),
         "hora_generacion": now.strftime("%H:%M"),
         "planta": planta,
         "planta_display": _display_planta(planta),
         "tipo_turno": turno_key,
         "turno": turno_name,
+        "responsable": responsable,
+        "cerrado": bool(cierre_existente),
+        "cierre": cierre_existente,
         "desde": start_time.strftime("%Y-%m-%d %H:%M"),
         "desde_iso": start_time.strftime("%Y-%m-%dT%H:%M"),
         "hasta": end_time.strftime("%Y-%m-%d %H:%M"),
@@ -283,7 +347,6 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         "kpi": kpi,
         "eventos": registros[:500],
         "pendientes": gp_pendientes,
-        "stock_critico": stock_critico,
         "resumen_copiable": resumen_copiable,
     }
 
@@ -399,6 +462,11 @@ def _build_cierre_turno_pdf(data):
             f"Sucursal {data.get('planta_display') or data.get('planta') or '-'} &middot; Rango: {data.get('desde') or ''} a {data.get('hasta') or ''}",
             styles["Muted"],
         ),
+        Paragraph(
+            f"Responsable: {_safe_pdf_text(data.get('responsable') or data.get('cierre', {}).get('responsable') or '-')}"
+            f" &middot; Hora cierre: {_safe_pdf_text(data.get('cierre', {}).get('hora_cierre') or data.get('hora_generacion') or '-')}",
+            styles["Muted"],
+        ),
         Spacer(1, 5 * mm),
     ]
 
@@ -417,12 +485,12 @@ def _build_cierre_turno_pdf(data):
         [
             Paragraph("Pendientes Turno", styles["KpiTitle"]),
             Paragraph("Trabajadores con Pendientes", styles["KpiTitle"]),
-            Paragraph("Stock Crítico", styles["KpiTitle"]),
+            Paragraph("Responsable", styles["KpiTitle"]),
         ],
         [
             Paragraph(str(kpi.get("pendientes", 0)), styles["KpiValue"]),
             Paragraph(str(kpi.get("trabajadores_pendientes", 0)), styles["KpiValue"]),
-            Paragraph(str(kpi.get("stock_critico", 0)), styles["KpiValue"]),
+            Paragraph(_safe_pdf_text(data.get("responsable") or "-"), styles["KpiValue"]),
         ],
     ]
     kpi_table = Table(kpi_rows, colWidths=[60.6 * mm, 60.6 * mm, 60.6 * mm])
@@ -501,31 +569,108 @@ def _build_cierre_turno_pdf(data):
         p_styles,
     )
 
-    # STOCK CRITICO
-    stock_rows = [
-        [
-            Paragraph(_safe_pdf_text(item.get("id")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("descripcion")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("talla") or "-"), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("medida") or "-"), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("stock_disponible")), styles["TableCell"]),
-            Paragraph(_safe_pdf_text(item.get("limite_alerta")), styles["TableCell"]),
-        ]
-        for item in (data.get("stock_critico") or [])
-    ]
-    section_table(
-        "Stock crítico",
-        ["ID", "Artículo", "Talla", "Medida", "Stock", "Alerta"],
-        stock_rows,
-        "Sin stock crítico.",
-        [18 * mm, 72 * mm, 22 * mm, 23 * mm, 18 * mm, 18 * mm],
-    )
-
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph("Documento generado automáticamente por Tuniche-Bodega.", styles["RightMuted"]))
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+
+def _confirm_cierre_turno(planta, tipo_turno, desde_str, hasta_str):
+    responsable = get_current_user()
+    data = _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsable)
+    cierre = data.get("cierre")
+    if cierre:
+        raise RuntimeError(
+            f"Este turno ya fue cerrado por {cierre.get('responsable') or 'otro usuario'} "
+            f"el {cierre.get('hora_cierre') or 'horario registrado'}."
+        )
+
+    now = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
+    kpi = data.get("kpi") or {}
+    conn = None
+    try:
+        conn = get_connection(planta)
+        cur = conn.cursor(dictionary=True)
+        _ensure_cierres_table(cur)
+        cur.execute("""
+            INSERT INTO cierres_turno (
+                planta, tipo_turno, fecha_operativa, desde, hasta,
+                responsable, hora_cierre, total, salidas, devoluciones,
+                pendientes, trabajadores_pendientes
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            planta,
+            data["tipo_turno"],
+            data["fecha_operativa"],
+            data["desde"],
+            data["hasta"],
+            responsable,
+            now,
+            kpi.get("total", 0),
+            kpi.get("salidas", 0),
+            kpi.get("devoluciones", 0),
+            kpi.get("pendientes", 0),
+            kpi.get("trabajadores_pendientes", 0),
+        ))
+        conn.commit()
+        cierre_row = _get_cierre_row(cur, planta, data["tipo_turno"], data["fecha_operativa"])
+        cur.close()
+        data["cerrado"] = True
+        data["cierre"] = _serialize_cierre_row(cierre_row)
+        data["responsable"] = responsable
+        return data
+    except mysql.connector.IntegrityError:
+        if conn:
+            conn.rollback()
+        cur = conn.cursor(dictionary=True)
+        cierre_row = _get_cierre_row(cur, planta, data["tipo_turno"], data["fecha_operativa"])
+        cur.close()
+        cierre = _serialize_cierre_row(cierre_row) or {}
+        raise RuntimeError(
+            f"Este turno ya fue cerrado por {cierre.get('responsable') or 'otro usuario'} "
+            f"el {cierre.get('hora_cierre') or 'horario registrado'}."
+        )
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+
+def _build_confirmed_cierre_data(planta, tipo_turno, desde_str, hasta_str):
+    turno_key, _ = _normalize_tipo_turno(tipo_turno)
+    start_time = _parse_datetime(desde_str)
+    end_time = _parse_datetime(hasta_str)
+    _validate_cierre_range(start_time, end_time)
+    fecha_operativa = _fecha_operativa(start_time)
+
+    conn = None
+    try:
+        conn = get_connection(planta)
+        cur = conn.cursor(dictionary=True)
+        cierre = _serialize_cierre_row(_get_cierre_row(cur, planta, turno_key, fecha_operativa))
+        cur.close()
+    finally:
+        if conn:
+            conn.close()
+
+    if not cierre:
+        raise LookupError("Primero debes confirmar el cierre de turno antes de descargar el PDF.")
+
+    data = _build_cierre_turno_data(
+        planta,
+        cierre["tipo_turno"],
+        cierre["desde"],
+        cierre["hasta"],
+        cierre.get("responsable") or get_current_user(),
+    )
+    data["cerrado"] = True
+    data["cierre"] = cierre
+    data["responsable"] = cierre.get("responsable") or data.get("responsable")
+    return data
 
 
 @stock_bp.route("/articulos")
@@ -708,6 +853,26 @@ def get_cierre_turno():
         return jsonify({"success": False, "message": "Ocurrió un error al generar los datos del cierre."}), 500
 
 
+@stock_bp.route("/cierre_turno", methods=["POST"])
+@login_required
+def post_cierre_turno():
+    planta = get_current_planta()
+    payload = request.get_json(silent=True) or {}
+    tipo_turno = payload.get("tipo_turno")
+    desde = payload.get("desde")
+    hasta = payload.get("hasta")
+    try:
+        return jsonify(_confirm_cierre_turno(planta, tipo_turno, desde, hasta))
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({"success": False, "message": str(e)}), 409
+    except Exception as e:
+        import logging
+        logging.getLogger("flask.app").error("Error en post_cierre_turno: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al confirmar el cierre."}), 500
+
+
 @stock_bp.route("/cierre_turno/pdf")
 @login_required
 def download_cierre_turno_pdf():
@@ -716,7 +881,7 @@ def download_cierre_turno_pdf():
     desde = request.args.get("desde")
     hasta = request.args.get("hasta")
     try:
-        data = _build_cierre_turno_data(planta, tipo_turno, desde, hasta)
+        data = _build_confirmed_cierre_data(planta, tipo_turno, desde, hasta)
         pdf_buffer = _build_cierre_turno_pdf(data)
         filename = f"cierre-turno-{data.get('tipo_turno', 'turno')}-{data['fecha']}-{data.get('planta_display', planta).lower().replace(' ', '-')}.pdf"
         return send_file(
@@ -727,6 +892,8 @@ def download_cierre_turno_pdf():
         )
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
+    except LookupError as e:
+        return jsonify({"success": False, "message": str(e)}), 409
     except Exception as e:
         import logging
         logging.getLogger("flask.app").error("Error en download_cierre_turno_pdf: %s", e, exc_info=True)

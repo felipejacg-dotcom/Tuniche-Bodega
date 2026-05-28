@@ -77,6 +77,12 @@ const API = (() => {
             return _req(`/api/cierre_turno?${params.toString()}`);
         },
 
+        confirmarCierreTurno: (tipoTurno = "", desde = "", hasta = "") =>
+            _req("/api/cierre_turno", {
+                method: "POST",
+                body: { tipo_turno: tipoTurno, desde, hasta },
+            }),
+
         downloadCierreTurnoPdf: async (tipoTurno = "", desde = "", hasta = "") => {
             const params = new URLSearchParams();
             if (tipoTurno) params.append("tipo_turno", tipoTurno);
