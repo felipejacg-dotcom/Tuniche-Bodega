@@ -64,6 +64,14 @@ App.logout = function() {
     App.state.scannedArticulos = [];
     if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
     if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
+
+    if (typeof App.stopArticleScanner === "function") {
+        App.stopArticleScanner("logout", { focusLaser: false });
+    }
+    if (typeof Scanner !== "undefined" && typeof Scanner.stopCarnetCamera === "function") {
+        Scanner.stopCarnetCamera();
+    }
+
     App.els.appContent.classList.remove("visible");
     App.els.loginScreen.classList.remove("hidden");
     App.els.loginPass.value = "";
@@ -145,7 +153,10 @@ App.init = function() {
     App.els.btnConfirm.addEventListener("click", App.confirmOperation);
 
     // Form change & RUT formatting
-    App.els.inputRut.addEventListener("input", App.onRutInput);
+    App.els.inputRut.addEventListener("input", (e) => {
+        if (typeof App.onWorkerFieldChange === "function") App.onWorkerFieldChange();
+        App.onRutInput(e);
+    });
     App.els.inputRut.addEventListener("change", async (e) => {
         const rutFmt = e.target.value.trim();
         if (rutFmt.length >= 11) {
@@ -167,8 +178,14 @@ App.init = function() {
             App.updateConfirmButton();
         }
     });
-    App.els.inputNombre.addEventListener("input", App.updateConfirmButton);
-    App.els.inputArea.addEventListener("change", App.updateConfirmButton);
+    App.els.inputNombre.addEventListener("input", () => {
+        if (typeof App.onWorkerFieldChange === "function") App.onWorkerFieldChange();
+        App.updateConfirmButton();
+    });
+    App.els.inputArea.addEventListener("change", () => {
+        if (typeof App.onWorkerFieldChange === "function") App.onWorkerFieldChange();
+        App.updateConfirmButton();
+    });
 
     // Stock search with 300ms debounce
     if (App.els.stockSearch) {

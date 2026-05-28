@@ -155,6 +155,21 @@ App.shouldNotifyDuplicateScan = function(id, cooldownMs = 2500) {
     return true;
 };
 
+App.stopArticleScanner = function(reason = "", options = {}) {
+    Scanner.stopArticleCamera();
+    if (App.state.scanMethod === "camera") {
+        if (typeof App.setScanMethod === "function") {
+            App.setScanMethod("laser", options);
+        } else {
+            App.state.scanMethod = "laser";
+        }
+    } else if (options.focusLaser === true) {
+        setTimeout(() => {
+            if (App.els.laserInput) App.els.laserInput.focus();
+        }, 100);
+    }
+};
+
 App.showView = function(name) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
@@ -167,6 +182,10 @@ App.showView = function(name) {
     if (navId) {
         const el = App.$(navId);
         if (el) el.classList.add("active");
+    }
+
+    if (name !== "operacion") {
+        App.stopArticleScanner("view_change", { focusLaser: false });
     }
 
     if (name === "stock") App.renderStockList();

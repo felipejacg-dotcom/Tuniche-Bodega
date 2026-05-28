@@ -23,7 +23,7 @@ App.updateMode = function(mode) {
     }
 
     if (App.state.mode === "DEVOLUCION") {
-        Scanner.stopArticleCamera();
+        App.stopArticleScanner("mode_change", { focusLaser: false });
         App.els.articleScanCard.style.display = "none";
         App.els.multiScanSection.style.display = "none";
         App.els.btnConfirm.style.display = "none";
@@ -57,6 +57,9 @@ App.onCredentialScanned = async function(rawText) {
     App.vibrate([100]);
     App.closeCarnetModal();
 
+    if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+    if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
+
     try {
         const data = await API.buscarTrabajador(rutFmt);
         if (data.success) {
@@ -76,6 +79,12 @@ App.onCredentialScanned = async function(rawText) {
     }
 
     App.updateConfirmButton();
+};
+
+App.onWorkerFieldChange = function() {
+    App.stopArticleScanner("worker_change", { focusLaser: false });
+    if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+    if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
 };
 
 App.onArticuloScanned = function(rawText) {
@@ -204,7 +213,7 @@ App.updateConfirmButton = function() {
     App.els.btnConfirm.disabled = !canConfirm;
 };
 
-App.setScanMethod = function(method) {
+App.setScanMethod = function(method, options = { focusLaser: true }) {
     if (App.state.mode !== "SALIDA") {
         Scanner.stopArticleCamera();
         return;
@@ -223,7 +232,11 @@ App.setScanMethod = function(method) {
         });
     } else {
         Scanner.stopArticleCamera();
-        setTimeout(() => App.els.laserInput.focus(), 100);
+        if (options.focusLaser !== false) {
+            setTimeout(() => {
+                if (App.els.laserInput) App.els.laserInput.focus();
+            }, 100);
+        }
     }
 };
 
@@ -268,12 +281,9 @@ App.confirmOperation = async function() {
                 App.state.scannedArticulos = [];
                 if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
                 if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
+                App.stopArticleScanner("confirm_success", { focusLaser: true });
                 App.renderMultiScanList();
                 App.clearArticulo();
-
-                if (App.state.scanMethod === "laser") {
-                    setTimeout(() => App.els.laserInput.focus(), 200);
-                }
             } else {
                 App.vibrate([300]);
                 App.toast(data.message || "Error al registrar entrega.", "error", 4000);
