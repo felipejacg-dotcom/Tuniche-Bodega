@@ -84,10 +84,12 @@ class WebAppInterface(private val mContext: Context) {
             mContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
-        if (type == "success") {
-            vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+        val duration = if (type == "success") 100L else 300L
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
         } else {
-            vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
         }
     }
 
