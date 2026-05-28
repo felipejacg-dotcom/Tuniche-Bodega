@@ -22,6 +22,8 @@ App.state = {
     cierreTipoTurno: "dia",
     stockFilter: "all",
     stockQuery: "",
+    scanProcessingIds: new Set(),
+    scanMutedIds: new Map(),
 };
 
 App.$ = (id) => document.getElementById(id);
@@ -143,6 +145,14 @@ App.vibrateInternal = function(pattern) {
     try {
         if (navigator.vibrate) navigator.vibrate(pattern);
     } catch (_) {}
+};
+
+App.shouldNotifyDuplicateScan = function(id, cooldownMs = 2500) {
+    const now = Date.now();
+    const last = App.state.scanMutedIds.get(id) || 0;
+    if (now - last < cooldownMs) return false;
+    App.state.scanMutedIds.set(id, now);
+    return true;
 };
 
 App.showView = function(name) {

@@ -3,7 +3,10 @@
 window.App = window.App || {};
 
 App.updateMode = function(mode) {
-    App.state.mode = mode === "DEVOLUCION" ? "DEVOLUCION" : "SALIDA";
+    const targetMode = mode === "DEVOLUCION" ? "DEVOLUCION" : "SALIDA";
+    const modeChanged = App.state.mode !== targetMode;
+
+    App.state.mode = targetMode;
     const isDevolucion = App.state.mode === "DEVOLUCION";
     App.els.modeSalidaBtn.classList.toggle("active", !isDevolucion);
     App.els.modeDevolucionBtn.classList.toggle("active", isDevolucion);
@@ -13,6 +16,11 @@ App.updateMode = function(mode) {
     App.els.btnConfirm.querySelector("span").textContent = App.state.mode === "SALIDA" ? "CONFIRMAR SALIDA" : "CONFIRMAR DEVOLUCION";
 
     App.clearArticulo();
+
+    if (modeChanged) {
+        if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+        if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
+    }
 
     if (App.state.mode === "DEVOLUCION") {
         Scanner.stopArticleCamera();
@@ -77,71 +85,97 @@ App.onArticuloScanned = function(rawText) {
     }
 
     const id = Scanner.parseArticleCode(rawText);
+    let found = null;
     if (id === null) {
-        const found = App.state.articulos.find(a =>
+        found = App.state.articulos.find(a =>
             a.descripcion.toLowerCase().includes(rawText.toLowerCase())
         );
-        if (found) { App.selectArticulo(found); return; }
-        App.toast("Código de artículo no reconocido.", "warning");
-        App.vibrate([200, 100, 200]);
-        return;
-    }
-    const found = App.state.articulos.find(a => a.id === id);
-    if (found) {
-        App.selectArticulo(found);
+        if (!found) {
+            App.toast("Código de artículo no reconocido.", "warning");
+            App.vibrate([200, 100, 200]);
+            return;
+        }
     } else {
-        App.toast(`Artículo ID ${id} no encontrado en catálogo.`, "error");
-        App.vibrate([300]);
-    }
-};
-
-App.selectArticulo = async function(art) {
-    const rut = App.els.inputRut.value.trim();
-
-    if (App.state.mode === "SALIDA") {
-        if (art.stock_disponible <= 0) {
-            App.toast(`Sin stock disponible de ${art.descripcion}`, "error");
+        found = App.state.articulos.find(a => a.id === id);
+        if (!found) {
+            App.toast(`Artículo ID ${id} no encontrado en catálogo.`, "error");
             App.vibrate([300]);
             return;
         }
+    }
 
-        let warningText = "";
-        if (rut) {
-            try {
-                const freq = await API.getUltimoRetiro(rut, art.id);
-                if (freq.success && freq.alerta) {
-                    warningText = `⚠️ Retirado hace ${freq.dias} días (${freq.fecha})`;
-                }
-            } catch (_) {}
-        }
+    const artId = found.id;
 
-        if (App.state.scannedArticulos.some(a => a.id === art.id)) {
+    if (App.state.scannedArticulos.some(a => a.id === artId)) {
+        if (App.shouldNotifyDuplicateScan(artId)) {
             App.toast("Este artículo ya está en la lista.", "warning");
-            return;
         }
+        return;
+    }
 
-        App.state.scannedArticulos.push({
-            id: art.id,
-            descripcion: art.descripcion,
-            talla: art.talla,
-            medida: art.medida,
-            stock_disponible: art.stock_disponible,
-            warning: warningText
-        });
+    if (App.state.scanProcessingIds.has(artId)) {
+        return;
+    }
 
-        App.vibrate([80]);
-        App.renderMultiScanList();
+    App.state.scanProcessingIds.add(artId);
+    App.selectArticulo(found);
+};
 
-        App.els.articuloDisplay.className = "articulo-display found";
-        App.els.articuloNombre.textContent = `Agregado: ${art.descripcion} [${art.talla || ""}]`;
-        App.els.articuloStock.textContent = "";
+App.selectArticulo = async function(art) {
+    try {
+        const rut = App.els.inputRut.value.trim();
 
-        if (App.state.scanMethod === "laser") {
-            App.els.laserInput.value = "";
-            setTimeout(() => App.els.laserInput.focus(), 100);
+        if (App.state.mode === "SALIDA") {
+            if (art.stock_disponible <= 0) {
+                App.toast(`Sin stock disponible de ${art.descripcion}`, "error");
+                App.vibrate([300]);
+                return;
+            }
+
+            let warningText = "";
+            if (rut) {
+                try {
+                    const freq = await API.getUltimoRetiro(rut, art.id);
+                    if (freq.success && freq.alerta) {
+                        warningText = `⚠️ Retirado hace ${freq.dias} días (${freq.fecha})`;
+                    }
+                } catch (_) {}
+            }
+
+            if (App.state.scannedArticulos.some(a => a.id === art.id)) {
+                if (App.shouldNotifyDuplicateScan(art.id)) {
+                    App.toast("Este artículo ya está en la lista.", "warning");
+                }
+                return;
+            }
+
+            App.state.scannedArticulos.push({
+                id: art.id,
+                descripcion: art.descripcion,
+                talla: art.talla,
+                medida: art.medida,
+                stock_disponible: art.stock_disponible,
+                warning: warningText
+            });
+
+            App.vibrate([80]);
+            App.renderMultiScanList();
+
+            App.els.articuloDisplay.className = "articulo-display found";
+            App.els.articuloNombre.textContent = `Agregado: ${art.descripcion} [${art.talla || ""}]`;
+            App.els.articuloStock.textContent = "";
+
+            if (App.state.scanMethod === "laser") {
+                App.els.laserInput.value = "";
+                setTimeout(() => App.els.laserInput.focus(), 100);
+            }
+        }
+        App.updateConfirmButton();
+    } finally {
+        if (App.state.scanProcessingIds) {
+            App.state.scanProcessingIds.delete(art.id);
         }
     }
-    App.updateConfirmButton();
 };
 
 App.clearArticulo = function() {
@@ -232,6 +266,8 @@ App.confirmOperation = async function() {
                 App.renderHistorial();
 
                 App.state.scannedArticulos = [];
+                if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+                if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
                 App.renderMultiScanList();
                 App.clearArticulo();
 
@@ -275,6 +311,11 @@ App.renderMultiScanList = function() {
 };
 
 App.removeItemFromMultiScan = function(idx) {
+    const art = App.state.scannedArticulos[idx];
+    if (art) {
+        if (App.state.scanProcessingIds) App.state.scanProcessingIds.delete(art.id);
+        if (App.state.scanMutedIds) App.state.scanMutedIds.delete(art.id);
+    }
     App.state.scannedArticulos.splice(idx, 1);
     App.renderMultiScanList();
     App.updateConfirmButton();

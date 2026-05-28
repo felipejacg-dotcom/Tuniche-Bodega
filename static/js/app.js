@@ -61,6 +61,9 @@ App.logout = function() {
     App.state.articulos = [];
     App.state.historial = [];
     App.state.cierreTurno = null;
+    App.state.scannedArticulos = [];
+    if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+    if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
     App.els.appContent.classList.remove("visible");
     App.els.loginScreen.classList.remove("hidden");
     App.els.loginPass.value = "";
