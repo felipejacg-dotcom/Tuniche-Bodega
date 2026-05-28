@@ -295,7 +295,7 @@ class MainActivity : AppCompatActivity() {
                 if (request?.isForMainFrame == true) {
                     val errorCode = error?.errorCode
                     // Reintentar si es error de conexión, timeout o DNS
-                    if (errorCode == WebViewClient.ERROR_CONNECT || errorCode == WebViewClient.ERROR_TIMEOUT || errorCode == WebViewClient.ERROR_HOST_LOOKUP) {
+                    if (errorCode == ERROR_CONNECT || errorCode == ERROR_TIMEOUT || errorCode == ERROR_HOST_LOOKUP) {
                         runOnUiThread {
                             // Limpiamos caché ante error de red para asegurar recarga limpia
                             view?.clearCache(true)
