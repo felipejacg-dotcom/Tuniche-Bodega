@@ -20,6 +20,7 @@ const App = (() => {
         registrosFilter: "",      // "EN TERRENO" | "DEVUELTO" | ""
         registrosQuery: "",
         cierreTurno: null,
+        cierreTipoTurno: "dia",
         stockFilter: "all",
         stockQuery: "",
     };
@@ -66,9 +67,13 @@ const App = (() => {
         kpiTotal: $("kpiTotal"),
         kpiTerreno: $("kpiTerreno"),
         kpiDevueltos: $("kpiDevueltos"),
-        cierreModal: $("cierreModal"),
+        viewCierre: $("viewCierre"),
         cierreContent: $("cierreContent"),
-        btnCloseCierre: $("btnCloseCierre"),
+        cierreDesde: $("cierreDesde"),
+        cierreHasta: $("cierreHasta"),
+        cierreTurnoDia: $("cierreTurnoDia"),
+        cierreTurnoNoche: $("cierreTurnoNoche"),
+        btnGenerarCierre: $("btnGenerarCierre"),
         btnDownloadCierre: $("btnDownloadCierre"),
         // Modal carnet
         carnetModal: $("carnetModal"),
@@ -170,6 +175,7 @@ const App = (() => {
         state.planta = "TUNICHE";
         state.articulos = [];
         state.historial = [];
+        state.cierreTurno = null;
         els.appContent.classList.remove("visible");
         els.loginScreen.classList.remove("hidden");
         els.loginPass.value = "";
@@ -180,13 +186,14 @@ const App = (() => {
     function showView(name) {
         document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
         document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-        const viewId = { operacion: "viewOperacion", stock: "viewStock", registros: "viewRegistros" }[name];
-        const navId = { operacion: "navOperacion", stock: "navStock", registros: "navRegistros" }[name];
+        const viewId = { operacion: "viewOperacion", stock: "viewStock", registros: "viewRegistros", cierre: "viewCierre" }[name];
+        const navId = { operacion: "navOperacion", stock: "navStock", registros: "navRegistros", cierre: "navCierre" }[name];
         if (viewId) $(viewId).classList.add("active");
         if (navId) $(navId).classList.add("active");
 
         if (name === "stock") renderStockList();
         if (name === "registros") loadRegistros();
+        if (name === "cierre") initCierreView();
     }
 
     // ── Mode (SALIDA / DEVOLUCION) ────────────────────────────────
@@ -707,6 +714,111 @@ const App = (() => {
         }).join("");
     }
 
+    function toDatetimeLocal(value) {
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+    }
+
+    function updateCierreTurnoTabs() {
+        const isDia = state.cierreTipoTurno === "dia";
+        if (els.cierreTurnoDia) {
+            els.cierreTurnoDia.classList.toggle("active", isDia);
+            els.cierreTurnoDia.setAttribute("aria-pressed", String(isDia));
+        }
+        if (els.cierreTurnoNoche) {
+            els.cierreTurnoNoche.classList.toggle("active", !isDia);
+            els.cierreTurnoNoche.setAttribute("aria-pressed", String(!isDia));
+        }
+    }
+
+    function renderCierrePlaceholder() {
+        if (!els.cierreContent) return;
+        els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Selecciona turno y rango para generar el cierre.</p></div>`;
+    }
+
+    function setSuggestedCierreRange(tipo = state.cierreTipoTurno) {
+        if (!els.cierreDesde || !els.cierreHasta) return;
+        const now = new Date();
+        const start = new Date(now);
+        const end = new Date(now);
+
+        if (tipo === "noche") {
+            start.setHours(20, 0, 0, 0);
+            end.setDate(start.getDate() + 1);
+            end.setHours(8, 0, 0, 0);
+            if (now.getHours() < 8) {
+                start.setDate(start.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+            }
+        } else {
+            start.setHours(8, 0, 0, 0);
+            end.setHours(20, 0, 0, 0);
+        }
+
+        els.cierreDesde.value = toDatetimeLocal(start);
+        els.cierreHasta.value = toDatetimeLocal(end);
+        state.cierreTurno = null;
+        renderCierrePlaceholder();
+    }
+
+    function initCierreView() {
+        if (!els.cierreDesde?.value || !els.cierreHasta?.value) {
+            setSuggestedCierreRange(state.cierreTipoTurno);
+        }
+        updateCierreTurnoTabs();
+    }
+
+    function setCierreTurno(tipoTurno) {
+        state.cierreTipoTurno = tipoTurno === "noche" ? "noche" : "dia";
+        updateCierreTurnoTabs();
+        setSuggestedCierreRange(state.cierreTipoTurno);
+    }
+
+    function getCierreFormValues() {
+        const tipoTurno = state.cierreTipoTurno;
+        const desde = els.cierreDesde?.value || "";
+        const hasta = els.cierreHasta?.value || "";
+        if (!tipoTurno) throw new Error("Selecciona si el cierre es Dia o Noche.");
+        if (!desde || !hasta) throw new Error("Completa Desde y Hasta para generar el cierre.");
+        if (new Date(desde) >= new Date(hasta)) throw new Error("Desde debe ser anterior a Hasta.");
+        const hours = (new Date(hasta) - new Date(desde)) / 36e5;
+        if (hours > 24) throw new Error("El rango del cierre no puede superar 24 horas.");
+        return { tipoTurno, desde, hasta };
+    }
+
+    async function generateCierreTurno() {
+        let values;
+        try {
+            values = getCierreFormValues();
+        } catch (e) {
+            toast(e.message, "warning", 4200);
+            return;
+        }
+
+        if (els.btnGenerarCierre) {
+            els.btnGenerarCierre.disabled = true;
+            els.btnGenerarCierre.textContent = "Generando...";
+        }
+        els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16M4 12h16M4 19h10"/></svg><p>Generando cierre...</p></div>`;
+
+        try {
+            const data = await API.getCierreTurno(values.tipoTurno, values.desde, values.hasta);
+            if (!data.success) throw new Error(data.message || "No se pudo generar el cierre.");
+            state.cierreTurno = data;
+            renderCierreTurno(data);
+            toast("Cierre generado.", "success");
+        } catch (e) {
+            state.cierreTurno = null;
+            els.cierreContent.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><p>${escHtml(e.message || "Error generando cierre.")}</p></div>`;
+            toast(e.message || "Error al generar cierre.", "error", 5000);
+        } finally {
+            if (els.btnGenerarCierre) {
+                els.btnGenerarCierre.disabled = false;
+                els.btnGenerarCierre.textContent = "Generar cierre";
+            }
+        }
+    }
+
     async function openCierreTurno(desde = null, hasta = null) {
         if (!els.cierreModal) return;
         els.cierreModal.classList.add("active");
@@ -728,7 +840,7 @@ const App = (() => {
         }
 
         try {
-            const data = await API.getCierreTurno(desde, hasta);
+            const data = await API.getCierreTurno(state.cierreTipoTurno, desde, hasta);
             if (!data.success) throw new Error(data.message || "No se pudo generar el cierre.");
             state.cierreTurno = data;
             renderCierreTurno(data);
@@ -837,6 +949,28 @@ const App = (() => {
                 openCierreTurno(desdeVal, hastaVal);
             });
         }
+
+        els.cierreContent.innerHTML = `
+            <div class="cierre-head">
+                <div>
+                    <div class="cierre-eyebrow">Generado ${escHtml(data.hora_generacion || "--:--")}</div>
+                    <div class="cierre-title">Turno ${escHtml(data.turno || "")} - ${escHtml(data.planta_display || data.planta || state.planta)}</div>
+                    <div class="cierre-range-text">Rango: ${escHtml(data.desde || "")} a ${escHtml(data.hasta || "")}</div>
+                </div>
+            </div>
+            <div class="cierre-kpi-grid">
+                <div class="cierre-kpi"><strong>${escHtml(kpi.total ?? 0)}</strong><span>Movimientos</span></div>
+                <div class="cierre-kpi"><strong>${escHtml(kpi.salidas ?? 0)}</strong><span>Salidas</span></div>
+                <div class="cierre-kpi"><strong>${escHtml(kpi.devoluciones ?? 0)}</strong><span>Devoluciones</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.pendientes ?? 0)}</strong><span>Pendientes</span></div>
+                <div class="cierre-kpi warning"><strong>${escHtml(kpi.trabajadores_pendientes ?? 0)}</strong><span>Trabajadores</span></div>
+                <div class="cierre-kpi danger"><strong>${escHtml(kpi.stock_critico ?? 0)}</strong><span>Stock critico</span></div>
+            </div>
+            <div class="cierre-section-title">Pendientes del Turno</div>
+            <div class="cierre-list">${pendientesHtml}</div>
+            <div class="cierre-section-title">Stock critico</div>
+            <div class="cierre-list">${stockHtml}</div>
+        `;
     }
 
     async function downloadCierrePdf() {
@@ -845,8 +979,13 @@ const App = (() => {
             return;
         }
 
-        const desdeVal = document.getElementById("cierreDesde")?.value || "";
-        const hastaVal = document.getElementById("cierreHasta")?.value || "";
+        let values;
+        try {
+            values = getCierreFormValues();
+        } catch (e) {
+            toast(e.message, "warning", 4200);
+            return;
+        }
 
         const originalText = els.btnDownloadCierre ? els.btnDownloadCierre.textContent : "";
         try {
@@ -854,7 +993,7 @@ const App = (() => {
                 els.btnDownloadCierre.disabled = true;
                 els.btnDownloadCierre.textContent = "Generando PDF...";
             }
-            const { blob, filename } = await API.downloadCierreTurnoPdf(desdeVal, hastaVal);
+            const { blob, filename } = await API.downloadCierreTurnoPdf(values.tipoTurno, values.desde, values.hasta);
             const sanitizedFilename = (filename || "cierre-turno.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
             const file = new File([blob], sanitizedFilename, { type: "application/pdf" });
             const sucursal = state.cierreTurno?.planta_display || state.cierreTurno?.planta || state.planta || "";
@@ -996,11 +1135,11 @@ const App = (() => {
         els.carnetModal.addEventListener("click", e => { if (e.target === els.carnetModal) closeCarnetModal(); });
 
         // Cierre de turno
-        if (els.btnCloseCierre) {
-            els.btnCloseCierre.addEventListener("click", closeCierreTurno);
+        if (els.btnDownloadCierre) {
             els.btnDownloadCierre.addEventListener("click", downloadCierrePdf);
-            els.cierreModal.addEventListener("click", e => { if (e.target === els.cierreModal) closeCierreTurno(); });
         }
+        if (els.cierreDesde) els.cierreDesde.addEventListener("input", () => { state.cierreTurno = null; renderCierrePlaceholder(); });
+        if (els.cierreHasta) els.cierreHasta.addEventListener("input", () => { state.cierreTurno = null; renderCierrePlaceholder(); });
 
         // Laser input for articles
         Scanner.initLaser(els.laserInput, onArticuloScanned);
@@ -1066,6 +1205,8 @@ const App = (() => {
         filterRegistros,
         setScanMethod,
         loadRegistros,
+        setCierreTurno,
+        generateCierreTurno,
         openCierreTurno,
         closeCierreTurno,
         downloadCierrePdf,

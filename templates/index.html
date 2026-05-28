@@ -10,7 +10,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260527-native-pdf">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260528-cierre-turno-manual">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
      ============================================================ -->
 <div id="loginScreen">
     <div class="login-card">
-        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260527-native-pdf" alt="Tuniche Fruits">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260528-cierre-turno-manual" alt="Tuniche Fruits">
         <div class="login-brand">
             <h1>SGB Logistic F.C.</h1>
             <p>Sistema de Bodega &mdash; Acceso de Operario</p>
@@ -56,7 +56,7 @@
     <header class="app-header">
         <div class="header-left">
             <div class="header-logo-box">
-                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260527-native-pdf" alt="Tuniche">
+                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260528-cierre-turno-manual" alt="Tuniche">
             </div>
             <div class="header-brand">
                 <strong>SGB LOGISTIC F.C.</strong>
@@ -281,9 +281,6 @@
             </div>
 
             <div class="refresh-bar registros-actions">
-                <button class="btn-refresh btn-cierre-turno" onclick="App.openCierreTurno()" type="button">
-                    Cierre de Turno
-                </button>
                 <button class="btn-refresh" onclick="App.loadRegistros()" type="button">&#8635; Actualizar</button>
             </div>
             <div id="registrosList">
@@ -292,6 +289,61 @@
                         <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/><path d="M12 7v5l3 2"/>
                     </svg>
                     <p>Cargando registros...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             VIEW: CIERRE
+             ==================================================== -->
+        <section id="viewCierre" class="view" aria-label="Cierre de turno">
+            <div class="card cierre-form-card">
+                <div class="card-header">
+                    <div class="card-step">4</div>
+                    <span class="card-title">Cierre de Turno</span>
+                </div>
+                <div class="card-body">
+                    <div class="cierre-ctrl-group cierre-turno-group">
+                        <span class="cierre-ctrl-label">Tipo de turno</span>
+                        <div class="cierre-turno-tabs" role="group" aria-label="Tipo de turno">
+                            <button class="cierre-turno-tab active" id="cierreTurnoDia" type="button"
+                                    data-turno="dia" aria-pressed="true" onclick="App.setCierreTurno('dia')">
+                                Turno D&iacute;a
+                            </button>
+                            <button class="cierre-turno-tab" id="cierreTurnoNoche" type="button"
+                                    data-turno="noche" aria-pressed="false" onclick="App.setCierreTurno('noche')">
+                                Turno Noche
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cierre-range-ctrls cierre-page-range">
+                        <div class="cierre-ctrl-group">
+                            <label class="cierre-ctrl-label" for="cierreDesde">Desde</label>
+                            <input type="datetime-local" id="cierreDesde" class="cierre-datetime-input" required>
+                        </div>
+                        <div class="cierre-ctrl-group">
+                            <label class="cierre-ctrl-label" for="cierreHasta">Hasta</label>
+                            <input type="datetime-local" id="cierreHasta" class="cierre-datetime-input" required>
+                        </div>
+                    </div>
+                    <div class="cierre-actions cierre-page-actions">
+                        <button class="btn-refresh btn-cierre-update" id="btnGenerarCierre" type="button"
+                                onclick="App.generateCierreTurno()">
+                            Generar cierre
+                        </button>
+                        <button class="btn-refresh btn-cierre-download" id="btnDownloadCierre" type="button">
+                            Descargar PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cierreContent" class="cierre-content">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 5h16M4 12h16M4 19h10"/>
+                    </svg>
+                    <p>Selecciona turno y rango para generar el cierre.</p>
                 </div>
             </div>
         </section>
@@ -327,6 +379,15 @@
             Registros
             <div class="nav-dot"></div>
         </button>
+        <button class="nav-item" id="navCierre" data-view="cierre"
+                onclick="App.showView('cierre')" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3h8l2 3v15H6V6l2-3z"/>
+                <path d="M9 10h6M9 14h6M9 18h4"/>
+            </svg>
+            Cierre
+            <div class="nav-dot"></div>
+        </button>
     </nav>
 
 </div><!-- #appContent -->
@@ -349,31 +410,6 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="cierreModal" role="dialog" aria-modal="true" aria-label="Cierre de turno">
-    <div class="modal cierre-modal">
-        <div class="modal-hdr">
-            <span class="modal-title">Cierre de Turno</span>
-            <button class="modal-close" id="btnCloseCierre" type="button" aria-label="Cerrar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <div id="cierreContent" class="cierre-content">
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M4 5h16M4 12h16M4 19h10"/>
-                </svg>
-                <p>Generando cierre...</p>
-            </div>
-        </div>
-        <div class="cierre-actions">
-            <button class="btn-refresh btn-cierre-download" id="btnDownloadCierre" type="button">Descargar PDF</button>
-        </div>
-    </div>
-</div>
-
-
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
     <div class="spinner"></div>
@@ -382,9 +418,9 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260527-native-pdf"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260527-native-pdf"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260527-native-pdf"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260528-cierre-turno-manual"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260528-cierre-turno-manual"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260528-cierre-turno-manual"></script>
 
 </body>
 </html>

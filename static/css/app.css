@@ -126,7 +126,7 @@ select.form-ctrl { appearance: none; background-image: url("data:image/svg+xml,%
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--surface); border-top: 1px solid var(--border);
-    height: var(--nav-h); display: grid; grid-template-columns: repeat(3, 1fr);
+    height: var(--nav-h); display: grid; grid-template-columns: repeat(4, 1fr);
     z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
 }
 .nav-item {
@@ -357,9 +357,19 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
    ============================================================ */
 .cierre-modal { max-height: 88dvh; overflow-y: auto; padding-bottom: 20px; }
 .cierre-content { display: flex; flex-direction: column; gap: 10px; }
+.cierre-form-card .card-body { display: flex; flex-direction: column; gap: 10px; }
+.cierre-page-range { margin-bottom: 0; }
+.cierre-page-actions { justify-content: space-between; gap: 8px; margin-top: 0; }
+.cierre-page-actions .btn-refresh { flex: 1 1 0; min-height: 38px; justify-content: center; border-radius: 8px; }
+.cierre-turno-group { flex: 1 1 auto; }
+.cierre-turno-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: #f3f4f6; }
+.cierre-turno-tab { min-height: 38px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); font-family: inherit; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.02em; cursor: pointer; }
+.cierre-turno-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 7px 16px rgba(15,15,15,0.14); }
+.cierre-turno-tab:active { transform: scale(0.985); }
 .cierre-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
 .cierre-eyebrow { font-size: 0.68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .cierre-title { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-top: 2px; }
+.cierre-range-text { margin-top: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 700; }
 .cierre-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .cierre-kpi { padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .cierre-kpi strong { display: block; font-size: 1.35rem; line-height: 1; color: var(--navy); }
@@ -399,6 +409,7 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .btn-cierre-update { height: 32px; font-size: 0.72rem; padding: 0 14px; background: var(--petrol); border-color: var(--petrol); color: #fff; border-radius: 6px; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--petrol); transition: background 0.15s, border-color 0.15s; }
 .btn-cierre-update:hover { background: var(--navy); border-color: var(--navy); }
 .btn-cierre-update:disabled { opacity: 0.6; cursor: wait; }
+.cierre-page-actions .btn-cierre-update { height: 38px; }
 
 /* ============================================================
    MULTI-SCAN & DEVOLUCIONES PENDIENTES

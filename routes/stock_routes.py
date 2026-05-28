@@ -54,16 +54,32 @@ def _get_default_shift_range():
     return shift_name, start_time, end_time
 
 
-def _parse_datetime(dt_str, default_val):
+def _parse_datetime(dt_str):
     if not dt_str:
-        return default_val
+        raise ValueError("Debes indicar fecha y hora de inicio y termino.")
     try:
         clean_str = dt_str.replace("T", " ")
         if len(clean_str) == 16:
             return datetime.strptime(clean_str, "%Y-%m-%d %H:%M")
         return datetime.strptime(clean_str[:19], "%Y-%m-%d %H:%M:%S")
     except Exception:
-        return default_val
+        raise ValueError("Formato de fecha invalido. Usa fecha y hora completas.")
+
+
+def _normalize_tipo_turno(tipo_turno):
+    clean = (tipo_turno or "").strip().lower().replace("í", "i")
+    if clean == "dia":
+        return "dia", "D\u00eda"
+    if clean == "noche":
+        return "noche", "Noche"
+    raise ValueError("Selecciona si el cierre corresponde a turno Dia o Noche.")
+
+
+def _validate_cierre_range(start_time, end_time):
+    if start_time >= end_time:
+        raise ValueError("La fecha/hora Desde debe ser anterior a Hasta.")
+    if end_time - start_time > timedelta(hours=24):
+        raise ValueError("El rango del cierre no puede superar 24 horas.")
 
 
 def _group_pendientes(items):
@@ -92,36 +108,53 @@ def _group_pendientes(items):
     return list(grouped.values())
 
 
-def _build_cierre_turno_data(planta, desde_str=None, hasta_str=None):
-    now = datetime.now()
-    def_name, def_start, def_end = _get_default_shift_range()
-
-    start_time = _parse_datetime(desde_str, def_start)
-    end_time = _parse_datetime(hasta_str, def_end)
-
-    if 5 <= start_time.hour < 17:
-        turno_name = "Diurno"
-    else:
-        turno_name = "Noche"
+def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
+    now = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
+    turno_key, turno_name = _normalize_tipo_turno(tipo_turno)
+    start_time = _parse_datetime(desde_str)
+    end_time = _parse_datetime(hasta_str)
+    _validate_cierre_range(start_time, end_time)
 
     conn = None
     try:
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
 
-        # 1. Movimientos del turno: salidas o devoluciones dentro del rango de tiempo
+        # 1. Eventos del turno. Una transaccion devuelta puede sumar como salida
+        # y como devolucion si ambos eventos caen dentro del rango manual.
         cur.execute("""
             SELECT t.id, t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
-                   t.hora_salida, t.hora_entrada, t.estado
+                   t.hora_salida AS hora_evento,
+                   'SALIDA' AS evento
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
-            WHERE (t.hora_salida >= %s AND t.hora_salida <= %s)
-               OR (t.estado = 'DEVUELTO' AND t.hora_entrada >= %s AND t.hora_entrada <= %s)
-            ORDER BY COALESCE(t.hora_entrada, t.hora_salida) DESC
+            WHERE t.hora_salida >= %s AND t.hora_salida <= %s
+            ORDER BY t.hora_salida DESC
             LIMIT 500
-        """, (start_time, end_time, start_time, end_time))
-        registros = cur.fetchall()
+        """, (start_time, end_time))
+        salidas_eventos = cur.fetchall()
+
+        cur.execute("""
+            SELECT t.id, t.rut, t.trabajador, t.area,
+                   CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
+                   t.hora_entrada AS hora_evento,
+                   'DEVOLUCION' AS evento
+            FROM transacciones t
+            JOIN articulos a ON t.articulo_id = a.id
+            WHERE t.estado = 'DEVUELTO'
+              AND t.hora_entrada >= %s AND t.hora_entrada <= %s
+            ORDER BY t.hora_entrada DESC
+            LIMIT 500
+        """, (start_time, end_time))
+        devoluciones_eventos = cur.fetchall()
+        eventos = salidas_eventos + devoluciones_eventos
+        eventos.sort(key=lambda row: row.get("hora_evento") or datetime.min, reverse=True)
+        for row in eventos:
+            row["estado"] = "DEVUELTO" if row.get("evento") == "DEVOLUCION" else "EN TERRENO"
+            row["hora_salida"] = row.get("hora_evento") if row.get("evento") == "SALIDA" else None
+            row["hora_entrada"] = row.get("hora_evento") if row.get("evento") == "DEVOLUCION" else None
+        registros = eventos
 
         # 2. Pendientes del turno: entregadas en este rango que siguen EN TERRENO
         cur.execute("""
@@ -160,6 +193,7 @@ def _build_cierre_turno_data(planta, desde_str=None, hasta_str=None):
     for row in registros:
         row["hora_salida"] = _format_hora(row.get("hora_salida"))
         row["hora_entrada"] = _format_hora(row.get("hora_entrada"))
+        row["hora_evento"] = _format_hora(row.get("hora_evento"))
 
     # Calcular KPIs
     salidas_count = 0
@@ -240,12 +274,14 @@ def _build_cierre_turno_data(planta, desde_str=None, hasta_str=None):
         "hora_generacion": now.strftime("%H:%M"),
         "planta": planta,
         "planta_display": _display_planta(planta),
+        "tipo_turno": turno_key,
         "turno": turno_name,
         "desde": start_time.strftime("%Y-%m-%d %H:%M"),
         "desde_iso": start_time.strftime("%Y-%m-%dT%H:%M"),
         "hasta": end_time.strftime("%Y-%m-%d %H:%M"),
         "hasta_iso": end_time.strftime("%Y-%m-%dT%H:%M"),
         "kpi": kpi,
+        "eventos": registros[:500],
         "pendientes": gp_pendientes,
         "stock_critico": stock_critico,
         "resumen_copiable": resumen_copiable,
@@ -588,10 +624,13 @@ def get_registros():
 @login_required
 def get_cierre_turno():
     planta = get_current_planta()
+    tipo_turno = request.args.get("tipo_turno")
     desde = request.args.get("desde")
     hasta = request.args.get("hasta")
     try:
-        return jsonify(_build_cierre_turno_data(planta, desde, hasta))
+        return jsonify(_build_cierre_turno_data(planta, tipo_turno, desde, hasta))
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -600,18 +639,21 @@ def get_cierre_turno():
 @login_required
 def download_cierre_turno_pdf():
     planta = get_current_planta()
+    tipo_turno = request.args.get("tipo_turno")
     desde = request.args.get("desde")
     hasta = request.args.get("hasta")
     try:
-        data = _build_cierre_turno_data(planta, desde, hasta)
+        data = _build_cierre_turno_data(planta, tipo_turno, desde, hasta)
         pdf_buffer = _build_cierre_turno_pdf(data)
-        filename = f"cierre-turno-{data['fecha']}-{data.get('planta_display', planta).lower().replace(' ', '-')}.pdf"
+        filename = f"cierre-turno-{data.get('tipo_turno', 'turno')}-{data['fecha']}-{data.get('planta_display', planta).lower().replace(' ', '-')}.pdf"
         return send_file(
             pdf_buffer,
             mimetype="application/pdf",
             as_attachment=True,
             download_name=filename,
         )
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
