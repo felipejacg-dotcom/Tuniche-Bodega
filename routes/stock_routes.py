@@ -459,7 +459,7 @@ def _build_cierre_turno_pdf(data):
         header_table,
         Paragraph(f"Cierre de Turno — {data.get('turno', '')}", styles["ReportTitle"]),
         Paragraph(
-            f"Sucursal {data.get('planta_display') or data.get('planta') or '-'} &middot; Rango: {data.get('desde') or ''} a {data.get('hasta') or ''}",
+            f"Sucursal {data.get('planta_display') or data.get('planta') or '-'}",
             styles["Muted"],
         ),
         Paragraph(
