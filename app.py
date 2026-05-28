@@ -6,8 +6,18 @@ from datetime import timedelta
 
 load_dotenv(override=True)
 
+from config import AREAS
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION")
+
+# Enforce secure SECRET_KEY in production
+secret_key = os.environ.get("SECRET_KEY")
+if not secret_key:
+    if os.environ.get("FLASK_ENV") == "production" or os.environ.get("RENDER") == "true":
+        raise RuntimeError("La variable de entorno SECRET_KEY es requerida en producción.")
+    secret_key = "dev-secret-CHANGE-IN-PRODUCTION"
+app.secret_key = secret_key
+
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 
 from routes.auth_routes import auth_bp
@@ -23,27 +33,7 @@ app.register_blueprint(operation_bp)
 
 @app.route("/")
 def index():
-    areas = [
-        "ABASTECIMIENTO", "ADMINISTRACION", "ASEO", "BANOS PLANTA", "BODEGA",
-        "BODEGA AGRICOLA LIBERTAD (TAMBO)", "BODEGA AGRICOLA QUINAHUE",
-        "BODEGA AGRICOLA SAN ALBERTO (FRUSAL)", "BODEGA AGRICOLA TUNITEC (PEUMO)",
-        "BRC", "CAMARA CEREZA", "CAMARA M.INTERNO", "CASILLA ROPA-FILTRO", "CASINO",
-        "COMPAC 1-2", "CONTABILIDAD", "CONTROL CALIDAD", "DATOS E INFORMATICA",
-        "DESAROLLO", "DPTO. COMERCIAL", "ENFERMERIA", "ENSAYO PACKING", "ENVASES",
-        "FILTRO SANITARIO", "FRIGORIFICO", "GERENCIA", "GUARDAROPA FILTRO",
-        "HAND PACK", "I+D", "INOCUIDAD", "INOCUIDAD CENTRAL",
-        "LAVANDERIA MIRIAM SANHUEZA", "LINEA COMPAC 1", "LINEA COMPAC 2",
-        "LOGISTICA", "MANTENCION", "MANTENCION CENTRAL", "MERCADO INTERNO",
-        "MERMA ROPA MAL ESTADO", "OFICINAS ADMINISTRACION", "OPERACIONES",
-        "PACKING", "PACKING SATELITE", "PANOL CENTRAL", "PCK CAROZOS",
-        "PCK CEREZAS", "PLANTA RILES", "PLANTA TRATAMIENTO",
-        "PLANTA TUNICHE FRUITS 2 PUQUILLAY", "PORTERIA 1", "PORTERIA 2",
-        "PREVENCION CENTRAL", "PREVENCION DE RIESGOS", "PRODUCCION",
-        "RECEPCION FRUTA", "RR.HH", "SADEMA", "SADEMA CENTRAL", "SAG",
-        "SEGURIDAD", "SERV GRALES CENTRAL", "SERVICIOS GENERALES", "TALLER",
-        "TODAS LAS AREAS", "UNITEC",
-    ]
-    response = make_response(render_template("index.html", areas=areas))
+    response = make_response(render_template("index.html", areas=AREAS))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

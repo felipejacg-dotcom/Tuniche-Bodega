@@ -69,10 +69,10 @@ def _parse_datetime(dt_str):
 def _normalize_tipo_turno(tipo_turno):
     clean = (tipo_turno or "").strip().lower().replace("í", "i")
     if clean == "dia":
-        return "dia", "D\u00eda"
+        return "dia", "Día"
     if clean == "noche":
         return "noche", "Noche"
-    raise ValueError("Selecciona si el cierre corresponde a turno Dia o Noche.")
+    raise ValueError("Selecciona si el cierre corresponde a turno Día o Noche.")
 
 
 def _validate_cierre_range(start_time, end_time):
@@ -87,7 +87,7 @@ def _group_pendientes(items):
     for item in items:
         rut = item.get("rut") or ""
         trabajador = item.get("trabajador") or "Desconocido"
-        area = item.get("area") or "Sin area"
+        area = item.get("area") or "Sin área"
 
         key = (rut, trabajador, area)
         if key not in grouped:
@@ -233,16 +233,16 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
     if not resumen_pendientes_lines:
         resumen_pendientes_lines = ["Sin pendientes en este turno."]
     elif len(gp_pendientes) > 15:
-        resumen_pendientes_lines.append(f"... y {len(gp_pendientes) - 15} trabajadores mas.")
+        resumen_pendientes_lines.append(f"... y {len(gp_pendientes) - 15} trabajadores más.")
 
     stock_lines = [
         f"- {s['descripcion']} [{s.get('talla') or '-'}] stock {s['stock_disponible']} / alerta {s['limite_alerta']}"
         for s in stock_critico[:25]
     ]
     if not stock_lines:
-        stock_lines = ["Sin stock critico."]
+        stock_lines = ["Sin stock crítico."]
     elif len(stock_critico) > 25:
-        stock_lines.append(f"... y {len(stock_critico) - 25} articulos mas.")
+        stock_lines.append(f"... y {len(stock_critico) - 25} artículos más.")
 
     rango_display = f"{start_time.strftime('%d/%m/%Y %H:%M')} a {end_time.strftime('%d/%m/%Y %H:%M')}"
 
@@ -251,19 +251,19 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str):
         f"Planta: {planta}",
         f"Turno: {turno_name}",
         f"Rango: {rango_display}",
-        f"Hora generacion: {now.strftime('%H:%M')}",
+        f"Hora generación: {now.strftime('%H:%M')}",
         "",
         f"Movimientos turno: {kpi['total']}",
         f"Salidas turno: {kpi['salidas']}",
         f"Devoluciones turno: {kpi['devoluciones']}",
         f"Pendientes turno: {kpi['pendientes']}",
-        f"Trabajadores c/ pendientes: {kpi['trabajadores_pendientes']}",
-        f"Stock critico: {kpi['stock_critico']}",
+        f"Trabajadores con pendientes: {kpi['trabajadores_pendientes']}",
+        f"Stock crítico: {kpi['stock_critico']}",
         "",
         "PENDIENTES DEL TURNO",
         *resumen_pendientes_lines,
         "",
-        "STOCK CRITICO",
+        "STOCK CRÍTICO",
         *stock_lines,
     ])
 
@@ -416,8 +416,8 @@ def _build_cierre_turno_pdf(data):
         ],
         [
             Paragraph("Pendientes Turno", styles["KpiTitle"]),
-            Paragraph("Trabajadores c/ Pend.", styles["KpiTitle"]),
-            Paragraph("Stock Critico", styles["KpiTitle"]),
+            Paragraph("Trabajadores con Pendientes", styles["KpiTitle"]),
+            Paragraph("Stock Crítico", styles["KpiTitle"]),
         ],
         [
             Paragraph(str(kpi.get("pendientes", 0)), styles["KpiValue"]),
@@ -494,7 +494,7 @@ def _build_cierre_turno_pdf(data):
 
     section_table(
         "Pendientes del Turno (Entregados y No Devueltos)",
-        ["Trabajador / Area", "Articulo Pendiente", "Salida (Hora)"],
+        ["Trabajador / Área", "Artículo Pendiente", "Salida (Hora)"],
         pendientes_rows,
         "Sin pendientes en este turno.",
         [75 * mm, 72 * mm, 35 * mm],
@@ -514,15 +514,15 @@ def _build_cierre_turno_pdf(data):
         for item in (data.get("stock_critico") or [])
     ]
     section_table(
-        "Stock critico",
-        ["ID", "Articulo", "Talla", "Medida", "Stock", "Alerta"],
+        "Stock crítico",
+        ["ID", "Artículo", "Talla", "Medida", "Stock", "Alerta"],
         stock_rows,
-        "Sin stock critico.",
+        "Sin stock crítico.",
         [18 * mm, 72 * mm, 22 * mm, 23 * mm, 18 * mm, 18 * mm],
     )
 
     story.append(Spacer(1, 4 * mm))
-    story.append(Paragraph("Documento generado automaticamente por Tuniche-Bodega.", styles["RightMuted"]))
+    story.append(Paragraph("Documento generado automáticamente por Tuniche-Bodega.", styles["RightMuted"]))
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -546,7 +546,9 @@ def get_articulos():
         cur.close()
         return jsonify({"success": True, "articulos": rows})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en get_articulos: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al obtener el catálogo de artículos."}), 500
     finally:
         if conn:
             conn.close()
@@ -558,63 +560,132 @@ def get_registros():
     planta = get_current_planta()
     estado = request.args.get("estado", "").strip()
     texto = request.args.get("q", "").strip()
+    desde = request.args.get("desde", "").strip()
+    hasta = request.args.get("hasta", "").strip()
+
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 50, type=int)
+    if page < 1:
+        page = 1
+    if limit < 1 or limit > 200:
+        limit = 50
+    offset = (page - 1) * limit
 
     conn = None
     try:
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
 
-        query = """
+        clauses = []
+        params = []
+
+        if estado:
+            clauses.append("t.estado = %s")
+            params.append(estado)
+
+        if texto:
+            clauses.append("(LOWER(t.trabajador) LIKE LOWER(%s) OR t.rut LIKE %s)")
+            like = f"%{texto}%"
+            params.extend([like, like])
+
+        if desde:
+            try:
+                dt_desde = _parse_datetime(desde) if ("T" in desde or " " in desde) else datetime.strptime(desde, "%Y-%m-%d")
+                clauses.append("t.hora_salida >= %s")
+                params.append(dt_desde)
+            except ValueError:
+                return jsonify({"success": False, "message": "Formato de fecha 'desde' inválido."}), 400
+
+        if hasta:
+            try:
+                dt_hasta = _parse_datetime(hasta) if ("T" in hasta or " " in hasta) else datetime.strptime(hasta, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+                clauses.append("t.hora_salida <= %s")
+                params.append(dt_hasta)
+            except ValueError:
+                return jsonify({"success": False, "message": "Formato de fecha 'hasta' inválido."}), 400
+
+        # Si no hay filtros de fecha, limitamos por defecto a CURDATE()
+        if not desde and not hasta:
+            clauses.append("t.hora_salida >= CURDATE()")
+
+        where_clause = " AND ".join(clauses)
+        if where_clause:
+            where_clause = " AND " + where_clause
+
+        # 1. Total records count
+        count_query = f"""
+            SELECT COUNT(*) AS total
+            FROM transacciones t
+            JOIN articulos a ON t.articulo_id = a.id
+            WHERE 1=1 {where_clause}
+        """
+        cur.execute(count_query, params)
+        total_records = cur.fetchone()["total"]
+
+        # 2. Page records
+        query = f"""
             SELECT t.id, t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida, t.hora_entrada, t.estado
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
-            WHERE t.hora_salida >= CURDATE()
+            WHERE 1=1 {where_clause}
+            ORDER BY t.hora_salida DESC
+            LIMIT %s OFFSET %s
         """
-        params = []
-
-        if estado:
-            query += " AND t.estado = %s"
-            params.append(estado)
-
-        if texto:
-            query += " AND (LOWER(t.trabajador) LIKE LOWER(%s) OR t.rut LIKE %s)"
-            like = f"%{texto}%"
-            params.extend([like, like])
-
-        query += " ORDER BY t.hora_salida DESC LIMIT 200"
-        cur.execute(query, params)
+        page_params = params + [limit, offset]
+        cur.execute(query, page_params)
         rows = cur.fetchall()
 
-        # Normalize datetime fields to HH:MM string
+        # 3. Global KPI counts for this filtered query
+        kpi_query = f"""
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN t.estado = 'EN TERRENO' THEN 1 ELSE 0 END) AS en_terreno,
+                   SUM(CASE WHEN t.estado = 'DEVUELTO' THEN 1 ELSE 0 END) AS devueltos
+            FROM transacciones t
+            JOIN articulos a ON t.articulo_id = a.id
+            WHERE 1=1 {where_clause}
+        """
+        cur.execute(kpi_query, params)
+        kpi_res = cur.fetchone()
+
+        # Normalize datetime fields
         for r in rows:
             for k in ("hora_salida", "hora_entrada"):
                 val = r[k]
                 if val is None:
                     r[k] = "---"
                 elif isinstance(val, datetime):
-                    r[k] = val.strftime("%H:%M")
+                    if val.date() == datetime.today().date():
+                        r[k] = val.strftime("%H:%M")
+                    else:
+                        r[k] = val.strftime("%d/%m %H:%M")
                 else:
                     s = str(val)
                     r[k] = s.split(" ")[1][:5] if " " in s else s[:5]
 
-        total = len(rows)
-        en_terreno = sum(1 for r in rows if r["estado"] == "EN TERRENO")
-        devueltos = sum(1 for r in rows if r["estado"] == "DEVUELTO")
+        total_pages = (total_records + limit - 1) // limit
+        if total_pages < 1:
+            total_pages = 1
 
         cur.close()
         return jsonify({
             "success": True,
             "registros": rows,
             "kpi": {
-                "total": total,
-                "en_terreno": en_terreno,
-                "devueltos": devueltos,
+                "total": kpi_res["total"] or 0,
+                "en_terreno": kpi_res["en_terreno"] or 0,
+                "devueltos": kpi_res["devueltos"] or 0,
             },
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "total_records": total_records
         })
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en get_registros: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al obtener los registros."}), 500
     finally:
         if conn:
             conn.close()
@@ -632,7 +703,9 @@ def get_cierre_turno():
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en get_cierre_turno: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al generar los datos del cierre."}), 500
 
 
 @stock_bp.route("/cierre_turno/pdf")
@@ -655,7 +728,9 @@ def download_cierre_turno_pdf():
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en download_cierre_turno_pdf: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al generar el PDF del cierre."}), 500
 
 
 @stock_bp.route("/ultimo_retiro")
@@ -720,7 +795,9 @@ def get_ultimo_retiro():
 
         return jsonify({"success": True, "alerta": False})
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en get_ultimo_retiro: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al buscar el último retiro."}), 500
     finally:
         if conn:
             conn.close()

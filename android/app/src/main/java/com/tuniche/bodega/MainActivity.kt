@@ -124,68 +124,78 @@ class WebAppInterface(private val mContext: Context) {
     }
 
     @JavascriptInterface
-    fun sharePdf(base64Data: String, filename: String) {
+    fun sharePdf(base64Data: String?, filename: String, tipoTurno: String?, desde: String?, hasta: String?) {
         val activity = mContext as? AppCompatActivity ?: return
         activity.runOnUiThread {
             val webView = activity.findViewById<WebView>(R.id.webView)
             if (!isAllowedAppUrl(webView?.url)) return@runOnUiThread
 
-            // Ejecutar la decodificación y escritura de archivo en segundo plano para no congelar la UI
-            thread(name = "pdf-base64-decode") {
-                try {
-                    val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
-                    val file = writePdfToCache(pdfBytes, filename)
-                    
-                    // Mostrar la hoja de compartir nativa en el hilo principal
-                    activity.runOnUiThread {
-                        try {
-                            openPdfShareSheet(file)
-                        } catch (e: Exception) {
-                            showShareError(activity, e)
+            if (!base64Data.isNullOrBlank()) {
+                // Compartido instantáneo usando Base64
+                thread(name = "pdf-base64-decode") {
+                    try {
+                        val pdfBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT)
+                        val file = writePdfToCache(pdfBytes, filename)
+                        activity.runOnUiThread {
+                            try {
+                                openPdfShareSheet(file)
+                            } catch (e: Exception) {
+                                showShareError(activity, e)
+                            }
                         }
+                    } catch (e: Exception) {
+                        activity.runOnUiThread { showShareError(activity, e) }
                     }
-                } catch (e: Exception) {
-                    activity.runOnUiThread { showShareError(activity, e) }
                 }
-            }
-        }
-    }
-
-    @JavascriptInterface
-    fun shareCierreTurnoPdf(filename: String) {
-        val activity = mContext as? AppCompatActivity ?: return
-        activity.runOnUiThread {
-            if (!isAllowedAppUrl(activity.findViewById<WebView>(R.id.webView)?.url)) return@runOnUiThread
-
-            thread(name = "cierre-pdf-share") {
-                try {
-                    val pdfUrl = "$ALLOWED_ORIGIN$CIERRE_PDF_PATH"
-                    val connection = (URL(pdfUrl).openConnection() as HttpURLConnection).apply {
-                        requestMethod = "GET"
-                        connectTimeout = 15000
-                        readTimeout = 30000
-                        val cookies = CookieManager.getInstance().getCookie(ALLOWED_ORIGIN)
-                        if (!cookies.isNullOrBlank()) {
-                            setRequestProperty("Cookie", cookies)
+            } else {
+                // Descarga nativa en segundo plano como fallback
+                thread(name = "pdf-native-download") {
+                    try {
+                        val queryParams = StringBuilder()
+                        if (!tipoTurno.isNullOrBlank()) {
+                            queryParams.append("tipo_turno=").append(Uri.encode(tipoTurno))
                         }
-                    }
-
-                    val code = connection.responseCode
-                    if (code !in 200..299) {
-                        throw IllegalStateException("HTTP $code al descargar PDF")
-                    }
-
-                    val bytes = connection.inputStream.use { it.readBytes() }
-                    val file = writePdfToCache(bytes, filename)
-                    activity.runOnUiThread {
-                        try {
-                            openPdfShareSheet(file)
-                        } catch (e: Exception) {
-                            showShareError(activity, e)
+                        if (!desde.isNullOrBlank()) {
+                            if (queryParams.isNotEmpty()) queryParams.append("&")
+                            queryParams.append("desde=").append(Uri.encode(desde))
                         }
+                        if (!hasta.isNullOrBlank()) {
+                            if (queryParams.isNotEmpty()) queryParams.append("&")
+                            queryParams.append("hasta=").append(Uri.encode(hasta))
+                        }
+                        val pdfUrl = if (queryParams.isNotEmpty()) {
+                            "$ALLOWED_ORIGIN$CIERRE_PDF_PATH?$queryParams"
+                        } else {
+                            "$ALLOWED_ORIGIN$CIERRE_PDF_PATH"
+                        }
+
+                        val connection = (URL(pdfUrl).openConnection() as HttpURLConnection).apply {
+                            requestMethod = "GET"
+                            connectTimeout = 15000
+                            readTimeout = 30000
+                            val cookies = CookieManager.getInstance().getCookie(ALLOWED_ORIGIN)
+                            if (!cookies.isNullOrBlank()) {
+                                setRequestProperty("Cookie", cookies)
+                            }
+                        }
+
+                        val code = connection.responseCode
+                        if (code !in 200..299) {
+                            throw IllegalStateException("HTTP $code al descargar PDF")
+                        }
+
+                        val bytes = connection.inputStream.use { it.readBytes() }
+                        val file = writePdfToCache(bytes, filename)
+                        activity.runOnUiThread {
+                            try {
+                                openPdfShareSheet(file)
+                            } catch (e: Exception) {
+                                showShareError(activity, e)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        activity.runOnUiThread { showShareError(activity, e) }
                     }
-                } catch (e: Exception) {
-                    activity.runOnUiThread { showShareError(activity, e) }
                 }
             }
         }
@@ -217,7 +227,7 @@ class WebAppInterface(private val mContext: Context) {
     private fun showShareError(activity: AppCompatActivity, e: Exception) {
         val webView = activity.findViewById<WebView>(R.id.webView)
         val safeError = e.message?.replace("'", "\\'")?.replace("\n", "") ?: "Error al compartir"
-        webView.evaluateJavascript(
+        webView?.evaluateJavascript(
             "javascript:if(typeof toast === 'function') { toast('Error al compartir PDF: $safeError', 'error'); } else { alert('Error al compartir PDF: $safeError'); }",
             null
         )
@@ -281,9 +291,11 @@ class MainActivity : AppCompatActivity() {
                     // Reintentar si es error de conexión, timeout o DNS
                     if (errorCode == WebViewClient.ERROR_CONNECT || errorCode == WebViewClient.ERROR_TIMEOUT || errorCode == WebViewClient.ERROR_HOST_LOOKUP) {
                         runOnUiThread {
+                            // Limpiamos caché ante error de red para asegurar recarga limpia
+                            view?.clearCache(true)
                             Toast.makeText(this@MainActivity, "Conexión lenta o fallida. Reintentando...", Toast.LENGTH_SHORT).show()
                             view?.postDelayed({
-                                view.loadUrl("https://tuniche-bodega.onrender.com/")
+                                view.loadUrl("$ALLOWED_ORIGIN/")
                             }, 4000)
                         }
                     }
@@ -294,7 +306,7 @@ class MainActivity : AppCompatActivity() {
                 // Si el proceso de renderizado del WebView se destruye (pantalla negra), recargamos
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "Recuperando pantalla...", Toast.LENGTH_SHORT).show()
-                    view?.loadUrl("https://tuniche-bodega.onrender.com/")
+                    view?.loadUrl("$ALLOWED_ORIGIN/")
                 }
                 return true // Retornar true evita que la aplicación se cierre (crash)
             }
@@ -325,11 +337,27 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
         }
 
-        // Limpiar la caché local al iniciar para asegurar que se carguen los últimos archivos JS y estilos
-        webView.clearCache(true)
+        // Limpiar la caché solo ante cambio de versión de la aplicación
+        val sharedPrefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val lastVersionCode = sharedPrefs.getInt("last_version_code", -1)
+        val currentVersionCode = try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode
+            }
+        } catch (e: Exception) {
+            1
+        }
+        if (currentVersionCode != lastVersionCode) {
+            webView.clearCache(true)
+            sharedPrefs.edit().putInt("last_version_code", currentVersionCode).apply()
+        }
 
         // Carga la URL oficial de producción
-        webView.loadUrl("https://tuniche-bodega.onrender.com/")
+        webView.loadUrl("$ALLOWED_ORIGIN/")
 
         // Manejo del botón atrás moderno
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

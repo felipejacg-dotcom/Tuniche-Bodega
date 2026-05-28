@@ -46,11 +46,17 @@ def registrar():
         conn = get_connection(planta)
         cur = conn.cursor()
 
-        # Get article info
-        cur.execute(
-            "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s",
-            (art_id,),
-        )
+        # Get article info: lock row only if it is a SALIDA
+        if accion == "SALIDA":
+            cur.execute(
+                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s FOR UPDATE",
+                (art_id,),
+            )
+        else:
+            cur.execute(
+                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s",
+                (art_id,),
+            )
         item = cur.fetchone()
 
         if not item:
@@ -121,7 +127,9 @@ def registrar():
                 conn.rollback()
             except Exception:
                 pass
-        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en registrar: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error en la base de datos al registrar la operación."}), 500
     finally:
         if conn:
             conn.close()
@@ -140,13 +148,14 @@ def registrar_masivo():
     if not rut or not trabajador or not area or not isinstance(articulo_ids_raw, list) or len(articulo_ids_raw) == 0:
         return jsonify({"success": False, "message": "Campos obligatorios invalidos o vacios."}), 400
 
-    # Convert IDs to integers
+    # Convert IDs to integers and sort to prevent deadlocks when locking
     articulo_ids = []
     for x in articulo_ids_raw:
         try:
             articulo_ids.append(int(x))
         except (TypeError, ValueError):
             return jsonify({"success": False, "message": "IDs de articulo invalidos."}), 400
+    articulo_ids.sort()
 
     planta = get_current_planta()
     operador = get_current_user()
@@ -160,7 +169,7 @@ def registrar_masivo():
         entregados = []
         for art_id in articulo_ids:
             cur.execute(
-                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s",
+                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s FOR UPDATE",
                 (art_id,),
             )
             item = cur.fetchone()
@@ -213,7 +222,9 @@ def registrar_masivo():
                 conn.rollback()
             except Exception:
                 pass
-        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en registrar_masivo: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error en la base de datos al registrar la entrega masiva."}), 500
     finally:
         if conn:
             conn.close()

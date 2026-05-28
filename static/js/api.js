@@ -58,8 +58,16 @@ const API = (() => {
 
         getArticulos: () => _req("/api/articulos"),
 
-        getRegistros: (estado = "", q = "") =>
-            _req(`/api/registros?estado=${encodeURIComponent(estado)}&q=${encodeURIComponent(q)}`),
+        getRegistros: (estado = "", q = "", desde = "", hasta = "", page = 1, limit = 50) => {
+            const params = new URLSearchParams();
+            if (estado) params.append("estado", estado);
+            if (q) params.append("q", q);
+            if (desde) params.append("desde", desde);
+            if (hasta) params.append("hasta", hasta);
+            if (page) params.append("page", page);
+            if (limit) params.append("limit", limit);
+            return _req(`/api/registros?${params.toString()}`);
+        },
 
         getCierreTurno: (tipoTurno = "", desde = "", hasta = "") => {
             const params = new URLSearchParams();

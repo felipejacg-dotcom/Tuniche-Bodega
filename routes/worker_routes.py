@@ -37,7 +37,9 @@ def buscar_trabajador():
         return jsonify({"success": False, "message": "Trabajador no encontrado en historial."})
 
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en buscar_trabajador: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error interno al buscar el trabajador."}), 500
     finally:
         if conn:
             conn.close()
@@ -79,7 +81,9 @@ def get_pendientes():
 
         return jsonify({"success": True, "pendientes": rows})
     except Exception as e:
-        return jsonify({"success": False, "message": f"Error BD: {str(e)}"}), 500
+        import logging
+        logging.getLogger("flask.app").error("Error en get_pendientes: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error interno al obtener los pendientes."}), 500
     finally:
         if conn:
             conn.close()

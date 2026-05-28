@@ -345,9 +345,6 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .btn-refresh { background: none; border: 1px solid var(--border); color: var(--petrol); font-weight: 700; cursor: pointer; font-size: 0.73rem; padding: 5px 12px; border-radius: 999px; font-family: inherit; }
 .btn-refresh:hover { background: #f5f6f3; }
 .registros-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-.btn-cierre-turno { background: var(--navy); border-color: var(--navy); color: #fff; }
-.btn-cierre-turno:hover { background: var(--petrol); }
-
 .pending-card-header { background: var(--success-bg); border-bottom-color: var(--success-bd); }
 .pending-card-header .card-step { background: var(--success); color: #fff; }
 .pending-card-header .card-title { color: var(--success-dark); font-weight: 800; }
@@ -355,7 +352,6 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 /* ============================================================
    CIERRE DE TURNO
    ============================================================ */
-.cierre-modal { max-height: 88dvh; overflow-y: auto; padding-bottom: 20px; }
 .cierre-content { display: flex; flex-direction: column; gap: 10px; }
 .cierre-form-card .card-body { display: flex; flex-direction: column; gap: 10px; }
 .cierre-page-range { margin-bottom: 0; }

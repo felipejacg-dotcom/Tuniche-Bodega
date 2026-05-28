@@ -44,10 +44,41 @@ El APK resultante se guardará en:
 
 ## 🔒 Endurecimiento y Seguridad Implementada
 * **`android:allowBackup="false"`**: Deshabilitado en el `AndroidManifest.xml` para evitar fugas de datos y manipulación de cookies locales.
-* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente (`playBeep`, `openNativeScanner`, `sharePdf`, `shareCierreTurnoPdf`) al dominio autorizado `https://tuniche-bodega.onrender.com/`. No se permite `http://` para el host productivo.
-* **Compartir PDF nativo**: El cierre de turno se descarga desde Android con la cookie activa del WebView y luego se comparte con el selector nativo. Esto evita pasar PDFs grandes como Base64 por el puente JavaScript.
+* **Restricción de Origen (Host Check)**: La aplicación de Android restringe estrictamente la navegación interna y las llamadas de la API nativa de puente al dominio autorizado `https://tuniche-bodega.onrender.com/`. No se permite `http://` para el host productivo.
+* **Compartir PDF Unificado (`sharePdf`)**: El cierre de turno y los PDFs se transfieren instantáneamente usando cadenas Base64 en memoria hacia el puente JavaScript, lo que elimina conexiones secundarias de red y retrasos de 5 segundos. Opcionalmente, soporta descarga nativa por HTTP en segundo plano pasando los parámetros del turno.
+* **Caché Inteligente**: Se evita borrar la caché de forma indiscriminada en cada inicio. Ahora se hace de manera inteligente leyendo el `versionCode` (solo tras actualizaciones de la aplicación) o cuando se produce un error de conexión para forzar una recarga limpia.
 * **Enlaces externos controlados**: Los enlaces fuera del host autorizado solo se derivan al sistema si usan esquemas seguros conocidos (`https`, `mailto`, `tel`). Esquemas como `javascript`, `file`, `content` e `intent` quedan bloqueados dentro del WebView.
 * **Deshabilitado de Acceso Local**: Se deshabilitó el acceso a archivos de contenido del dispositivo (`allowFileAccess = false` y `allowContentAccess = false`) desde la configuración del WebView.
+
+---
+
+## 🔑 Firma del APK de Producción (Release)
+
+Para compilar el APK de producción firmado sin exponer llaves privadas en el repositorio de Git, se recomienda usar variables de entorno o crear un archivo local `keystore.properties` (excluido en `.gitignore`).
+
+Ejemplo de configuración en `android/app/build.gradle.kts`:
+```kotlin
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "tuniche-release.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+```
+
+O firmar el APK manualmente mediante la herramienta de Android SDK `apksigner`:
+```powershell
+apksigner sign --ks tuniche-release.jks --out app-release-signed.apk app-release-unsigned.apk
+```
 
 ---
 
