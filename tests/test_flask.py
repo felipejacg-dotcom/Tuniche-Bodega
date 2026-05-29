@@ -227,5 +227,51 @@ class FlaskTestCase(unittest.TestCase):
         self.assertEqual(len(data["pendientes"]), 1)
         self.assertEqual(data["pendientes"][0]["descripcion"], "Casco [Única]")
 
+    @patch('routes.stock_routes.get_connection')
+    def test_get_registros_coalesce_sorting(self, mock_get_conn):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+
+        mock_cur.fetchone.side_effect = [
+            {"total": 2},
+            {"total": 2, "en_terreno": 1, "devueltos": 1}
+        ]
+        mock_cur.fetchall.return_value = [
+            {
+                "id": 1,
+                "rut": "12.345.678-9",
+                "trabajador": "Juan Perez",
+                "area": "BODEGA",
+                "articulo": "Casco [L]",
+                "hora_salida": "2026-05-28 10:00:00",
+                "hora_entrada": "2026-05-29 15:30:00",
+                "estado": "DEVUELTO"
+            },
+            {
+                "id": 2,
+                "rut": "98.765.432-1",
+                "trabajador": "Maria Lopez",
+                "area": "PACKING",
+                "articulo": "Guantes [M]",
+                "hora_salida": "2026-05-29 11:00:00",
+                "hora_entrada": None,
+                "estado": "EN TERRENO"
+            }
+        ]
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        response = self.app.get('/api/registros?desde=2026-05-29&hasta=2026-05-29')
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(len(data["registros"]), 2)
+        self.assertEqual(data["registros"][0]["estado"], "DEVUELTO")
+        self.assertEqual(data["registros"][1]["estado"], "EN TERRENO")
+
 if __name__ == '__main__':
     unittest.main()

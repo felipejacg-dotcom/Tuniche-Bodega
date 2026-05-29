@@ -733,25 +733,33 @@ def get_registros():
             like = f"%{texto}%"
             params.extend([like, like])
 
+        dt_desde = None
         if desde:
             try:
                 dt_desde = _parse_datetime(desde) if ("T" in desde or " " in desde) else datetime.strptime(desde, "%Y-%m-%d")
-                clauses.append("t.hora_salida >= %s")
-                params.append(dt_desde)
             except ValueError:
                 return jsonify({"success": False, "message": "Formato de fecha 'desde' inválido."}), 400
 
+        dt_hasta = None
         if hasta:
             try:
                 dt_hasta = _parse_datetime(hasta) if ("T" in hasta or " " in hasta) else datetime.strptime(hasta, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-                clauses.append("t.hora_salida <= %s")
-                params.append(dt_hasta)
             except ValueError:
                 return jsonify({"success": False, "message": "Formato de fecha 'hasta' inválido."}), 400
 
         # Si no hay filtros de fecha, limitamos por defecto a CURDATE()
         if not desde and not hasta:
-            clauses.append("t.hora_salida >= CURDATE()")
+            clauses.append("(t.hora_salida >= CURDATE() OR t.hora_entrada >= CURDATE())")
+        else:
+            if dt_desde and dt_hasta:
+                clauses.append("((t.hora_salida >= %s AND t.hora_salida <= %s) OR (t.hora_entrada >= %s AND t.hora_entrada <= %s))")
+                params.extend([dt_desde, dt_hasta, dt_desde, dt_hasta])
+            elif dt_desde:
+                clauses.append("(t.hora_salida >= %s OR t.hora_entrada >= %s)")
+                params.extend([dt_desde, dt_desde])
+            elif dt_hasta:
+                clauses.append("(t.hora_salida <= %s OR t.hora_entrada <= %s)")
+                params.extend([dt_hasta, dt_hasta])
 
         where_clause = " AND ".join(clauses)
         if where_clause:
@@ -775,7 +783,7 @@ def get_registros():
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE 1=1 {where_clause}
-            ORDER BY t.hora_salida DESC
+            ORDER BY COALESCE(t.hora_entrada, t.hora_salida) DESC
             LIMIT %s OFFSET %s
         """
         page_params = params + [limit, offset]
