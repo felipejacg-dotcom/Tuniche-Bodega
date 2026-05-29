@@ -130,6 +130,44 @@ class FlaskTestCase(unittest.TestCase):
         self.assertNotIn("stock_critico", data["kpi"])
 
     @patch('routes.stock_routes.get_connection')
+    def test_cierre_preview_includes_devoluciones(self, mock_get_conn):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+
+        mock_cur.fetchall.side_effect = [
+            [],
+            [
+                {
+                    "id": 5,
+                    "rut": "12.345.678-9",
+                    "trabajador": "Juan Perez",
+                    "area": "BODEGA",
+                    "articulo": "Casco [Única]",
+                    "hora_evento": "2026-05-28 14:30:00",
+                    "evento": "DEVOLUCION"
+                }
+            ],
+            []
+        ]
+        mock_cur.fetchone.return_value = None
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        response = self.app.get('/api/cierre_turno?tipo_turno=dia&desde=2026-05-28T08:00&hasta=2026-05-28T20:00')
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertIn("devoluciones", data)
+        self.assertEqual(len(data["devoluciones"]), 1)
+        self.assertEqual(data["devoluciones"][0]["trabajador"], "Juan Perez")
+        self.assertEqual(len(data["devoluciones"][0]["articulos"]), 1)
+        self.assertEqual(data["devoluciones"][0]["articulos"][0]["articulo"], "Casco [Única]")
+
+    @patch('routes.stock_routes.get_connection')
     def test_confirmar_cierre_y_bloquear_repetido(self, mock_get_conn):
         cierre_row = {
             "id": 1,

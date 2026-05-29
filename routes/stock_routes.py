@@ -187,6 +187,32 @@ def _group_pendientes(items):
     return list(grouped.values())
 
 
+def _group_devoluciones(items):
+    grouped = {}
+    for item in items:
+        rut = item.get("rut") or ""
+        trabajador = item.get("trabajador") or "Desconocido"
+        area = item.get("area") or "Sin área"
+
+        key = (rut, trabajador, area)
+        if key not in grouped:
+            grouped[key] = {
+                "rut": rut,
+                "trabajador": trabajador,
+                "area": area,
+                "articulos": []
+            }
+
+        val_hora = item.get("hora_entrada") or item.get("hora_evento")
+        hora_str = _format_hora(val_hora)
+
+        grouped[key]["articulos"].append({
+            "articulo": item.get("articulo"),
+            "hora_entrada": hora_str
+        })
+    return list(grouped.values())
+
+
 def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsable=None):
     now = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
     turno_key, turno_name = _normalize_tipo_turno(tipo_turno)
@@ -297,6 +323,9 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
     # Agrupar pendientes
     gp_pendientes = _group_pendientes(raw_pendientes)
 
+    # Agrupar devoluciones
+    gp_devoluciones = _group_devoluciones(devoluciones_eventos)
+
     # Resumen copiable en texto plano
     resumen_pendientes_lines = []
     for w in gp_pendientes[:15]:
@@ -347,6 +376,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
         "kpi": kpi,
         "eventos": registros[:500],
         "pendientes": gp_pendientes,
+        "devoluciones": gp_devoluciones,
         "resumen_copiable": resumen_copiable,
     }
 
@@ -567,6 +597,42 @@ def _build_cierre_turno_pdf(data):
         "Sin pendientes en este turno.",
         [75 * mm, 72 * mm, 35 * mm],
         p_styles,
+    )
+
+    # DEVOLUCIONES DEL TURNO
+    devoluciones_list = data.get("devoluciones") or []
+    devoluciones_rows = []
+    d_styles = []
+    row_idx = 1
+    for w in devoluciones_list:
+        devoluciones_rows.append([
+            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])})", styles["TableCell"]),
+            "",
+            ""
+        ])
+        d_styles.extend([
+            ("SPAN", (0, row_idx), (2, row_idx)),
+            ("BACKGROUND", (0, row_idx), (-1, row_idx), colors.HexColor("#f0fdf4")),
+            ("TOPPADDING", (0, row_idx), (-1, row_idx), 4),
+            ("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 4),
+        ])
+        row_idx += 1
+        for art in w["articulos"]:
+            devoluciones_rows.append([
+                "",
+                Paragraph(_safe_pdf_text(art["articulo"]), styles["TableCell"]),
+                Paragraph(_safe_pdf_text(art["hora_entrada"]), styles["TableCell"])
+            ])
+            d_styles.append(("LEFTPADDING", (1, row_idx), (1, row_idx), 12))
+            row_idx += 1
+
+    section_table(
+        "Devoluciones del Turno (Recibidas)",
+        ["Trabajador / Área", "Artículo Devuelto", "Devolución (Hora)"],
+        devoluciones_rows,
+        "Sin devoluciones en este turno.",
+        [75 * mm, 72 * mm, 35 * mm],
+        d_styles,
     )
 
     story.append(Spacer(1, 4 * mm))

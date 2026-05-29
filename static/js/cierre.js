@@ -157,6 +157,7 @@ App.confirmCierreTurno = async function() {
 App.renderCierreTurno = function(data) {
     const kpi = data.kpi || {};
     const pendientes = data.pendientes || [];
+    const devoluciones = data.devoluciones || [];
     const cierre = data.cierre || {};
     const isClosed = !!data.cerrado;
     const responsable = cierre.responsable || data.responsable || App.state.user || "Sin responsable";
@@ -188,7 +189,34 @@ App.renderCierreTurno = function(data) {
         }).join("");
     }
 
+    function buildDevolucionesHtml(list) {
+        if (!list.length) {
+            return `<div class="cierre-empty">Sin devoluciones en este turno.</div>`;
+        }
+        return list.map(worker => {
+            const artsHtml = worker.articulos.map(art => `
+                <div class="cierre-sub-item">
+                    <div class="cierre-sub-item-name">${App.escHtml(art.articulo)}</div>
+                    <div class="cierre-sub-item-time">${App.escHtml(art.hora_entrada || art.hora_salida || "---")}</div>
+                </div>
+            `).join("");
+
+            return `
+                <div class="cierre-worker-card">
+                    <div class="cierre-worker-info">
+                        <strong>${App.escHtml(worker.trabajador)}</strong>
+                        <span>${App.escHtml(worker.rut)} · ${App.escHtml(worker.area || "Sin área")}</span>
+                    </div>
+                    <div class="cierre-worker-items">
+                        ${artsHtml}
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
     const pendientesHtml = buildPendientesHtml(pendientes);
+    const devolucionesHtml = buildDevolucionesHtml(devoluciones);
 
     App.els.cierreContent.innerHTML = `
         <!-- SECCIÓN 1: RESUMEN GENERADO Y KPIS -->
@@ -228,6 +256,16 @@ App.renderCierreTurno = function(data) {
             </div>
             <div class="card-body cierre-list">
                 ${pendientesHtml}
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: DEVOLUCIONES DEL TURNO -->
+        <div class="card" style="margin-top:15px;">
+            <div class="card-header" style="background:var(--success-bg); border-bottom-color:var(--success-bd);">
+                <span class="card-title" style="color:var(--success-dark); font-weight:800;">Devoluciones del Turno</span>
+            </div>
+            <div class="card-body cierre-list">
+                ${devolucionesHtml}
             </div>
         </div>
     `;
