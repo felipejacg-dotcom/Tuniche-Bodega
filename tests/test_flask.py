@@ -189,7 +189,7 @@ class FlaskTestCase(unittest.TestCase):
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cur
         mock_cur.fetchall.return_value = []
-        mock_cur.fetchone.side_effect = [None, cierre_row, cierre_row]
+        mock_cur.fetchone.side_effect = [None, cierre_row, cierre_row, cierre_row]
 
         with self.app.session_transaction() as sess:
             sess['user'] = 'admin'
@@ -204,8 +204,8 @@ class FlaskTestCase(unittest.TestCase):
 
         response = self.app.post('/api/cierre_turno', json=payload)
         data = json.loads(response.data)
-        self.assertEqual(response.status_code, 409)
-        self.assertIn("ya fue cerrado", data["message"])
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["cerrado"])
 
     @patch('routes.operation_routes.get_connection')
     def test_registrar_masivo(self, mock_get_conn):

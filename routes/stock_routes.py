@@ -645,12 +645,6 @@ def _build_cierre_turno_pdf(data):
 def _confirm_cierre_turno(planta, tipo_turno, desde_str, hasta_str):
     responsable = get_current_user()
     data = _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsable)
-    cierre = data.get("cierre")
-    if cierre:
-        raise RuntimeError(
-            f"Este turno ya fue cerrado por {cierre.get('responsable') or 'otro usuario'} "
-            f"el {cierre.get('hora_cierre') or 'horario registrado'}."
-        )
 
     now = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
     kpi = data.get("kpi") or {}
@@ -665,6 +659,16 @@ def _confirm_cierre_turno(planta, tipo_turno, desde_str, hasta_str):
                 responsable, hora_cierre, total, salidas, devoluciones,
                 pendientes, trabajadores_pendientes
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                desde = VALUES(desde),
+                hasta = VALUES(hasta),
+                responsable = VALUES(responsable),
+                hora_cierre = VALUES(hora_cierre),
+                total = VALUES(total),
+                salidas = VALUES(salidas),
+                devoluciones = VALUES(devoluciones),
+                pendientes = VALUES(pendientes),
+                trabajadores_pendientes = VALUES(trabajadores_pendientes)
         """, (
             planta,
             data["tipo_turno"],
@@ -686,17 +690,6 @@ def _confirm_cierre_turno(planta, tipo_turno, desde_str, hasta_str):
         data["cierre"] = _serialize_cierre_row(cierre_row)
         data["responsable"] = responsable
         return data
-    except mysql.connector.IntegrityError:
-        if conn:
-            conn.rollback()
-        cur = conn.cursor(dictionary=True)
-        cierre_row = _get_cierre_row(cur, planta, data["tipo_turno"], data["fecha_operativa"])
-        cur.close()
-        cierre = _serialize_cierre_row(cierre_row) or {}
-        raise RuntimeError(
-            f"Este turno ya fue cerrado por {cierre.get('responsable') or 'otro usuario'} "
-            f"el {cierre.get('hora_cierre') or 'horario registrado'}."
-        )
     except Exception:
         if conn:
             conn.rollback()
@@ -748,7 +741,7 @@ def get_articulos():
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
         cur.execute("""
-            SELECT id, descripcion, talla, medida,
+            SELECT id, codigo_material, descripcion, talla, medida,
                    stock_disponible, limite_alerta,
                    categoria, tipo_control
             FROM articulos

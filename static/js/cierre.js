@@ -30,8 +30,8 @@ App.updateCierreActions = function() {
     const isGenerated = !!data;
     const isClosed = !!data?.cerrado;
     if (App.els.btnConfirmarCierre) {
-        App.els.btnConfirmarCierre.disabled = !isGenerated || isClosed;
-        App.els.btnConfirmarCierre.textContent = isClosed ? "Turno cerrado" : "Confirmar cierre";
+        App.els.btnConfirmarCierre.disabled = !isGenerated;
+        App.els.btnConfirmarCierre.textContent = isClosed ? "Actualizar cierre" : "Confirmar cierre";
     }
     if (App.els.btnDownloadCierre) {
         App.els.btnDownloadCierre.disabled = !isClosed;

@@ -96,9 +96,16 @@ App.onArticuloScanned = function(rawText) {
     const id = Scanner.parseArticleCode(rawText);
     let found = null;
     if (id === null) {
+        const queryClean = rawText.trim().toLowerCase();
         found = App.state.articulos.find(a =>
-            a.descripcion.toLowerCase().includes(rawText.toLowerCase())
+            a.codigo_material && a.codigo_material.trim().toLowerCase() === queryClean
         );
+        if (!found) {
+            found = App.state.articulos.find(a =>
+                a.descripcion.toLowerCase().includes(queryClean) ||
+                (a.codigo_material && a.codigo_material.toLowerCase().includes(queryClean))
+            );
+        }
         if (!found) {
             App.toast("Código de artículo no reconocido.", "warning");
             App.vibrate([200, 100, 200]);

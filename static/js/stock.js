@@ -21,12 +21,13 @@ App.filterStock = function(filter) {
 };
 
 App.renderStockList = function() {
-    const query = App.els.stockSearch ? App.els.stockSearch.value.toLowerCase() : "";
+    const query = App.els.stockSearch ? App.els.stockSearch.value.toLowerCase().trim() : "";
     let items = [...App.state.articulos];
 
     if (query) {
         items = items.filter(a =>
             a.descripcion.toLowerCase().includes(query) ||
+            (a.codigo_material && a.codigo_material.toLowerCase().includes(query)) ||
             (a.talla && a.talla.toLowerCase().includes(query))
         );
     }
@@ -45,10 +46,11 @@ App.renderStockList = function() {
         const s = a.stock_disponible;
         const isLow = a.limite_alerta && s > 0 && s <= a.limite_alerta;
         const cls = s <= 0 ? "zero" : isLow ? "low" : "ok";
+        const codeText = a.codigo_material ? `${App.escHtml(a.codigo_material)} · ` : "";
         return `<div class="stock-item">
             <div class="stock-info">
                 <div class="stock-nombre">${App.escHtml(a.descripcion)}</div>
-                <div class="stock-sub">Talla ${App.escHtml(a.talla || "-")} · ${App.escHtml(a.medida || "")}</div>
+                <div class="stock-sub">${codeText}Talla ${App.escHtml(a.talla || "-")} · ${App.escHtml(a.medida || "")}</div>
             </div>
             <div class="stock-badge ${cls}">${s}</div>
         </div>`;
