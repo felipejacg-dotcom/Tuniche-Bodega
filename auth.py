@@ -35,19 +35,34 @@ def _verify_password(stored: str, provided: str) -> bool:
     return hmac.compare_digest(stored.encode("utf-8"), provided.encode("utf-8"))
 
 
+def get_user_display_name(username: str) -> str:
+    """Retorna el nombre con la capitalización original definida en LOGIN_USERS."""
+    raw = os.environ.get("LOGIN_USERS", "").strip() or DEFAULT_LOGIN_USERS
+    username_lower = username.strip().lower()
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if ":" in pair:
+            u, _ = pair.split(":", 1)
+            u_clean = u.strip()
+            if u_clean.lower() == username_lower:
+                return u_clean
+    return username.title()
+
+
 def login_user(username: str, password: str, planta: str) -> bool:
     users = _get_users()
     stored_password = users.get(username.strip().lower())
     if stored_password is not None and _verify_password(stored_password, password.strip()):
         session.permanent = True
         session["user"] = username.strip().lower()
+        session["user_display"] = get_user_display_name(username)
         session["planta"] = planta
         return True
     return False
 
 
 def get_current_user() -> str:
-    return session.get("user", "")
+    return session.get("user_display", session.get("user", ""))
 
 
 def get_current_planta() -> str:
