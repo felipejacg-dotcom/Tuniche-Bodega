@@ -293,14 +293,21 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .reg-card { background: var(--surface); border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
 .reg-card.terreno { border-left-color: var(--warning); }
 .reg-card.devuelto { border-left-color: var(--success); }
+.reg-card.consumido { border-left-color: #64748b; }
 .reg-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .reg-nombre { font-weight: 700; font-size: 0.88rem; }
 .reg-rut { font-size: 0.7rem; color: var(--muted); font-family: 'Courier New', monospace; margin-top: 1px; }
 .reg-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
 .badge-terreno { background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-bd); }
 .badge-devuelto { background: var(--success-bg); color: var(--success-dark); border: 1px solid var(--success-bd); }
+.badge-consumido { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .reg-articulo { font-size: 0.8rem; color: var(--text); margin-top: 6px; font-weight: 600; }
 .reg-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; }
+
+.multi-scan-qty-box { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 0.75rem; font-weight: 600; }
+.qty-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.qty-input { border: 1px solid var(--border); border-radius: 6px; padding: 2px 4px; font-weight: 700; color: var(--navy); width: 60px; text-align: center; font-size: 0.8rem; background: var(--bg); transition: border-color 0.2s; }
+.qty-input:focus { outline: none; border-color: var(--petrol); }
 
 /* ============================================================
    MODAL (Scanner Carnet)

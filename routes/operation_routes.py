@@ -24,18 +24,28 @@ def registrar():
     trabajador = data.get("trabajador", "").strip()
     area = data.get("area", "").strip()
     art_id_raw = data.get("articulo_id")
+    cantidad_raw = data.get("cantidad")
 
     # Validate
     if accion not in ("SALIDA", "DEVOLUCION"):
         return jsonify({"success": False, "message": "Accion invalida."}), 400
 
-    if not rut or not trabajador or not area or art_id_raw is None:
-        return jsonify({"success": False, "message": "Faltan campos obligatorios."}), 400
+    if art_id_raw is None:
+        return jsonify({"success": False, "message": "ID de articulo requerido."}), 400
 
     try:
         art_id = int(art_id_raw)
     except (TypeError, ValueError):
         return jsonify({"success": False, "message": "ID de articulo invalido."}), 400
+
+    cantidad = 1
+    if cantidad_raw is not None:
+        try:
+            cantidad = int(cantidad_raw)
+            if cantidad <= 0:
+                raise ValueError()
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Cantidad invalida."}), 400
 
     planta = get_current_planta()
     operador = get_current_user()
@@ -49,12 +59,14 @@ def registrar():
         # Get article info: lock row only if it is a SALIDA
         if accion == "SALIDA":
             cur.execute(
-                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s FOR UPDATE",
+                "SELECT stock_disponible, descripcion, IFNULL(categoria, 'EPP'), IFNULL(tipo_control, 'RETORNABLE') "
+                "FROM articulos WHERE id = %s FOR UPDATE",
                 (art_id,),
             )
         else:
             cur.execute(
-                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s",
+                "SELECT stock_disponible, descripcion, IFNULL(categoria, 'EPP'), IFNULL(tipo_control, 'RETORNABLE') "
+                "FROM articulos WHERE id = %s",
                 (art_id,),
             )
         item = cur.fetchone()
@@ -62,52 +74,84 @@ def registrar():
         if not item:
             return jsonify({"success": False, "message": f"Articulo ID {art_id} no existe."}), 404
 
-        stock, descripcion = item
+        stock, descripcion, categoria, tipo_control = item
+        categoria = str(categoria or "EPP").upper()
+        tipo_control = str(tipo_control or "RETORNABLE").upper()
 
         if accion == "SALIDA":
+            if categoria != 'CONSUMO_LIQUIDO':
+                if not rut or not trabajador:
+                    return jsonify({"success": False, "message": "RUT y Trabajador son obligatorios para EPP / Herramienta."}), 400
+            else:
+                rut = rut or 'CONSUMO'
+                trabajador = trabajador or 'Consumo interno'
+
+            if not area:
+                return jsonify({"success": False, "message": "El area es obligatoria."}), 400
+
             if stock <= 0:
                 return jsonify({
                     "success": False,
                     "message": f"Sin stock disponible de '{descripcion}'.",
                 }), 409
 
+            if stock < cantidad:
+                return jsonify({
+                    "success": False,
+                    "message": f"Stock insuficiente de '{descripcion}'. Disponible: {stock}.",
+                }), 409
+
+            estado_salida = 'CONSUMIDO' if tipo_control == 'CONSUMIBLE' else 'EN TERRENO'
+
             cur.execute(
                 "INSERT INTO transacciones "
-                "(articulo_id, rut, trabajador, area, entregado_por, estado, hora_salida) "
-                "VALUES (%s, %s, %s, %s, %s, 'EN TERRENO', %s)",
-                (art_id, rut, trabajador, area, operador, ahora),
+                "(articulo_id, rut, trabajador, area, entregado_por, cantidad, estado, hora_salida) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (art_id, rut, trabajador, area, operador, cantidad, estado_salida, ahora),
             )
             cur.execute(
-                "UPDATE articulos SET stock_disponible = stock_disponible - 1 WHERE id = %s",
-                (art_id,),
+                "UPDATE articulos SET stock_disponible = stock_disponible - %s WHERE id = %s",
+                (cantidad, art_id),
             )
-            nuevo_stock = stock - 1
+            nuevo_stock = stock - cantidad
             msg = f"Entregado: {descripcion}"
 
         else:  # DEVOLUCION
+            if not rut or not trabajador or not area:
+                return jsonify({"success": False, "message": "Faltan campos obligatorios para devolucion."}), 400
+
+            if tipo_control == 'CONSUMIBLE':
+                return jsonify({
+                    "success": False,
+                    "message": f"Los registros consumibles ('{descripcion}') no se devuelven ni reponen stock.",
+                }), 400
+
             cur.execute(
-                "SELECT id FROM transacciones "
+                "SELECT id, IFNULL(cantidad, 1) FROM transacciones "
                 "WHERE rut = %s AND articulo_id = %s AND estado = 'EN TERRENO' "
                 "ORDER BY id DESC LIMIT 1",
                 (rut, art_id),
             )
-            tid = cur.fetchone()
+            tid_row = cur.fetchone()
 
-            if not tid:
+            if not tid_row:
                 return jsonify({
                     "success": False,
                     "message": f"No hay salida pendiente de '{descripcion}' para este trabajador.",
                 }), 404
 
+            tid, cant_transaccion = tid_row
+            cant_transaccion = int(cant_transaccion or 1)
+
             cur.execute(
                 "UPDATE transacciones SET hora_entrada = %s, estado = 'DEVUELTO' WHERE id = %s",
-                (ahora, tid[0]),
+                (ahora, tid),
             )
             cur.execute(
-                "UPDATE articulos SET stock_disponible = stock_disponible + 1 WHERE id = %s",
-                (art_id,),
+                "UPDATE articulos SET stock_disponible = stock_disponible + %s WHERE id = %s",
+                (cant_transaccion, art_id),
             )
-            nuevo_stock = stock + 1
+            nuevo_stock = stock + cant_transaccion
             msg = f"Devuelto: {descripcion}"
 
         conn.commit()
@@ -143,19 +187,31 @@ def registrar_masivo():
     rut = data.get("rut", "").strip()
     trabajador = data.get("trabajador", "").strip()
     area = data.get("area", "").strip()
+    articulos_data = data.get("articulos")
     articulo_ids_raw = data.get("articulo_ids")
 
-    if not rut or not trabajador or not area or not isinstance(articulo_ids_raw, list) or len(articulo_ids_raw) == 0:
+    items_to_process = []
+    if isinstance(articulos_data, list) and len(articulos_data) > 0:
+        for item in articulos_data:
+            try:
+                art_id = int(item.get("id"))
+                qty = int(item.get("cantidad", 1))
+                if qty <= 0:
+                    raise ValueError()
+                items_to_process.append({"id": art_id, "cantidad": qty})
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": "Datos de articulos invalidos en la lista."}), 400
+    elif isinstance(articulo_ids_raw, list) and len(articulo_ids_raw) > 0:
+        for x in articulo_ids_raw:
+            try:
+                items_to_process.append({"id": int(x), "cantidad": 1})
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": "IDs de articulo invalidos."}), 400
+    else:
         return jsonify({"success": False, "message": "Campos obligatorios invalidos o vacios."}), 400
 
-    # Convert IDs to integers and sort to prevent deadlocks when locking
-    articulo_ids = []
-    for x in articulo_ids_raw:
-        try:
-            articulo_ids.append(int(x))
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "message": "IDs de articulo invalidos."}), 400
-    articulo_ids.sort()
+    # Sort items_to_process by id to prevent deadlocks when locking
+    items_to_process.sort(key=lambda x: x["id"])
 
     planta = get_current_planta()
     operador = get_current_user()
@@ -166,41 +222,81 @@ def registrar_masivo():
         conn = get_connection(planta)
         cur = conn.cursor()
 
-        entregados = []
-        for art_id in articulo_ids:
+        processed_items = []
+        requires_worker = False
+
+        for item in items_to_process:
+            art_id = item["id"]
+            qty = item["cantidad"]
+
             cur.execute(
-                "SELECT stock_disponible, descripcion FROM articulos WHERE id = %s FOR UPDATE",
+                "SELECT stock_disponible, descripcion, IFNULL(categoria, 'EPP'), IFNULL(tipo_control, 'RETORNABLE') "
+                "FROM articulos WHERE id = %s FOR UPDATE",
                 (art_id,),
             )
-            item = cur.fetchone()
-            if not item:
+            res = cur.fetchone()
+            if not res:
                 conn.rollback()
                 cur.close()
                 return jsonify({"success": False, "message": f"Articulo ID {art_id} no existe."}), 404
 
-            stock, descripcion = item
+            stock, descripcion, categoria, tipo_control = res
+            categoria = str(categoria or "EPP").upper()
+            tipo_control = str(tipo_control or "RETORNABLE").upper()
+
+            if categoria != 'CONSUMO_LIQUIDO':
+                requires_worker = True
+
             if stock <= 0:
                 conn.rollback()
                 cur.close()
-                return jsonify({
-                    "success": False,
-                    "message": f"Sin stock disponible de '{descripcion}'.",
-                }), 409
+                return jsonify({"success": False, "message": f"Sin stock disponible de '{descripcion}'."}), 409
 
+            if stock < qty:
+                conn.rollback()
+                cur.close()
+                return jsonify({"success": False, "message": f"Stock insuficiente de '{descripcion}'. Disponible: {stock}."}), 409
+
+            processed_items.append({
+                "id": art_id,
+                "cantidad": qty,
+                "descripcion": descripcion,
+                "categoria": categoria,
+                "tipo_control": tipo_control,
+                "nuevo_stock": stock - qty
+            })
+
+        if requires_worker:
+            if not rut or not trabajador:
+                conn.rollback()
+                cur.close()
+                return jsonify({"success": False, "message": "RUT y Trabajador son obligatorios para EPP / Herramienta."}), 400
+        else:
+            rut = rut or 'CONSUMO'
+            trabajador = trabajador or 'Consumo interno'
+
+        if not area:
+            conn.rollback()
+            cur.close()
+            return jsonify({"success": False, "message": "El area es obligatoria."}), 400
+
+        entregados = []
+        for p in processed_items:
+            estado_salida = 'CONSUMIDO' if p["tipo_control"] == 'CONSUMIBLE' else 'EN TERRENO'
             cur.execute(
                 "INSERT INTO transacciones "
-                "(articulo_id, rut, trabajador, area, entregado_por, estado, hora_salida) "
-                "VALUES (%s, %s, %s, %s, %s, 'EN TERRENO', %s)",
-                (art_id, rut, trabajador, area, operador, ahora),
+                "(articulo_id, rut, trabajador, area, entregado_por, cantidad, estado, hora_salida) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (p["id"], rut, trabajador, area, operador, p["cantidad"], estado_salida, ahora),
             )
             cur.execute(
-                "UPDATE articulos SET stock_disponible = stock_disponible - 1 WHERE id = %s",
-                (art_id,),
+                "UPDATE articulos SET stock_disponible = stock_disponible - %s WHERE id = %s",
+                (p["cantidad"], p["id"]),
             )
             entregados.append({
-                "id": art_id,
-                "descripcion": descripcion,
-                "nuevo_stock": stock - 1,
+                "id": p["id"],
+                "descripcion": p["descripcion"],
+                "nuevo_stock": p["nuevo_stock"],
             })
 
         conn.commit()

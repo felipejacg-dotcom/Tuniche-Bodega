@@ -164,6 +164,9 @@ App.selectArticulo = async function(art) {
                 talla: art.talla,
                 medida: art.medida,
                 stock_disponible: art.stock_disponible,
+                categoria: art.categoria || "EPP",
+                tipo_control: art.tipo_control || "RETORNABLE",
+                cantidad: 1,
                 warning: warningText
             });
 
@@ -204,7 +207,9 @@ App.updateConfirmButton = function() {
 
     let canConfirm = false;
     if (App.state.mode === "SALIDA") {
-        canConfirm = rut && nombre && area && App.state.scannedArticulos.length > 0;
+        const hasEpp = App.state.scannedArticulos.some(a => a.categoria !== "CONSUMO_LIQUIDO");
+        const workerOk = hasEpp ? (rut && nombre) : true;
+        canConfirm = workerOk && area && App.state.scannedArticulos.length > 0;
         const n = App.state.scannedArticulos.length;
         App.els.btnConfirm.querySelector("span").textContent = n > 1
             ? `CONFIRMAR SALIDA (${n} ITEMS)`
@@ -245,19 +250,28 @@ App.confirmOperation = async function() {
     const nombre = App.els.inputNombre.value.trim();
     const area = App.els.inputArea.value;
 
-    if (!rut || !nombre || !area) {
-        App.toast("Completa los datos del trabajador.", "warning"); return;
-    }
-
     if (App.state.mode === "SALIDA") {
         if (App.state.scannedArticulos.length === 0) {
             App.toast("Escanea al menos un artículo.", "warning"); return;
         }
 
+        const hasEpp = App.state.scannedArticulos.some(a => a.categoria !== "CONSUMO_LIQUIDO");
+        if (hasEpp) {
+            if (!rut || !nombre) {
+                App.toast("RUT y Nombre son obligatorios para EPP / Herramienta.", "warning"); return;
+            }
+        }
+        if (!area) {
+            App.toast("Selecciona el área.", "warning"); return;
+        }
+
         App.showLoading();
         try {
-            const ids = App.state.scannedArticulos.map(a => a.id);
-            const data = await API.registrarMasivo(rut, nombre, area, ids);
+            const articulosPayload = App.state.scannedArticulos.map(a => ({
+                id: a.id,
+                cantidad: a.cantidad || 1
+            }));
+            const data = await API.registrarMasivo(rut, nombre, area, articulosPayload);
             App.hideLoading();
 
             if (data.success) {
@@ -272,7 +286,7 @@ App.confirmOperation = async function() {
                 App.state.historial.unshift({
                     tipo: "salida",
                     msg: data.message,
-                    rut,
+                    rut: rut || "CONSUMO",
                     area,
                     hora: data.hora || "",
                 });
@@ -308,16 +322,44 @@ App.renderMultiScanList = function() {
         const warnHtml = art.warning
             ? `<div class="multi-scan-alert">${art.warning}</div>`
             : "";
+        const isConsumo = art.categoria === "CONSUMO_LIQUIDO";
+        const qtyHtml = isConsumo
+            ? `<div class="multi-scan-qty-box">
+                 <span class="qty-label">Cant:</span>
+                 <input type="number" min="1" max="${art.stock_disponible}" class="qty-input" value="${art.cantidad}" onchange="App.updateItemQty(${idx}, this.value)" style="width: 50px; text-align: center; border: 1px solid var(--border); border-radius: 4px; padding: 2px;">
+                 <span style="font-size: 0.75rem; color: var(--muted); margin-left: 4px;">${App.escHtml(art.medida || "UNIDAD")}</span>
+               </div>`
+            : "";
         return `
             <div class="multi-scan-item" data-index="${idx}">
                 <div class="multi-scan-details">
                     <div>${App.escHtml(art.descripcion)} [${App.escHtml(art.talla || "-")}]</div>
+                    ${qtyHtml}
                     ${warnHtml}
                 </div>
                 <button type="button" class="btn-remove-item" onclick="App.removeItemFromMultiScan(${idx})" aria-label="Eliminar">&times;</button>
             </div>
         `;
     }).join("");
+};
+
+App.updateItemQty = function(idx, qty) {
+    const qtyVal = parseInt(qty);
+    const art = App.state.scannedArticulos[idx];
+    if (!art) return;
+
+    if (isNaN(qtyVal) || qtyVal <= 0) {
+        App.toast("Cantidad inválida", "warning");
+        App.renderMultiScanList();
+        return;
+    }
+    if (qtyVal > art.stock_disponible) {
+        App.toast(`Stock insuficiente. Disponible: ${art.stock_disponible}`, "error");
+        App.renderMultiScanList();
+        return;
+    }
+    art.cantidad = qtyVal;
+    App.updateConfirmButton();
 };
 
 App.removeItemFromMultiScan = function(idx) {

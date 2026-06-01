@@ -749,7 +749,8 @@ def get_articulos():
         cur = conn.cursor(dictionary=True)
         cur.execute("""
             SELECT id, descripcion, talla, medida,
-                   stock_disponible, limite_alerta
+                   stock_disponible, limite_alerta,
+                   categoria, tipo_control
             FROM articulos
             ORDER BY descripcion, talla
         """)
@@ -845,7 +846,7 @@ def get_registros():
         query = f"""
             SELECT t.id, t.rut, t.trabajador, t.area,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
-                   t.hora_salida, t.hora_entrada, t.estado
+                   t.hora_salida, t.hora_entrada, t.estado, IFNULL(t.cantidad, 1) AS cantidad
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE 1=1 {where_clause}

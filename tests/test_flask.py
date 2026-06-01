@@ -214,10 +214,10 @@ class FlaskTestCase(unittest.TestCase):
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cur
         
-        # Simular fetchone para validaciones de stock de los 2 artículos
+        # Simular fetchone para las 2 prendas con categoria y tipo_control
         mock_cur.fetchone.side_effect = [
-            (5, "Casco"),
-            (10, "Guantes")
+            (5, "Casco", "EPP", "RETORNABLE"),
+            (10, "Guantes", "EPP", "RETORNABLE")
         ]
 
         with self.app.session_transaction() as sess:
@@ -235,6 +235,61 @@ class FlaskTestCase(unittest.TestCase):
         self.assertTrue(data["success"])
         self.assertIn("Entregados (2)", data["message"])
         self.assertEqual(len(data["entregados"]), 2)
+
+    @patch('routes.operation_routes.get_connection')
+    def test_registrar_masivo_articulos_nuevos_formatos(self, mock_get_conn):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+        
+        # Simular fetchone con cantidades y categorías variadas
+        mock_cur.fetchone.side_effect = [
+            (100, "Bidon de agua", "CONSUMO_LIQUIDO", "CONSUMIBLE")
+        ]
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        # Retiro de consumo líquido sin RUT (debería ser exitoso)
+        response = self.app.post('/api/registrar_masivo', json={
+            "rut": "",
+            "trabajador": "",
+            "area": "BODEGA",
+            "articulos": [{"id": 90001, "cantidad": 5}]
+        })
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["entregados"][0]["nuevo_stock"], 95)
+
+    @patch('routes.operation_routes.get_connection')
+    def test_registrar_masivo_epp_rut_obligatorio_fallo(self, mock_get_conn):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+        
+        mock_cur.fetchone.side_effect = [
+            (10, "Casco", "EPP", "RETORNABLE")
+        ]
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        # Retiro de EPP sin RUT (debería fallar con 400)
+        response = self.app.post('/api/registrar_masivo', json={
+            "rut": "",
+            "trabajador": "",
+            "area": "BODEGA",
+            "articulos": [{"id": 101, "cantidad": 1}]
+        })
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(data["success"])
+        self.assertIn("RUT y Trabajador son obligatorios", data["message"])
 
     @patch('routes.worker_routes.get_connection')
     def test_pendientes(self, mock_get_conn):

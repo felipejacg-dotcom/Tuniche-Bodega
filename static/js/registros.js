@@ -52,10 +52,18 @@ App.renderRegistros = function() {
         return;
     }
     container.innerHTML = App.state.registros.map(r => {
-        const cls = r.estado === "EN TERRENO" ? "terreno" : "devuelto";
-        const badge = r.estado === "EN TERRENO"
-            ? `<span class="reg-badge badge-terreno">En Terreno</span>`
-            : `<span class="reg-badge badge-devuelto">Devuelto</span>`;
+        let cls = "devuelto";
+        let badge = `<span class="reg-badge badge-devuelto">Devuelto</span>`;
+        if (r.estado === "EN TERRENO") {
+            cls = "terreno";
+            badge = `<span class="reg-badge badge-terreno">En Terreno</span>`;
+        } else if (r.estado === "CONSUMIDO") {
+            cls = "consumido";
+            badge = `<span class="reg-badge badge-consumido">Consumido</span>`;
+        }
+
+        const cantStr = r.cantidad && r.cantidad > 1 ? ` x ${r.cantidad}` : "";
+
         return `<div class="reg-card ${cls}">
             <div class="reg-top">
                 <div class="reg-top-left">
@@ -64,7 +72,7 @@ App.renderRegistros = function() {
                 </div>
                 ${badge}
             </div>
-            <div class="reg-articulo">${App.escHtml(r.articulo)}</div>
+            <div class="reg-articulo">${App.escHtml(r.articulo)}${cantStr}</div>
             <div class="reg-meta">
                 <span>Salida: ${App.escHtml(r.hora_salida)}</span>
                 ${r.hora_entrada !== "---" ? `<span>Entrada: ${App.escHtml(r.hora_entrada)}</span>` : ""}
