@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from flask import session, jsonify
 import os
+import hmac
 from functools import wraps
+from werkzeug.security import check_password_hash
 
 DEFAULT_LOGIN_USERS = "admin:admin123,bodega:123456"
 
@@ -21,9 +23,22 @@ def has_login_users() -> bool:
     return bool(_get_users())
 
 
+def _verify_password(stored: str, provided: str) -> bool:
+    # Check if stored password has hash prefixes or format (pbkdf2:, scrypt:, bcrypt:, argon2:)
+    is_hash = stored.startswith(("pbkdf2:", "scrypt:", "bcrypt:", "argon2:")) or (stored.count("$") >= 2)
+    if is_hash:
+        try:
+            return check_password_hash(stored, provided)
+        except Exception:
+            pass
+    # Fallback to constant-time comparison for plain-text passwords
+    return hmac.compare_digest(stored.encode("utf-8"), provided.encode("utf-8"))
+
+
 def login_user(username: str, password: str, planta: str) -> bool:
     users = _get_users()
-    if users.get(username.strip().lower()) == password.strip():
+    stored_password = users.get(username.strip().lower())
+    if stored_password is not None and _verify_password(stored_password, password.strip()):
         session.permanent = True
         session["user"] = username.strip().lower()
         session["planta"] = planta

@@ -129,7 +129,7 @@ def registrar():
             cur.execute(
                 "SELECT id, IFNULL(cantidad, 1) FROM transacciones "
                 "WHERE rut = %s AND articulo_id = %s AND estado = 'EN TERRENO' "
-                "ORDER BY id DESC LIMIT 1",
+                "ORDER BY id DESC LIMIT 1 FOR UPDATE",
                 (rut, art_id),
             )
             tid_row = cur.fetchone()

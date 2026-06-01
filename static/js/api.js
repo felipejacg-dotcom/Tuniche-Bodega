@@ -5,12 +5,27 @@
  * Maneja automaticamente el caso 401 (sesion expirada → logout).
  */
 const API = (() => {
+    function _getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return "";
+    }
+
     async function _req(url, options = {}) {
         const { skipAuthHandler = false, ...fetchOptions } = options;
+        const csrfToken = _getCookie("csrf_token");
+        const headers = {
+            "Content-Type": "application/json",
+            ...fetchOptions.headers
+        };
+        if (csrfToken) {
+            headers["X-CSRF-Token"] = csrfToken;
+        }
         const config = {
             credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
             ...fetchOptions,
+            headers,
         };
         if (config.body && typeof config.body === "object") {
             config.body = JSON.stringify(config.body);

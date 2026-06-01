@@ -104,28 +104,6 @@ def _format_fecha(value):
     return str(value)[:10]
 
 
-def _ensure_cierres_table(cur):
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS cierres_turno (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            planta VARCHAR(32) NOT NULL,
-            tipo_turno VARCHAR(16) NOT NULL,
-            fecha_operativa DATE NOT NULL,
-            desde DATETIME NOT NULL,
-            hasta DATETIME NOT NULL,
-            responsable VARCHAR(100) NOT NULL,
-            hora_cierre DATETIME NOT NULL,
-            total INT NOT NULL DEFAULT 0,
-            salidas INT NOT NULL DEFAULT 0,
-            devoluciones INT NOT NULL DEFAULT 0,
-            pendientes INT NOT NULL DEFAULT 0,
-            trabajadores_pendientes INT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cierre_turno_operativo (planta, tipo_turno, fecha_operativa)
-        )
-    """)
-
-
 def _serialize_cierre_row(row):
     if not row:
         return None
@@ -149,7 +127,6 @@ def _serialize_cierre_row(row):
 
 
 def _get_cierre_row(cur, planta, tipo_turno, fecha_operativa):
-    _ensure_cierres_table(cur)
     cur.execute("""
         SELECT id, planta, tipo_turno, fecha_operativa, desde, hasta,
                responsable, hora_cierre, total, salidas, devoluciones,
@@ -652,7 +629,6 @@ def _confirm_cierre_turno(planta, tipo_turno, desde_str, hasta_str):
     try:
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
-        _ensure_cierres_table(cur)
         cur.execute("""
             INSERT INTO cierres_turno (
                 planta, tipo_turno, fecha_operativa, desde, hasta,
