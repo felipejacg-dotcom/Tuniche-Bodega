@@ -214,7 +214,9 @@ App.updateConfirmButton = function() {
 
     let canConfirm = false;
     if (App.state.mode === "SALIDA") {
-        const hasEpp = App.state.scannedArticulos.some(a => a.categoria !== "CONSUMO_LIQUIDO");
+        const hasEpp = App.state.scannedArticulos.some(a =>
+            a.categoria !== "CONSUMO_LIQUIDO" && (a.tipo_control || "RETORNABLE") !== "CONSUMIBLE"
+        );
         const workerOk = hasEpp ? (rut && nombre) : true;
         canConfirm = workerOk && area && App.state.scannedArticulos.length > 0;
         const n = App.state.scannedArticulos.length;
