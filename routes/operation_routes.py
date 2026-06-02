@@ -244,7 +244,7 @@ def registrar_masivo():
             categoria = str(categoria or "EPP").upper()
             tipo_control = str(tipo_control or "RETORNABLE").upper()
 
-            if categoria != 'CONSUMO_LIQUIDO':
+            if categoria != 'CONSUMO_LIQUIDO' and tipo_control != 'CONSUMIBLE':
                 requires_worker = True
 
             if stock <= 0:

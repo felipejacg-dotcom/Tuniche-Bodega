@@ -262,7 +262,9 @@ App.confirmOperation = async function() {
             App.toast("Escanea al menos un artículo.", "warning"); return;
         }
 
-        const hasEpp = App.state.scannedArticulos.some(a => a.categoria !== "CONSUMO_LIQUIDO");
+        const hasEpp = App.state.scannedArticulos.some(a =>
+            a.categoria !== "CONSUMO_LIQUIDO" && (a.tipo_control || "RETORNABLE") !== "CONSUMIBLE"
+        );
         if (hasEpp) {
             if (!rut || !nombre) {
                 App.toast("RUT y Nombre son obligatorios para EPP / Herramienta.", "warning"); return;
