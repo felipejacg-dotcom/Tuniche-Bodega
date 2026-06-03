@@ -333,14 +333,13 @@ App.renderMultiScanList = function() {
         const warnHtml = art.warning
             ? `<div class="multi-scan-alert">${art.warning}</div>`
             : "";
-        const isConsumo = art.categoria === "CONSUMO_LIQUIDO";
-        const qtyHtml = isConsumo
-            ? `<div class="multi-scan-qty-box">
+        const qtyHtml = `<div class="multi-scan-qty-box">
                  <span class="qty-label">Cant:</span>
-                 <input type="number" min="1" max="${art.stock_disponible}" class="qty-input" value="${art.cantidad}" onchange="App.updateItemQty(${idx}, this.value)" style="width: 50px; text-align: center; border: 1px solid var(--border); border-radius: 4px; padding: 2px;">
-                 <span style="font-size: 0.75rem; color: var(--muted); margin-left: 4px;">${App.escHtml(art.medida || "UNIDAD")}</span>
-               </div>`
-            : "";
+                 <button type="button" class="qty-btn" onclick="App.updateItemQty(${idx}, ${art.cantidad - 1})" aria-label="Menos">−</button>
+                 <input type="number" inputmode="numeric" min="1" max="${art.stock_disponible}" class="qty-input" value="${art.cantidad}" onchange="App.updateItemQty(${idx}, this.value)">
+                 <button type="button" class="qty-btn" onclick="App.updateItemQty(${idx}, ${art.cantidad + 1})" aria-label="Más">+</button>
+                 <span class="qty-unit">${App.escHtml(art.medida || "UNIDAD")}</span>
+               </div>`;
         return `
             <div class="multi-scan-item" data-index="${idx}">
                 <div class="multi-scan-details">
@@ -352,6 +351,7 @@ App.renderMultiScanList = function() {
             </div>
         `;
     }).join("");
+
 };
 
 App.updateItemQty = function(idx, qty) {
@@ -360,16 +360,17 @@ App.updateItemQty = function(idx, qty) {
     if (!art) return;
 
     if (isNaN(qtyVal) || qtyVal <= 0) {
-        App.toast("Cantidad inválida", "warning");
+        App.toast("Debe ingresar una cantidad válida.", "warning");
         App.renderMultiScanList();
         return;
     }
     if (qtyVal > art.stock_disponible) {
-        App.toast(`Stock insuficiente. Disponible: ${art.stock_disponible}`, "error");
+        App.toast(`Stock insuficiente. Disponible: ${art.stock_disponible}.`, "error");
         App.renderMultiScanList();
         return;
     }
     art.cantidad = qtyVal;
+    App.renderMultiScanList();
     App.updateConfirmButton();
 };
 

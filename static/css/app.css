@@ -304,10 +304,15 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .reg-articulo { font-size: 0.8rem; color: var(--text); margin-top: 6px; font-weight: 600; }
 .reg-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; }
 
-.multi-scan-qty-box { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 0.75rem; font-weight: 600; }
+.multi-scan-qty-box { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.75rem; font-weight: 600; }
 .qty-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-.qty-input { border: 1px solid var(--border); border-radius: 6px; padding: 2px 4px; font-weight: 700; color: var(--navy); width: 60px; text-align: center; font-size: 0.8rem; background: var(--bg); transition: border-color 0.2s; }
+.qty-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--navy); font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+.qty-btn:active { background: var(--petrol); color: #fff; border-color: var(--petrol); }
+.qty-input { border: 1px solid var(--border); border-radius: 6px; padding: 4px 4px; font-weight: 700; color: var(--navy); width: 50px; height: 32px; text-align: center; font-size: 0.9rem; background: var(--bg); transition: border-color 0.2s; -moz-appearance: textfield; }
+.qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .qty-input:focus { outline: none; border-color: var(--petrol); }
+.qty-unit { font-size: 0.7rem; color: var(--muted); margin-left: 2px; }
+
 
 /* ============================================================
    MODAL (Scanner Carnet)
