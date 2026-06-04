@@ -118,3 +118,45 @@ App.changeRegistrosPage = function(newPage) {
     App.state.registrosPage = newPage;
     App.loadRegistros();
 };
+
+App.toggleRegistrosDateFilter = function() {
+    const container = App.els.registrosDateFilterContainer;
+    const btn = App.els.btnToggleDateFilter;
+    if (!container) return;
+
+    if (container.style.display === "none") {
+        container.style.display = "block";
+        if (btn) btn.classList.add("active");
+    } else {
+        container.style.display = "none";
+        if (btn) btn.classList.remove("active");
+    }
+};
+
+App.applyRegistrosDateFilter = function() {
+    App.state.registrosPage = 1;
+    
+    const desdeVal = App.els.registrosDesde ? App.els.registrosDesde.value : "";
+    const hastaVal = App.els.registrosHasta ? App.els.registrosHasta.value : "";
+    const kpiLabel = document.querySelector("#viewRegistros .kpi-card:first-child .kpi-label");
+    if (kpiLabel) {
+        if (desdeVal || hastaVal) {
+            kpiLabel.textContent = "Total período";
+        } else {
+            kpiLabel.textContent = "Total hoy";
+        }
+    }
+    
+    App.loadRegistros();
+};
+
+App.clearRegistrosDateFilter = function() {
+    if (App.els.registrosDesde) App.els.registrosDesde.value = "";
+    if (App.els.registrosHasta) App.els.registrosHasta.value = "";
+    
+    const kpiLabel = document.querySelector("#viewRegistros .kpi-card:first-child .kpi-label");
+    if (kpiLabel) kpiLabel.textContent = "Total hoy";
+    
+    App.state.registrosPage = 1;
+    App.loadRegistros();
+};

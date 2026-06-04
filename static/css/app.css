@@ -486,3 +486,20 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
     font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;
     display: flex; align-items: center; gap: 6px;
 }
+
+#btnToggleDateFilter.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

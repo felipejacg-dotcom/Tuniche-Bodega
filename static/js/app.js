@@ -77,6 +77,13 @@ App.logout = function() {
     App.els.loginPass.value = "";
     App.els.loginError.textContent = "";
 
+    if (App.els.registrosDesde) App.els.registrosDesde.value = "";
+    if (App.els.registrosHasta) App.els.registrosHasta.value = "";
+    if (App.els.registrosDateFilterContainer) App.els.registrosDateFilterContainer.style.display = "none";
+    if (App.els.btnToggleDateFilter) App.els.btnToggleDateFilter.classList.remove("active");
+    const kpiLabel = document.querySelector("#viewRegistros .kpi-card:first-child .kpi-label");
+    if (kpiLabel) kpiLabel.textContent = "Total hoy";
+
     if (window.AndroidApp && typeof window.AndroidApp.clearSessionCookies === "function") {
         window.AndroidApp.clearSessionCookies();
     }

@@ -294,7 +294,35 @@
 
             <div class="refresh-bar registros-actions">
                 <button class="btn-refresh" onclick="App.loadRegistros()" type="button">&#8635; Actualizar</button>
+                <button class="btn-refresh" id="btnToggleDateFilter" onclick="App.toggleRegistrosDateFilter()" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13" style="vertical-align: middle; margin-right: 4px; display: inline-block;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Filtrar fecha
+                </button>
             </div>
+
+            <!-- Filtro de fecha colapsable -->
+            <div id="registrosDateFilterContainer" style="display: none; margin-bottom: 12px; animation: slideDown 0.25s ease-out;">
+                <div class="cierre-range-ctrls" style="margin-bottom: 0;">
+                    <div class="cierre-ctrl-group">
+                        <label class="cierre-ctrl-label" for="registrosDesde">Desde</label>
+                        <input type="date" id="registrosDesde" class="cierre-datetime-input" style="height: 38px;" required>
+                    </div>
+                    <div class="cierre-ctrl-group">
+                        <label class="cierre-ctrl-label" for="registrosHasta">Hasta</label>
+                        <input type="date" id="registrosHasta" class="cierre-datetime-input" style="height: 38px;" required>
+                    </div>
+                </div>
+                <div class="registros-actions" style="margin-top: 8px; display: flex; gap: 8px;">
+                    <button class="btn-refresh" onclick="App.applyRegistrosDateFilter()" type="button" style="flex: 1; background: var(--navy); color: #fff; border-color: var(--navy); height: 38px; border-radius: 8px; font-weight: 700;">Aplicar filtro</button>
+                    <button class="btn-refresh" onclick="App.clearRegistrosDateFilter()" type="button" style="flex: 1; height: 38px; border-radius: 8px; font-weight: 700;">Limpiar</button>
+                </div>
+            </div>
+
             <div id="registrosList">
                 <div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -435,14 +463,14 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-historial-detallado"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-historial-detallado"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-filtro-fechas"></script>
 
 </body>
 </html>
