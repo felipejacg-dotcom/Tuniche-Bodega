@@ -360,10 +360,18 @@ App.confirmOperation = async function() {
                     if (idx !== -1) App.state.articulos[idx].stock_disponible = item.nuevo_stock;
                 });
 
+                const items = App.state.scannedArticulos.map(a => ({
+                    descripcion: a.descripcion,
+                    talla: a.talla || "",
+                    cantidad: a.cantidad || 1
+                }));
+
                 App.state.historial.unshift({
                     tipo: "salida",
                     msg: data.message,
+                    items: items,
                     rut: rut || "CONSUMO",
+                    nombre: nombre || "Consumo interno",
                     area,
                     hora: data.hora || "",
                 });
@@ -539,16 +547,39 @@ App.renderHistorial = function() {
     }
 
     const last5 = App.state.historial.slice(0, 5);
-    container.innerHTML = last5.map(h => `
-        <div class="hist-item ${h.tipo}">
-            <div class="hist-dot"></div>
-            <div class="hist-info">
-                <div class="hist-msg">${App.escHtml(h.msg)}</div>
-                <div class="hist-meta">${App.escHtml(h.rut)} · ${App.escHtml(h.area)}</div>
+    container.innerHTML = last5.map(h => {
+        const isSalida = h.tipo === "salida";
+        let itemsHtml = "";
+
+        if (isSalida && h.items && h.items.length > 0) {
+            itemsHtml = `<div class="hist-items-list">` +
+                h.items.map(it => {
+                    const qty = it.cantidad > 1 ? `<span class="hist-item-qty">×${it.cantidad}</span>` : "";
+                    return `<div class="hist-item-line">${App.escHtml(it.descripcion)} [${App.escHtml(it.talla || "-")}] ${qty}</div>`;
+                }).join("") +
+                `</div>`;
+        }
+
+        const titleText = isSalida && h.items
+            ? `Salida (${h.items.length} artículo${h.items.length > 1 ? "s" : ""})`
+            : App.escHtml(h.msg);
+
+        const workerLine = h.nombre
+            ? `<div class="hist-meta">${App.escHtml(h.nombre)} · ${App.escHtml(h.rut)} · ${App.escHtml(h.area)}</div>`
+            : `<div class="hist-meta">${App.escHtml(h.rut)} · ${App.escHtml(h.area)}</div>`;
+
+        return `
+            <div class="hist-item ${h.tipo}">
+                <div class="hist-dot"></div>
+                <div class="hist-info">
+                    <div class="hist-msg">${titleText}</div>
+                    ${itemsHtml}
+                    ${workerLine}
+                </div>
+                <div class="hist-time">${App.escHtml(h.hora)}</div>
             </div>
-            <div class="hist-time">${App.escHtml(h.hora)}</div>
-        </div>
-    `).join("");
+        `;
+    }).join("");
 };
 
 App.openCarnetModal = function() {
