@@ -192,6 +192,12 @@ App.init = function() {
         App.els.stockSearch.addEventListener("input", App.debounce(() => App.renderStockList(), 300));
     }
 
+    // Manual article search with 200ms debounce
+    if (App.els.manualSearchInput) {
+        App.els.manualSearchInput.addEventListener("input", App.debounce(() => App.onManualSearch(), 200));
+    }
+
+
     // Registros search with 300ms debounce
     if (App.els.registrosSearch) {
         App.els.registrosSearch.addEventListener("input", App.debounce((e) => {

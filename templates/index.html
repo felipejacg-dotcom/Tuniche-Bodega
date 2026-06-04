@@ -10,7 +10,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260603-cantidad-todos">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260604-busqueda-manual">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
      ============================================================ -->
 <div id="loginScreen">
     <div class="login-card">
-        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260603-cantidad-todos" alt="Tuniche Fruits">
+        <img class="login-logo" src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260604-busqueda-manual" alt="Tuniche Fruits">
         <div class="login-brand">
             <h1>SGB Logistic F.C.</h1>
             <p>Sistema de Bodega &mdash; Acceso de Operario</p>
@@ -56,7 +56,7 @@
     <header class="app-header">
         <div class="header-left">
             <div class="header-logo-box">
-                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260603-cantidad-todos" alt="Tuniche">
+                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260604-busqueda-manual" alt="Tuniche">
             </div>
             <div class="header-brand">
                 <strong>SGB LOGISTIC F.C.</strong>
@@ -162,6 +162,9 @@
                         <button class="scan-tab" id="tabCamara" type="button" onclick="App.setScanMethod('camera')">
                             Camara
                         </button>
+                        <button class="scan-tab" id="tabManual" type="button" onclick="App.setScanMethod('manual')">
+                            Manual
+                        </button>
                     </div>
 
                     <!-- Laser input -->
@@ -175,6 +178,15 @@
                     <div id="camaraSection" style="display:none;">
                         <div id="readerArticulo" style="width:100%;border-radius:8px;overflow:hidden;margin-bottom:10px;"></div>
                     </div>
+
+                    <!-- Manual search -->
+                    <div id="manualSection" style="display:none;">
+                        <input type="text" id="manualSearchInput" class="manual-search-input"
+                               placeholder="Buscar por nombre, código o ID..."
+                               autocomplete="off" spellcheck="false" inputmode="search">
+                        <div id="manualSearchResults" class="manual-search-results"></div>
+                    </div>
+
 
                     <!-- Article info -->
                     <div class="articulo-display" id="articuloDisplay">
@@ -423,14 +435,14 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260603-cantidad-todos"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260603-cantidad-todos"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-busqueda-manual"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-busqueda-manual"></script>
 
 </body>
 </html>

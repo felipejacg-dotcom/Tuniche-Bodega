@@ -236,8 +236,10 @@ App.setScanMethod = function(method, options = { focusLaser: true }) {
     App.state.scanMethod = method;
     App.els.laserInput.parentElement.style.display = method === "laser" ? "block" : "none";
     App.els.camaraSection.style.display = method === "camera" ? "block" : "none";
+    App.els.manualSection.style.display = method === "manual" ? "block" : "none";
     App.els.tabLaser.classList.toggle("active", method === "laser");
     App.els.tabCamara.classList.toggle("active", method === "camera");
+    App.els.tabManual.classList.toggle("active", method === "manual");
 
     if (method === "camera") {
         Scanner.startArticleCamera("readerArticulo", App.onArticuloScanned).catch(e => {
@@ -246,13 +248,77 @@ App.setScanMethod = function(method, options = { focusLaser: true }) {
         });
     } else {
         Scanner.stopArticleCamera();
-        if (options.focusLaser !== false) {
-            setTimeout(() => {
-                if (App.els.laserInput) App.els.laserInput.focus();
-            }, 100);
-        }
+    }
+
+    if (method === "laser" && options.focusLaser !== false) {
+        setTimeout(() => {
+            if (App.els.laserInput) App.els.laserInput.focus();
+        }, 100);
+    }
+
+    if (method === "manual") {
+        App.els.manualSearchInput.value = "";
+        App.els.manualSearchResults.innerHTML = "";
+        setTimeout(() => App.els.manualSearchInput.focus(), 100);
     }
 };
+
+App.onManualSearch = function() {
+    const query = App.els.manualSearchInput.value.trim().toLowerCase();
+    const container = App.els.manualSearchResults;
+
+    if (query.length < 2) {
+        container.innerHTML = query.length === 0
+            ? ""
+            : '<div class="manual-search-hint">Escribe al menos 2 caracteres...</div>';
+        return;
+    }
+
+    const results = App.state.articulos.filter(a => {
+        const desc = (a.descripcion || "").toLowerCase();
+        const codigo = (a.codigo_material || "").toLowerCase();
+        const idStr = String(a.id);
+        const talla = (a.talla || "").toLowerCase();
+        return desc.includes(query) || codigo.includes(query) || idStr === query || talla.includes(query);
+    });
+
+    if (results.length === 0) {
+        container.innerHTML = '<div class="manual-search-hint">No se encontraron artículos.</div>';
+        return;
+    }
+
+    container.innerHTML = results.slice(0, 20).map(art => {
+        const stockClass = art.stock_disponible <= 0 ? "no-stock" : "";
+        const stockBadge = art.stock_disponible <= 0
+            ? '<span class="manual-result-badge sin-stock">Sin stock</span>'
+            : `<span class="manual-result-badge">Stock: ${art.stock_disponible}</span>`;
+        const already = App.state.scannedArticulos.some(a => a.id === art.id);
+        const addedBadge = already ? '<span class="manual-result-badge added">✓ Agregado</span>' : "";
+        const codigoText = art.codigo_material ? ` — ${App.escHtml(art.codigo_material)}` : "";
+        return `
+            <div class="manual-result-item ${stockClass}" onclick="App.selectManualArticulo(${art.id})" role="button" tabindex="0">
+                <div class="manual-result-name">${App.escHtml(art.descripcion)} [${App.escHtml(art.talla || "-")}]</div>
+                <div class="manual-result-meta">
+                    <span>ID: ${art.id}${codigoText}</span>
+                    ${stockBadge}
+                    ${addedBadge}
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    if (results.length > 20) {
+        container.innerHTML += `<div class="manual-search-hint">${results.length - 20} resultados más. Refina la búsqueda.</div>`;
+    }
+};
+
+App.selectManualArticulo = function(id) {
+    const art = App.state.articulos.find(a => a.id === id);
+    if (!art) return;
+    App.selectArticulo(art);
+    App.onManualSearch();
+};
+
 
 App.confirmOperation = async function() {
     const rut = App.els.inputRut.value.trim();
