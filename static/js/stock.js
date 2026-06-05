@@ -46,13 +46,14 @@ App.renderStockList = function() {
         const s = a.stock_disponible;
         const isLow = a.limite_alerta && s > 0 && s <= a.limite_alerta;
         const cls = s <= 0 ? "zero" : isLow ? "low" : "ok";
-        const codeText = a.codigo_material ? `${App.escHtml(a.codigo_material)} · ` : "";
+        const sku = a.codigo_material ? `<span style="font-weight:600;color:var(--muted);font-size:0.68rem;letter-spacing:0.04em;">${App.escHtml(a.codigo_material)}</span><span style="color:var(--border);margin:0 4px;">·</span>` : "";
+        const badgeLabel = s <= 0 ? "Agotado" : String(s);
         return `<div class="stock-item">
             <div class="stock-info">
                 <div class="stock-nombre">${App.escHtml(a.descripcion)}</div>
-                <div class="stock-sub">${codeText}Talla ${App.escHtml(a.talla || "-")} · ${App.escHtml(a.medida || "")}</div>
+                <div class="stock-sub">${sku}Talla ${App.escHtml(a.talla || "—")} · ${App.escHtml(a.medida || "")}</div>
             </div>
-            <div class="stock-badge ${cls}">${s}</div>
+            <div class="stock-badge ${cls}">${badgeLabel}</div>
         </div>`;
     }).join("");
 };
