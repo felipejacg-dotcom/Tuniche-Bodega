@@ -55,16 +55,14 @@
     <!-- HEADER -->
     <header class="app-header">
         <div class="header-left">
-            <div class="header-logo-box">
-                <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260604-historial-detallado" alt="Tuniche">
-            </div>
-            <div class="header-brand">
-                <strong>SGB LOGISTIC F.C.</strong>
-                <span id="headerPlanta">Sucursal: Graneros</span>
-            </div>
+            <span id="headerPlantaBadge" class="planta-badge">Graneros</span>
+            <span id="headerPlanta" style="display:none;"></span>
+        </div>
+        <div class="header-center">
+            <img src="{{ url_for('static', filename='logo-tuniche.png') }}?v=20260605-tuniche-palette"
+                 alt="Tuniche" class="header-logo-center">
         </div>
         <div class="header-right">
-            <span id="headerPlantaBadge" class="planta-badge">Graneros</span>
             <button class="btn-logout" id="btnLogout" type="button">Salir</button>
         </div>
     </header>
