@@ -33,6 +33,7 @@ App.renderStockList = function() {
     }
     if (App.state.stockFilter === "low") items = items.filter(a => a.stock_disponible > 0 && a.limite_alerta && a.stock_disponible <= a.limite_alerta);
     if (App.state.stockFilter === "zero") items = items.filter(a => a.stock_disponible <= 0);
+    if (App.state.stockFilter === "available") items = items.filter(a => a.stock_disponible > 0);
 
     const container = App.els.stockList;
     if (!container) return;

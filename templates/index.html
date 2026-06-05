@@ -244,6 +244,7 @@
             </div>
             <div class="filter-tabs">
                 <button class="filter-tab active" data-filter="all" onclick="App.filterStock('all')">Todos</button>
+                <button class="filter-tab" data-filter="available" onclick="App.filterStock('available')">Con stock</button>
                 <button class="filter-tab" data-filter="low" onclick="App.filterStock('low')">Stock bajo</button>
                 <button class="filter-tab" data-filter="zero" onclick="App.filterStock('zero')">Sin stock</button>
             </div>
@@ -466,7 +467,7 @@
 <script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260604-filtro-fechas"></script>
-<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/stock.js') }}?v=20260605-con-stock"></script>
 <script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-filtro-fechas"></script>
