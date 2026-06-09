@@ -588,3 +588,26 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
         transform: translateY(0);
     }
 }
+
+.btn-clear-worker {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--brand-red);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-clear-worker:active {
+    background: var(--brand-red-bg);
+    border-color: var(--brand-red-bd);
+    transform: scale(0.95);
+}
+

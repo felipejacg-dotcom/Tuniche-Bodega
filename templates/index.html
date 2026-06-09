@@ -11,7 +11,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260605-tuniche-palette">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260609-limpiar">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -100,9 +100,17 @@
 
             <!-- Card 1: Trabajador -->
             <div class="card">
-                <div class="card-header">
-                    <div class="card-step">1</div>
-                    <span class="card-title">Datos del Trabajador</span>
+                <div class="card-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="card-step">1</div>
+                        <span class="card-title">Datos del Trabajador</span>
+                    </div>
+                    <button class="btn-clear-worker" id="btnClearWorker" type="button" onclick="App.clearWorkerData()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a1 1 0 001 1h3m-9-2H6m3 0h6m-3 0v1a1 1 0 001 1h3m-9-2a1 1 0 011-1h6a1 1 0 011 1"/>
+                        </svg>
+                        <span>Limpiar</span>
+                    </button>
                 </div>
                 <div class="card-body">
                     <button class="btn-scan" id="btnScanCarnet" type="button">
@@ -466,7 +474,7 @@
 <script src="{{ url_for('static', filename='js/api.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-filtro-fechas"></script>
-<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260609-limpiar"></script>
 <script src="{{ url_for('static', filename='js/stock.js') }}?v=20260605-con-stock"></script>
 <script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>

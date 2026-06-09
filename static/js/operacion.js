@@ -44,6 +44,25 @@ App.updateMode = function(mode) {
     App.updateConfirmButton();
 };
 
+App.clearWorkerData = function() {
+    App.els.inputRut.value = "";
+    App.els.inputNombre.value = "";
+    App.els.inputArea.selectedIndex = 0;
+    App.state.currentWorker = null;
+
+    App.ocultarPendientes();
+
+    if (App.state.scanProcessingIds) App.state.scanProcessingIds.clear();
+    if (App.state.scanMutedIds) App.state.scanMutedIds.clear();
+
+    App.updateConfirmButton();
+    App.toast("Datos del trabajador limpiados.", "info", 1500);
+
+    setTimeout(() => {
+        if (App.els.inputRut) App.els.inputRut.focus();
+    }, 100);
+};
+
 App.onCredentialScanned = async function(rawText) {
     const { rut, nombre } = Scanner.parseCredential(rawText);
     if (!rut) {
