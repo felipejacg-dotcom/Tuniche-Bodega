@@ -22,7 +22,9 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebResourceError
+import android.net.http.SslError
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.SslErrorHandler
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -267,6 +269,11 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
 
+        // Habilitar depuración de contenidos web
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
+
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
@@ -283,6 +290,16 @@ class MainActivity : AppCompatActivity() {
 
         // Restringir navegación estrictamente al dominio autorizado
         webView.webViewClient = object : WebViewClient() {
+            @SuppressLint("WebViewClientOnReceivedSslError")
+            override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                val url = error?.url ?: ""
+                if (isAllowedAppUrl(url) || url.contains(ALLOWED_HOST)) {
+                    handler?.proceed()
+                } else {
+                    super.onReceivedSslError(view, handler, error)
+                }
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: ""
                 // Permitir navegacion solo si es el host de produccion por HTTPS.
