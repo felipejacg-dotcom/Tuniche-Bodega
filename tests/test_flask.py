@@ -43,6 +43,30 @@ class FlaskTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertFalse(data["success"])
 
+    def test_login_restringe_usuario_a_puquillay(self):
+        with patch.dict(os.environ, {
+            "LOGIN_USERS": "Cristina Lopez:tuniche2026",
+            "LOGIN_USER_PLANTAS": "Cristina Lopez:PUQUILLAY",
+        }):
+            response = self.app.post('/api/login', json={
+                "username": "Cristina Lopez",
+                "password": "tuniche2026",
+                "planta": "TUNICHE"
+            })
+            data = json.loads(response.data)
+            self.assertEqual(response.status_code, 401)
+            self.assertFalse(data["success"])
+
+            response = self.app.post('/api/login', json={
+                "username": "Cristina Lopez",
+                "password": "tuniche2026",
+                "planta": "PUQUILLAY"
+            })
+            data = json.loads(response.data)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(data["success"])
+            self.assertEqual(data["planta"], "PUQUILLAY")
+
     def test_me_unauthorized(self):
         response = self.app.get('/api/me')
         self.assertEqual(response.status_code, 401)

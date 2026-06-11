@@ -19,8 +19,30 @@ def _get_users() -> dict:
     return users
 
 
+def _get_user_plantas() -> dict:
+    raw = os.environ.get("LOGIN_USER_PLANTAS", "").strip()
+    plantas_by_user = {}
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if ":" in pair:
+            user, plantas = pair.split(":", 1)
+            allowed = {
+                planta.strip().upper()
+                for planta in plantas.replace("|", ";").split(";")
+                if planta.strip()
+            }
+            if allowed:
+                plantas_by_user[user.strip().lower()] = allowed
+    return plantas_by_user
+
+
 def has_login_users() -> bool:
     return bool(_get_users())
+
+
+def is_user_allowed_for_planta(username: str, planta: str) -> bool:
+    allowed_plantas = _get_user_plantas().get(username.strip().lower())
+    return not allowed_plantas or planta.strip().upper() in allowed_plantas
 
 
 def _verify_password(stored: str, provided: str) -> bool:
@@ -51,10 +73,13 @@ def get_user_display_name(username: str) -> str:
 
 def login_user(username: str, password: str, planta: str) -> bool:
     users = _get_users()
-    stored_password = users.get(username.strip().lower())
+    username_key = username.strip().lower()
+    stored_password = users.get(username_key)
     if stored_password is not None and _verify_password(stored_password, password.strip()):
+        if not is_user_allowed_for_planta(username_key, planta):
+            return False
         session.permanent = True
-        session["user"] = username.strip().lower()
+        session["user"] = username_key
         session["user_display"] = get_user_display_name(username)
         session["planta"] = planta
         return True
