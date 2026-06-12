@@ -629,24 +629,24 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 }
 
 .btn-clear-worker {
-    background: transparent;
-    border: 1px solid transparent;
+    background: var(--brand-red-bg);
+    border: 1px solid var(--brand-red-bd);
     color: var(--brand-red);
-    font-size: 0.72rem;
+    font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 6px;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
     transition: all 0.15s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 .btn-clear-worker:active {
-    background: var(--brand-red-bg);
-    border-color: var(--brand-red-bd);
+    background: var(--brand-red-bd);
+    border-color: var(--brand-red-dark);
     transform: scale(0.95);
 }
 
