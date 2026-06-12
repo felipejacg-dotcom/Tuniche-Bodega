@@ -58,7 +58,9 @@ def _verify_password(stored: str, provided: str) -> bool:
 
 
 def verify_admin_password(password: str) -> bool:
-    stored_password = _get_users().get("admin")
+    stored_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not stored_password:
+        stored_password = _get_users().get("admin")
     if not stored_password:
         return False
     return _verify_password(stored_password, (password or "").strip())

@@ -21,5 +21,7 @@ services:
         generateValue: true
       - key: LOGIN_USERS
         value: admin:admin123,bodega:123456
+      - key: ADMIN_PASSWORD
+        value: tuniche2026
       - key: FLASK_DEBUG
         value: "0"
