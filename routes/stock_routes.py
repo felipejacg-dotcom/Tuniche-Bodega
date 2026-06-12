@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, jsonify, request, send_file
-from auth import login_required, get_current_planta, get_current_user
+from auth import login_required, get_current_planta, get_current_user, verify_admin_password
 from db import get_connection
 from io import BytesIO
 from pathlib import Path
@@ -16,6 +16,27 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/api")
+
+
+def _clean_edit_value(value):
+    return str(value or "").strip()
+
+
+def _ensure_registro_ediciones_table(cur):
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS registro_ediciones (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            transaccion_id INT NOT NULL,
+            usuario VARCHAR(100) NOT NULL,
+            planta VARCHAR(50) NOT NULL,
+            campo VARCHAR(50) NOT NULL,
+            valor_anterior TEXT,
+            valor_nuevo TEXT,
+            fecha_edicion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_registro_ediciones_transaccion (transaccion_id),
+            INDEX idx_registro_ediciones_fecha (fecha_edicion)
+        )
+    """)
 
 
 def _format_hora(value):
@@ -875,6 +896,97 @@ def get_registros():
         import logging
         logging.getLogger("flask.app").error("Error en get_registros: %s", e, exc_info=True)
         return jsonify({"success": False, "message": "Ocurrió un error al obtener los registros."}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@stock_bp.route("/registros/<int:registro_id>", methods=["PATCH"])
+@login_required
+def editar_registro(registro_id):
+    planta = get_current_planta()
+    usuario = get_current_user() or "Desconocido"
+    payload = request.get_json(silent=True) or {}
+
+    if not verify_admin_password(payload.get("admin_password", "")):
+        return jsonify({"success": False, "message": "Contraseña de administrador incorrecta."}), 403
+
+    rut = _clean_edit_value(payload.get("rut"))
+    trabajador = _clean_edit_value(payload.get("trabajador"))
+    area = _clean_edit_value(payload.get("area"))
+
+    if not rut:
+        return jsonify({"success": False, "message": "El RUT no puede quedar vacío."}), 400
+    if not trabajador:
+        return jsonify({"success": False, "message": "El trabajador no puede quedar vacío."}), 400
+    if not area:
+        return jsonify({"success": False, "message": "El área no puede quedar vacía."}), 400
+
+    conn = None
+    try:
+        conn = get_connection(planta)
+        cur = conn.cursor(dictionary=True)
+        _ensure_registro_ediciones_table(cur)
+
+        cur.execute("""
+            SELECT id, rut, trabajador, area
+            FROM transacciones
+            WHERE id = %s
+            LIMIT 1
+            FOR UPDATE
+        """, (registro_id,))
+        registro_actual = cur.fetchone()
+        if not registro_actual:
+            conn.rollback()
+            return jsonify({"success": False, "message": "No se encontró el registro solicitado."}), 404
+
+        nuevos_valores = {
+            "rut": rut,
+            "trabajador": trabajador,
+            "area": area,
+        }
+        cambios = []
+        for campo, valor_nuevo in nuevos_valores.items():
+            valor_anterior = _clean_edit_value(registro_actual.get(campo))
+            if valor_anterior != valor_nuevo:
+                cambios.append((campo, valor_anterior, valor_nuevo))
+
+        if not cambios:
+            conn.rollback()
+            cur.close()
+            return jsonify({"success": True, "message": "No había cambios para guardar."})
+
+        cur.execute("""
+            UPDATE transacciones
+            SET rut = %s, trabajador = %s, area = %s
+            WHERE id = %s
+        """, (rut, trabajador, area, registro_id))
+
+        for campo, valor_anterior, valor_nuevo in cambios:
+            cur.execute("""
+                INSERT INTO registro_ediciones (
+                    transaccion_id, usuario, planta, campo, valor_anterior, valor_nuevo
+                ) VALUES (%s, %s, %s, %s, %s, %s)
+            """, (registro_id, usuario, planta, campo, valor_anterior, valor_nuevo))
+
+        conn.commit()
+        cur.close()
+        return jsonify({
+            "success": True,
+            "message": "Registro actualizado correctamente.",
+            "registro": {
+                "id": registro_id,
+                "rut": rut,
+                "trabajador": trabajador,
+                "area": area,
+            }
+        })
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        import logging
+        logging.getLogger("flask.app").error("Error en editar_registro: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "Ocurrió un error al editar el registro."}), 500
     finally:
         if conn:
             conn.close()

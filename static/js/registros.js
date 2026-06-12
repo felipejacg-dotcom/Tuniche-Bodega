@@ -70,7 +70,10 @@ App.renderRegistros = function() {
                     <div class="reg-nombre">${App.escHtml(r.trabajador)}</div>
                     <div class="reg-rut">${App.escHtml(r.rut)}</div>
                 </div>
-                ${badge}
+                <div class="reg-actions-inline">
+                    ${badge}
+                    <button class="reg-edit-btn" type="button" onclick="App.openEditarRegistro(${Number(r.id)})">Editar</button>
+                </div>
             </div>
             <div class="reg-articulo">${App.escHtml(r.articulo)}${cantStr}</div>
             <div class="reg-meta">
@@ -80,6 +83,83 @@ App.renderRegistros = function() {
             </div>
         </div>`;
     }).join("");
+};
+
+App._setEditAreaValue = function(area) {
+    const select = App.els.editRegistroArea || App.$("editRegistroArea");
+    if (!select) return;
+    const value = String(area || "");
+    const exists = Array.from(select.options).some(opt => opt.value === value);
+    if (value && !exists) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+    }
+    select.value = value;
+};
+
+App.openEditarRegistro = function(id) {
+    const registro = (App.state.registros || []).find(r => Number(r.id) === Number(id));
+    if (!registro) {
+        App.toast("No se encontró el registro en pantalla.", "warning");
+        return;
+    }
+
+    const modal = App.els.editarRegistroModal || App.$("editarRegistroModal");
+    if (!modal) return;
+
+    App.els.editRegistroId.value = registro.id;
+    App.els.editRegistroRut.value = registro.rut || "";
+    App.els.editRegistroTrabajador.value = registro.trabajador || "";
+    App._setEditAreaValue(registro.area || "");
+    App.els.editRegistroAdminPass.value = "";
+    modal.classList.add("active");
+    setTimeout(() => App.els.editRegistroRut && App.els.editRegistroRut.focus(), 80);
+};
+
+App.closeEditarRegistro = function() {
+    const modal = App.els.editarRegistroModal || App.$("editarRegistroModal");
+    if (modal) modal.classList.remove("active");
+};
+
+App.submitEditarRegistro = async function() {
+    const id = App.els.editRegistroId ? App.els.editRegistroId.value : "";
+    const rut = App.els.editRegistroRut ? App.els.editRegistroRut.value.trim() : "";
+    const trabajador = App.els.editRegistroTrabajador ? App.els.editRegistroTrabajador.value.trim() : "";
+    const area = App.els.editRegistroArea ? App.els.editRegistroArea.value.trim() : "";
+    const adminPassword = App.els.editRegistroAdminPass ? App.els.editRegistroAdminPass.value : "";
+
+    if (!id) return App.toast("No se pudo identificar el registro.", "error");
+    if (!rut) return App.toast("El RUT no puede quedar vacío.", "warning");
+    if (!trabajador) return App.toast("El trabajador no puede quedar vacío.", "warning");
+    if (!area) return App.toast("El área no puede quedar vacía.", "warning");
+    if (!adminPassword) return App.toast("Debe ingresar la contraseña de administrador.", "warning");
+
+    const btn = App.els.btnGuardarEditarRegistro || App.$("btnGuardarEditarRegistro");
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Guardando...";
+    }
+
+    try {
+        const data = await API.editarRegistro(id, {
+            rut,
+            trabajador,
+            area,
+            admin_password: adminPassword,
+        });
+        App.toast(data.message || "Registro actualizado correctamente.", "success");
+        App.closeEditarRegistro();
+        await App.loadRegistros();
+    } catch (e) {
+        App.toast(e.message || "No se pudo editar el registro.", "error", 5000);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Guardar cambios";
+        }
+    }
 };
 
 App.renderRegistrosPagination = function() {

@@ -358,12 +358,26 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .reg-card.devuelto { border-left-color: var(--success); }
 .reg-card.consumido { border-left-color: #64748b; }
 .reg-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.reg-actions-inline { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .reg-nombre { font-weight: 700; font-size: 0.88rem; }
 .reg-rut { font-size: 0.7rem; color: var(--muted); font-family: 'Courier New', monospace; margin-top: 1px; }
 .reg-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
 .badge-terreno { background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-bd); }
 .badge-devuelto { background: var(--success-bg); color: var(--success-dark); border: 1px solid var(--success-bd); }
 .badge-consumido { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.reg-edit-btn {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--petrol);
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-family: inherit;
+    font-size: 0.65rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.reg-edit-btn:active { transform: scale(0.96); }
 .reg-articulo { font-size: 0.8rem; color: var(--text); margin-top: 6px; font-weight: 600; }
 .reg-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; }
 
@@ -408,6 +422,31 @@ select.app-input { appearance: none; background-image: url("data:image/svg+xml,%
 .modal-close { background: var(--bg); border: none; width: 30px; height: 30px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 #carnetReader { width: 100%; border-radius: 8px; overflow: hidden; }
 .modal-hint { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 10px; }
+.edit-registro-modal { padding-bottom: 20px; }
+.edit-registro-hint {
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    margin: -4px 0 14px;
+}
+.edit-registro-actions {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+.edit-registro-actions .btn-refresh,
+.edit-registro-actions .btn-primary {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 9px;
+}
+.edit-registro-save {
+    margin-top: 0;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    box-shadow: none;
+}
 
 /* ============================================================
    LOADING

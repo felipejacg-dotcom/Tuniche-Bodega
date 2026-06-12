@@ -84,6 +84,12 @@ const API = (() => {
             return _req(`/api/registros?${params.toString()}`);
         },
 
+        editarRegistro: (id, payload) =>
+            _req(`/api/registros/${encodeURIComponent(id)}`, {
+                method: "PATCH",
+                body: payload,
+            }),
+
         getCierreTurno: (tipoTurno = "", desde = "", hasta = "") => {
             const params = new URLSearchParams();
             if (tipoTurno) params.append("tipo_turno", tipoTurno);

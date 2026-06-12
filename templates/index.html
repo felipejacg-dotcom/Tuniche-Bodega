@@ -11,7 +11,7 @@
     <meta name="description" content="Sistema de gestion de bodega y EPP para SGB Logistic F.C.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260609-limpiar">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v=20260612-editar-registros">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -463,6 +463,52 @@
     </div>
 </div>
 
+<!-- ============================================================
+     MODAL: Editar Registro
+     ============================================================ -->
+<div class="modal-overlay" id="editarRegistroModal" role="dialog" aria-modal="true" aria-label="Editar registro">
+    <div class="modal edit-registro-modal">
+        <div class="modal-hdr">
+            <span class="modal-title">Editar registro</span>
+            <button class="modal-close" id="btnCloseEditarRegistro" type="button" aria-label="Cerrar"
+                    onclick="App.closeEditarRegistro()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <p class="edit-registro-hint">
+            Solo se puede corregir RUT, trabajador y área. Artículo, cantidad, hora y estado no se modifican.
+        </p>
+        <input type="hidden" id="editRegistroId">
+        <div class="input-group">
+            <label class="input-label" for="editRegistroRut">RUT</label>
+            <input type="text" id="editRegistroRut" class="app-input" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label class="input-label" for="editRegistroTrabajador">Trabajador</label>
+            <input type="text" id="editRegistroTrabajador" class="app-input" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label class="input-label" for="editRegistroArea">Área</label>
+            <select id="editRegistroArea" class="app-input">
+                {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label" for="editRegistroAdminPass">Contraseña administrador</label>
+            <input type="password" id="editRegistroAdminPass" class="app-input" autocomplete="current-password">
+        </div>
+        <div class="edit-registro-actions">
+            <button class="btn-refresh edit-registro-cancel" type="button" onclick="App.closeEditarRegistro()">Cancelar</button>
+            <button class="btn-primary edit-registro-save" id="btnGuardarEditarRegistro" type="button"
+                    onclick="App.submitEditarRegistro()">Guardar cambios</button>
+        </div>
+    </div>
+</div>
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
     <div class="spinner"></div>
@@ -471,12 +517,12 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<script src="{{ url_for('static', filename='js/api.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/api.js') }}?v=20260612-editar-registros"></script>
 <script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-filtro-fechas"></script>
-<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260612-editar-registros"></script>
 <script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260609-limpiar"></script>
 <script src="{{ url_for('static', filename='js/stock.js') }}?v=20260605-con-stock"></script>
-<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260612-editar-registros"></script>
 <script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-filtro-fechas"></script>
 

@@ -57,6 +57,13 @@ def _verify_password(stored: str, provided: str) -> bool:
     return hmac.compare_digest(stored.encode("utf-8"), provided.encode("utf-8"))
 
 
+def verify_admin_password(password: str) -> bool:
+    stored_password = _get_users().get("admin")
+    if not stored_password:
+        return False
+    return _verify_password(stored_password, (password or "").strip())
+
+
 def get_user_display_name(username: str) -> str:
     """Retorna el nombre con la capitalización original definida en LOGIN_USERS."""
     raw = os.environ.get("LOGIN_USERS", "").strip() or DEFAULT_LOGIN_USERS
