@@ -113,6 +113,9 @@ App.openEditarRegistro = function(id) {
     App.els.editRegistroRut.value = registro.rut || "";
     App.els.editRegistroTrabajador.value = registro.trabajador || "";
     App._setEditAreaValue(registro.area || "");
+    if (App.els.editRegistroCantidad) {
+        App.els.editRegistroCantidad.value = registro.cantidad || 1;
+    }
     App.els.editRegistroAdminPass.value = "";
     modal.classList.add("active");
     setTimeout(() => App.els.editRegistroRut && App.els.editRegistroRut.focus(), 80);
@@ -128,12 +131,14 @@ App.submitEditarRegistro = async function() {
     const rut = App.els.editRegistroRut ? App.els.editRegistroRut.value.trim() : "";
     const trabajador = App.els.editRegistroTrabajador ? App.els.editRegistroTrabajador.value.trim() : "";
     const area = App.els.editRegistroArea ? App.els.editRegistroArea.value.trim() : "";
+    const cantidad = App.els.editRegistroCantidad ? parseInt(App.els.editRegistroCantidad.value) : 1;
     const adminPassword = App.els.editRegistroAdminPass ? App.els.editRegistroAdminPass.value : "";
 
     if (!id) return App.toast("No se pudo identificar el registro.", "error");
     if (!rut) return App.toast("El RUT no puede quedar vacío.", "warning");
     if (!trabajador) return App.toast("El trabajador no puede quedar vacío.", "warning");
     if (!area) return App.toast("El área no puede quedar vacía.", "warning");
+    if (isNaN(cantidad) || cantidad <= 0) return App.toast("La cantidad debe ser mayor a cero.", "warning");
     if (!adminPassword) return App.toast("Debe ingresar la contraseña de administrador.", "warning");
 
     const btn = App.els.btnGuardarEditarRegistro || App.$("btnGuardarEditarRegistro");
@@ -147,6 +152,7 @@ App.submitEditarRegistro = async function() {
             rut,
             trabajador,
             area,
+            cantidad,
             admin_password: adminPassword,
         });
         App.toast(data.message || "Registro actualizado correctamente.", "success");

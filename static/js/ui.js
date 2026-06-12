@@ -103,6 +103,7 @@ App.initEls = function() {
         editRegistroRut: $("editRegistroRut"),
         editRegistroTrabajador: $("editRegistroTrabajador"),
         editRegistroArea: $("editRegistroArea"),
+        editRegistroCantidad: $("editRegistroCantidad"),
         editRegistroAdminPass: $("editRegistroAdminPass"),
         btnGuardarEditarRegistro: $("btnGuardarEditarRegistro"),
         viewCierre: $("viewCierre"),

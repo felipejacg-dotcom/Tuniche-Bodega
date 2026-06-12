@@ -914,6 +914,13 @@ def editar_registro(registro_id):
     rut = _clean_edit_value(payload.get("rut"))
     trabajador = _clean_edit_value(payload.get("trabajador"))
     area = _clean_edit_value(payload.get("area"))
+    
+    try:
+        cantidad = int(payload.get("cantidad"))
+        if cantidad <= 0:
+            raise ValueError()
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "La cantidad debe ser un número entero mayor que cero."}), 400
 
     if not rut:
         return jsonify({"success": False, "message": "El RUT no puede quedar vacío."}), 400
@@ -929,7 +936,7 @@ def editar_registro(registro_id):
         _ensure_registro_ediciones_table(cur)
 
         cur.execute("""
-            SELECT id, rut, trabajador, area
+            SELECT id, rut, trabajador, area, cantidad, articulo_id, estado
             FROM transacciones
             WHERE id = %s
             LIMIT 1
@@ -940,10 +947,15 @@ def editar_registro(registro_id):
             conn.rollback()
             return jsonify({"success": False, "message": "No se encontró el registro solicitado."}), 404
 
+        cant_anterior = int(registro_actual.get("cantidad") or 0)
+        art_id = registro_actual.get("articulo_id")
+        estado = registro_actual.get("estado")
+
         nuevos_valores = {
             "rut": rut,
             "trabajador": trabajador,
             "area": area,
+            "cantidad": str(cantidad)
         }
         cambios = []
         for campo, valor_nuevo in nuevos_valores.items():
@@ -956,11 +968,42 @@ def editar_registro(registro_id):
             cur.close()
             return jsonify({"success": True, "message": "No había cambios para guardar."})
 
+        # Si cambió la cantidad y el estado no es DEVUELTO (está EN TERRENO o CONSUMIDO)
+        if cant_anterior != cantidad and estado in ("EN TERRENO", "CONSUMIDO"):
+            cur.execute("""
+                SELECT stock_disponible, descripcion 
+                FROM articulos 
+                WHERE id = %s 
+                LIMIT 1 
+                FOR UPDATE
+            """, (art_id,))
+            articulo = cur.fetchone()
+            if not articulo:
+                conn.rollback()
+                cur.close()
+                return jsonify({"success": False, "message": "El artículo asociado no existe."}), 404
+
+            diff = cant_anterior - cantidad
+            nuevo_stock = int(articulo["stock_disponible"] or 0) + diff
+            if nuevo_stock < 0:
+                conn.rollback()
+                cur.close()
+                return jsonify({
+                    "success": False, 
+                    "message": f"Stock insuficiente del artículo '{articulo['descripcion']}' para aumentar la cantidad. Disponible: {articulo['stock_disponible']}."
+                }), 400
+
+            cur.execute("""
+                UPDATE articulos 
+                SET stock_disponible = %s 
+                WHERE id = %s
+            """, (nuevo_stock, art_id))
+
         cur.execute("""
             UPDATE transacciones
-            SET rut = %s, trabajador = %s, area = %s
+            SET rut = %s, trabajador = %s, area = %s, cantidad = %s
             WHERE id = %s
-        """, (rut, trabajador, area, registro_id))
+        """, (rut, trabajador, area, cantidad, registro_id))
 
         for campo, valor_anterior, valor_nuevo in cambios:
             cur.execute("""
@@ -979,6 +1022,7 @@ def editar_registro(registro_id):
                 "rut": rut,
                 "trabajador": trabajador,
                 "area": area,
+                "cantidad": cantidad
             }
         })
     except Exception as e:

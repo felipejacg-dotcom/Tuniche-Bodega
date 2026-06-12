@@ -390,5 +390,49 @@ class FlaskTestCase(unittest.TestCase):
         self.assertEqual(data["registros"][0]["estado"], "DEVUELTO")
         self.assertEqual(data["registros"][1]["estado"], "EN TERRENO")
 
+    @patch('routes.stock_routes.verify_admin_password')
+    @patch('routes.stock_routes.get_connection')
+    def test_editar_registro(self, mock_get_conn, mock_verify_admin):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cur
+        mock_verify_admin.return_value = True
+
+        mock_cur.fetchone.side_effect = [
+            {
+                "id": 1,
+                "rut": "12.345.678-9",
+                "trabajador": "Juan Perez",
+                "area": "BODEGA",
+                "cantidad": 2,
+                "articulo_id": 101,
+                "estado": "EN TERRENO"
+            },
+            {
+                "stock_disponible": 10,
+                "descripcion": "Casco [Única]"
+            }
+        ]
+
+        with self.app.session_transaction() as sess:
+            sess['user'] = 'admin'
+            sess['planta'] = 'TUNICHE'
+
+        response = self.app.patch('/api/registros/1', json={
+            "rut": "98.765.432-1",
+            "trabajador": "Pedro Picapiedra",
+            "area": "PACKING",
+            "cantidad": 5,
+            "admin_password": "correct_pass"
+        })
+
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["registro"]["rut"], "98.765.432-1")
+        self.assertEqual(data["registro"]["cantidad"], 5)
+
 if __name__ == '__main__':
     unittest.main()
+

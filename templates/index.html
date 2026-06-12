@@ -478,7 +478,7 @@
             </button>
         </div>
         <p class="edit-registro-hint">
-            Solo se puede corregir RUT, trabajador y área. Artículo, cantidad, hora y estado no se modifican.
+            Solo se puede corregir RUT, trabajador, área y cantidad. Artículo, hora y estado no se modifican.
         </p>
         <input type="hidden" id="editRegistroId">
         <div class="input-group">
@@ -496,6 +496,10 @@
                 <option value="{{ area }}">{{ area }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label" for="editRegistroCantidad">Cantidad</label>
+            <input type="number" id="editRegistroCantidad" class="app-input" min="1" step="1" autocomplete="off">
         </div>
         <div class="input-group">
             <label class="input-label" for="editRegistroAdminPass">Contraseña administrador</label>
@@ -519,10 +523,10 @@
 
 <script src="{{ url_for('static', filename='js/api.js') }}?v=20260612-editar-registros"></script>
 <script src="{{ url_for('static', filename='js/scanner.js') }}?v=20260604-filtro-fechas"></script>
-<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260612-editar-registros"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}?v=20260612-cantidad"></script>
 <script src="{{ url_for('static', filename='js/operacion.js') }}?v=20260609-limpiar"></script>
 <script src="{{ url_for('static', filename='js/stock.js') }}?v=20260605-con-stock"></script>
-<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260612-editar-registros"></script>
+<script src="{{ url_for('static', filename='js/registros.js') }}?v=20260612-cantidad"></script>
 <script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-filtro-fechas"></script>
 
