@@ -8,7 +8,7 @@ from datetime import timedelta
 
 load_dotenv(override=True)
 
-from config import AREAS
+from config import AREAS, SUBAREAS
 
 app = Flask(__name__)
 
@@ -71,7 +71,7 @@ ensure_cierres_table_exists()
 
 @app.route("/")
 def index():
-    response = make_response(render_template("index.html", areas=AREAS))
+    response = make_response(render_template("index.html", areas=AREAS, subareas=SUBAREAS))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

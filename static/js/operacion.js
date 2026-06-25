@@ -48,6 +48,7 @@ App.clearWorkerData = function() {
     App.els.inputRut.value = "";
     App.els.inputNombre.value = "";
     App.els.inputArea.selectedIndex = 0;
+    if (App.els.inputSubarea) App.els.inputSubarea.selectedIndex = 0;
     App.state.currentWorker = null;
 
     App.ocultarPendientes();
@@ -87,6 +88,14 @@ App.onCredentialScanned = async function(rawText) {
             for (let i = 0; i < sel.options.length; i++) {
                 if (sel.options[i].value === data.area) {
                     sel.selectedIndex = i; break;
+                }
+            }
+            const selSub = App.els.inputSubarea;
+            if (selSub && data.subarea) {
+                for (let i = 0; i < selSub.options.length; i++) {
+                    if (selSub.options[i].value === data.subarea) {
+                        selSub.selectedIndex = i; break;
+                    }
                 }
             }
         }
@@ -230,6 +239,7 @@ App.updateConfirmButton = function() {
     const rut = App.els.inputRut.value.trim();
     const nombre = App.els.inputNombre.value.trim();
     const area = App.els.inputArea.value;
+    const subarea = App.els.inputSubarea ? App.els.inputSubarea.value : "";
 
     let canConfirm = false;
     if (App.state.mode === "SALIDA") {
@@ -237,7 +247,7 @@ App.updateConfirmButton = function() {
             a.categoria !== "CONSUMO_LIQUIDO" && (a.tipo_control || "RETORNABLE") !== "CONSUMIBLE"
         );
         const workerOk = hasEpp ? (rut && nombre) : true;
-        canConfirm = workerOk && area && App.state.scannedArticulos.length > 0;
+        canConfirm = workerOk && area && subarea && App.state.scannedArticulos.length > 0;
         const n = App.state.scannedArticulos.length;
         App.els.btnConfirm.querySelector("span").textContent = n > 1
             ? `CONFIRMAR SALIDA (${n} ITEMS)`
@@ -343,6 +353,7 @@ App.confirmOperation = async function() {
     const rut = App.els.inputRut.value.trim();
     const nombre = App.els.inputNombre.value.trim();
     const area = App.els.inputArea.value;
+    const subarea = App.els.inputSubarea ? App.els.inputSubarea.value : "";
 
     if (App.state.mode === "SALIDA") {
         if (App.state.scannedArticulos.length === 0) {
@@ -360,6 +371,9 @@ App.confirmOperation = async function() {
         if (!area) {
             App.toast("Selecciona el área.", "warning"); return;
         }
+        if (!subarea) {
+            App.toast("Selecciona la subárea.", "warning"); return;
+        }
 
         App.showLoading();
         try {
@@ -367,7 +381,7 @@ App.confirmOperation = async function() {
                 id: a.id,
                 cantidad: a.cantidad || 1
             }));
-            const data = await API.registrarMasivo(rut, nombre, area, articulosPayload);
+            const data = await API.registrarMasivo(rut, nombre, area, subarea, articulosPayload);
             App.hideLoading();
 
             if (data.success) {
@@ -392,6 +406,7 @@ App.confirmOperation = async function() {
                     rut: rut || "CONSUMO",
                     nombre: nombre || "Consumo interno",
                     area,
+                    subarea,
                     hora: data.hora || "",
                 });
                 App.renderHistorial();
@@ -492,13 +507,14 @@ App.cargarPendientes = async function(rut) {
                      data-articulo-id="${p.articulo_id}"
                      data-transaccion-id="${p.transaccion_id}"
                      data-trabajador="${App.escHtml(p.trabajador || "")}"
-                     data-area="${App.escHtml(p.area || "")}">
+                     data-area="${App.escHtml(p.area || "")}"
+                     data-subarea="${App.escHtml(p.subarea || "")}">
                     <div class="pending-return-info">
                         <div class="pending-return-title">${App.escHtml(p.descripcion)}</div>
                         <div class="pending-return-date">Retirado el ${App.escHtml(p.hora_salida)}</div>
                     </div>
                     <button type="button" class="btn-quick-return"
-                            onclick="App.devolverRapido(${p.articulo_id})">
+                             onclick="App.devolverRapido(${p.articulo_id})">
                         Devolver
                     </button>
                 </div>
@@ -523,6 +539,7 @@ App.devolverRapido = async function(articuloId) {
     const rut = App.els.inputRut.value.trim();
     const nombre = App.els.inputNombre.value.trim() || pendingItem?.dataset.trabajador || "Trabajador";
     const area = App.els.inputArea.value || pendingItem?.dataset.area || "BODEGA";
+    const subarea = App.els.inputSubarea ? App.els.inputSubarea.value : (pendingItem?.dataset.subarea || "");
 
     if (!rut) {
         App.toast("Ingresa o escanea el RUT del trabajador.", "warning");
@@ -531,7 +548,7 @@ App.devolverRapido = async function(articuloId) {
 
     App.showLoading();
     try {
-        const data = await API.registrar("DEVOLUCION", rut, nombre, area, articuloId);
+        const data = await API.registrar("DEVOLUCION", rut, nombre, area, subarea, articuloId);
         App.hideLoading();
         if (data.success) {
             App.vibrate([100, 50, 100]);
@@ -544,6 +561,7 @@ App.devolverRapido = async function(articuloId) {
                 msg: data.message,
                 rut,
                 area,
+                subarea,
                 hora: data.hora || "",
             });
             App.renderHistorial();
@@ -583,9 +601,10 @@ App.renderHistorial = function() {
             ? `Salida (${h.items.length} artículo${h.items.length > 1 ? "s" : ""})`
             : App.escHtml(h.msg);
 
+        const subareaPart = h.subarea ? ` · ${App.escHtml(h.subarea)}` : "";
         const workerLine = h.nombre
-            ? `<div class="hist-meta">${App.escHtml(h.nombre)} · ${App.escHtml(h.rut)} · ${App.escHtml(h.area)}</div>`
-            : `<div class="hist-meta">${App.escHtml(h.rut)} · ${App.escHtml(h.area)}</div>`;
+            ? `<div class="hist-meta">${App.escHtml(h.nombre)} · ${App.escHtml(h.rut)} · ${App.escHtml(h.area)}${subareaPart}</div>`
+            : `<div class="hist-meta">${App.escHtml(h.rut)} · ${App.escHtml(h.area)}${subareaPart}</div>`;
 
         return `
             <div class="hist-item ${h.tipo}">
@@ -596,7 +615,6 @@ App.renderHistorial = function() {
                     ${workerLine}
                 </div>
                 <div class="hist-time">${App.escHtml(h.hora)}</div>
-            </div>
         `;
     }).join("");
 };

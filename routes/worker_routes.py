@@ -21,7 +21,7 @@ def buscar_trabajador():
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
         cur.execute(
-            "SELECT trabajador, area FROM transacciones "
+            "SELECT trabajador, area, subarea FROM transacciones "
             "WHERE rut = %s ORDER BY id DESC LIMIT 1",
             (rut,),
         )
@@ -33,6 +33,7 @@ def buscar_trabajador():
                 "success": True,
                 "nombre": row["trabajador"],
                 "area": row["area"],
+                "subarea": row.get("subarea") or "",
             })
         return jsonify({"success": False, "message": "Trabajador no encontrado en historial."})
 
@@ -58,7 +59,7 @@ def get_pendientes():
         conn = get_connection(planta)
         cur = conn.cursor(dictionary=True)
         cur.execute(
-            "SELECT t.id AS transaccion_id, t.articulo_id, t.trabajador, t.area, "
+            "SELECT t.id AS transaccion_id, t.articulo_id, t.trabajador, t.area, t.subarea, "
             "CONCAT(a.descripcion, ' [', a.talla, ']') AS descripcion, "
             "t.hora_salida "
             "FROM transacciones t "

@@ -23,6 +23,7 @@ def registrar():
     rut = data.get("rut", "").strip()
     trabajador = data.get("trabajador", "").strip()
     area = data.get("area", "").strip()
+    subarea = data.get("subarea", "").strip()
     art_id_raw = data.get("articulo_id")
     cantidad_raw = data.get("cantidad")
 
@@ -86,8 +87,8 @@ def registrar():
                 rut = rut or 'CONSUMO'
                 trabajador = trabajador or 'Consumo interno'
 
-            if not area:
-                return jsonify({"success": False, "message": "El area es obligatoria."}), 400
+            if not area or not subarea:
+                return jsonify({"success": False, "message": "El area y la subarea son obligatorias."}), 400
 
             if stock <= 0:
                 return jsonify({
@@ -105,9 +106,9 @@ def registrar():
 
             cur.execute(
                 "INSERT INTO transacciones "
-                "(articulo_id, rut, trabajador, area, entregado_por, cantidad, estado, hora_salida) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (art_id, rut, trabajador, area, operador, cantidad, estado_salida, ahora),
+                "(articulo_id, rut, trabajador, area, subarea, entregado_por, cantidad, estado, hora_salida) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (art_id, rut, trabajador, area, subarea, operador, cantidad, estado_salida, ahora),
             )
             cur.execute(
                 "UPDATE articulos SET stock_disponible = stock_disponible - %s WHERE id = %s",
@@ -117,8 +118,8 @@ def registrar():
             msg = f"Entregado: {descripcion}"
 
         else:  # DEVOLUCION
-            if not rut or not trabajador or not area:
-                return jsonify({"success": False, "message": "Faltan campos obligatorios para devolucion."}), 400
+            if not rut or not trabajador or not area or not subarea:
+                return jsonify({"success": False, "message": "Faltan campos obligatorios para devolucion (incluyendo subarea)."}), 400
 
             if tipo_control == 'CONSUMIBLE':
                 return jsonify({
@@ -187,6 +188,7 @@ def registrar_masivo():
     rut = data.get("rut", "").strip()
     trabajador = data.get("trabajador", "").strip()
     area = data.get("area", "").strip()
+    subarea = data.get("subarea", "").strip()
     articulos_data = data.get("articulos")
     articulo_ids_raw = data.get("articulo_ids")
 
@@ -275,19 +277,19 @@ def registrar_masivo():
             rut = rut or 'CONSUMO'
             trabajador = trabajador or 'Consumo interno'
 
-        if not area:
+        if not area or not subarea:
             conn.rollback()
             cur.close()
-            return jsonify({"success": False, "message": "El area es obligatoria."}), 400
+            return jsonify({"success": False, "message": "El area y la subarea son obligatorias."}), 400
 
         entregados = []
         for p in processed_items:
             estado_salida = 'CONSUMIDO' if p["tipo_control"] == 'CONSUMIBLE' else 'EN TERRENO'
             cur.execute(
                 "INSERT INTO transacciones "
-                "(articulo_id, rut, trabajador, area, entregado_por, cantidad, estado, hora_salida) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (p["id"], rut, trabajador, area, operador, p["cantidad"], estado_salida, ahora),
+                "(articulo_id, rut, trabajador, area, subarea, entregado_por, cantidad, estado, hora_salida) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (p["id"], rut, trabajador, area, subarea, operador, p["cantidad"], estado_salida, ahora),
             )
             cur.execute(
                 "UPDATE articulos SET stock_disponible = stock_disponible - %s WHERE id = %s",

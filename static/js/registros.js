@@ -79,7 +79,7 @@ App.renderRegistros = function() {
             <div class="reg-meta">
                 <span>Salida: ${App.escHtml(r.hora_salida)}</span>
                 ${r.hora_entrada !== "---" ? `<span>Entrada: ${App.escHtml(r.hora_entrada)}</span>` : ""}
-                <span>${App.escHtml(r.area)}</span>
+                <span>${App.escHtml(r.area)}${r.subarea ? ' · ' + App.escHtml(r.subarea) : ''}</span>
             </div>
         </div>`;
     }).join("");
@@ -89,6 +89,20 @@ App._setEditAreaValue = function(area) {
     const select = App.els.editRegistroArea || App.$("editRegistroArea");
     if (!select) return;
     const value = String(area || "");
+    const exists = Array.from(select.options).some(opt => opt.value === value);
+    if (value && !exists) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+    }
+    select.value = value;
+};
+
+App._setEditSubareaValue = function(subarea) {
+    const select = App.els.editRegistroSubarea || App.$("editRegistroSubarea");
+    if (!select) return;
+    const value = String(subarea || "");
     const exists = Array.from(select.options).some(opt => opt.value === value);
     if (value && !exists) {
         const opt = document.createElement("option");
@@ -113,6 +127,7 @@ App.openEditarRegistro = function(id) {
     App.els.editRegistroRut.value = registro.rut || "";
     App.els.editRegistroTrabajador.value = registro.trabajador || "";
     App._setEditAreaValue(registro.area || "");
+    App._setEditSubareaValue(registro.subarea || "");
     if (App.els.editRegistroCantidad) {
         App.els.editRegistroCantidad.value = registro.cantidad || 1;
     }
@@ -131,6 +146,7 @@ App.submitEditarRegistro = async function() {
     const rut = App.els.editRegistroRut ? App.els.editRegistroRut.value.trim() : "";
     const trabajador = App.els.editRegistroTrabajador ? App.els.editRegistroTrabajador.value.trim() : "";
     const area = App.els.editRegistroArea ? App.els.editRegistroArea.value.trim() : "";
+    const subarea = App.els.editRegistroSubarea ? App.els.editRegistroSubarea.value.trim() : "";
     const cantidad = App.els.editRegistroCantidad ? parseInt(App.els.editRegistroCantidad.value) : 1;
     const adminPassword = App.els.editRegistroAdminPass ? App.els.editRegistroAdminPass.value : "";
 
@@ -138,6 +154,7 @@ App.submitEditarRegistro = async function() {
     if (!rut) return App.toast("El RUT no puede quedar vacío.", "warning");
     if (!trabajador) return App.toast("El trabajador no puede quedar vacío.", "warning");
     if (!area) return App.toast("El área no puede quedar vacía.", "warning");
+    if (!subarea) return App.toast("La subárea no puede quedar vacía.", "warning");
     if (isNaN(cantidad) || cantidad <= 0) return App.toast("La cantidad debe ser mayor a cero.", "warning");
     if (!adminPassword) return App.toast("Debe ingresar la contraseña de administrador.", "warning");
 
@@ -152,6 +169,7 @@ App.submitEditarRegistro = async function() {
             rut,
             trabajador,
             area,
+            subarea,
             cantidad,
             admin_password: adminPassword,
         });

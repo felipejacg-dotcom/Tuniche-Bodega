@@ -165,13 +165,15 @@ def _group_pendientes(items):
         rut = item.get("rut") or ""
         trabajador = item.get("trabajador") or "Desconocido"
         area = item.get("area") or "Sin área"
+        subarea = item.get("subarea") or "Sin subárea"
 
-        key = (rut, trabajador, area)
+        key = (rut, trabajador, area, subarea)
         if key not in grouped:
             grouped[key] = {
                 "rut": rut,
                 "trabajador": trabajador,
                 "area": area,
+                "subarea": subarea,
                 "articulos": []
             }
 
@@ -191,13 +193,15 @@ def _group_devoluciones(items):
         rut = item.get("rut") or ""
         trabajador = item.get("trabajador") or "Desconocido"
         area = item.get("area") or "Sin área"
+        subarea = item.get("subarea") or "Sin subárea"
 
-        key = (rut, trabajador, area)
+        key = (rut, trabajador, area, subarea)
         if key not in grouped:
             grouped[key] = {
                 "rut": rut,
                 "trabajador": trabajador,
                 "area": area,
+                "subarea": subarea,
                 "articulos": []
             }
 
@@ -230,7 +234,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
         # 1. Eventos del turno. Una transaccion devuelta puede sumar como salida
         # y como devolucion si ambos eventos caen dentro del rango manual.
         cur.execute("""
-            SELECT t.id, t.rut, t.trabajador, t.area,
+            SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida AS hora_evento,
                    'SALIDA' AS evento
@@ -243,7 +247,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
         salidas_eventos = cur.fetchall()
 
         cur.execute("""
-            SELECT t.id, t.rut, t.trabajador, t.area,
+            SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_entrada AS hora_evento,
                    'DEVOLUCION' AS evento
@@ -265,11 +269,11 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
 
         # 2. Pendientes del turno: entregadas en este rango que siguen EN TERRENO
         cur.execute("""
-            SELECT t.rut, t.trabajador, t.area,
+            SELECT t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida
             FROM (
-                SELECT rut, trabajador, area, articulo_id, hora_salida
+                SELECT rut, trabajador, area, subarea, articulo_id, hora_salida
                 FROM transacciones
                 WHERE estado = 'EN TERRENO'
                   AND hora_salida >= %s AND hora_salida <= %s
@@ -568,7 +572,7 @@ def _build_cierre_turno_pdf(data):
     row_idx = 1
     for w in pendientes_list:
         pendientes_rows.append([
-            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])})", styles["TableCell"]),
+            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])} &middot; {_safe_pdf_text(w['subarea'])})", styles["TableCell"]),
             "",
             ""
         ])
@@ -604,7 +608,7 @@ def _build_cierre_turno_pdf(data):
     row_idx = 1
     for w in devoluciones_list:
         devoluciones_rows.append([
-            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])})", styles["TableCell"]),
+            Paragraph(f"<b>{_safe_pdf_text(w['trabajador'])}</b> ({_safe_pdf_text(w['rut'])} &middot; {_safe_pdf_text(w['area'])} &middot; {_safe_pdf_text(w['subarea'])})", styles["TableCell"]),
             "",
             ""
         ])
@@ -834,7 +838,7 @@ def get_registros():
 
         # 2. Page records
         query = f"""
-            SELECT t.id, t.rut, t.trabajador, t.area,
+            SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida, t.hora_entrada, t.estado, IFNULL(t.cantidad, 1) AS cantidad
             FROM transacciones t
@@ -914,6 +918,7 @@ def editar_registro(registro_id):
     rut = _clean_edit_value(payload.get("rut"))
     trabajador = _clean_edit_value(payload.get("trabajador"))
     area = _clean_edit_value(payload.get("area"))
+    subarea = _clean_edit_value(payload.get("subarea"))
     
     try:
         cantidad = int(payload.get("cantidad"))
@@ -928,6 +933,8 @@ def editar_registro(registro_id):
         return jsonify({"success": False, "message": "El trabajador no puede quedar vacío."}), 400
     if not area:
         return jsonify({"success": False, "message": "El área no puede quedar vacía."}), 400
+    if not subarea:
+        return jsonify({"success": False, "message": "La subárea no puede quedar vacía."}), 400
 
     conn = None
     try:
@@ -936,7 +943,7 @@ def editar_registro(registro_id):
         _ensure_registro_ediciones_table(cur)
 
         cur.execute("""
-            SELECT id, rut, trabajador, area, cantidad, articulo_id, estado
+            SELECT id, rut, trabajador, area, subarea, cantidad, articulo_id, estado
             FROM transacciones
             WHERE id = %s
             LIMIT 1
@@ -955,6 +962,7 @@ def editar_registro(registro_id):
             "rut": rut,
             "trabajador": trabajador,
             "area": area,
+            "subarea": subarea,
             "cantidad": str(cantidad)
         }
         cambios = []
@@ -1001,9 +1009,9 @@ def editar_registro(registro_id):
 
         cur.execute("""
             UPDATE transacciones
-            SET rut = %s, trabajador = %s, area = %s, cantidad = %s
+            SET rut = %s, trabajador = %s, area = %s, subarea = %s, cantidad = %s
             WHERE id = %s
-        """, (rut, trabajador, area, cantidad, registro_id))
+        """, (rut, trabajador, area, subarea, cantidad, registro_id))
 
         for campo, valor_anterior, valor_nuevo in cambios:
             cur.execute("""
@@ -1022,6 +1030,7 @@ def editar_registro(registro_id):
                 "rut": rut,
                 "trabajador": trabajador,
                 "area": area,
+                "subarea": subarea,
                 "cantidad": cantidad
             }
         })

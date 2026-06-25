@@ -129,16 +129,16 @@ const API = (() => {
             };
         },
 
-        registrar: (accion, rut, trabajador, area, articulo_id, cantidad = 1) =>
+        registrar: (accion, rut, trabajador, area, subarea, articulo_id, cantidad = 1) =>
             _req("/api/registrar", {
                 method: "POST",
-                body: { accion, rut, trabajador, area, articulo_id, cantidad },
+                body: { accion, rut, trabajador, area, subarea, articulo_id, cantidad },
             }),
 
-        registrarMasivo: (rut, trabajador, area, articulos) =>
+        registrarMasivo: (rut, trabajador, area, subarea, articulos) =>
             _req("/api/registrar_masivo", {
                 method: "POST",
-                body: { rut, trabajador, area, articulos },
+                body: { rut, trabajador, area, subarea, articulos },
             }),
 
         getPendientes: (rut) =>

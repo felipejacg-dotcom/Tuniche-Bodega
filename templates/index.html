@@ -132,11 +132,20 @@
                                autocomplete="off">
                     </div>
                     <div class="input-group" style="margin-bottom:0">
-                        <label class="input-label" for="inputArea">Área / Departamento</label>
+                        <label class="input-label" for="inputArea">Área</label>
                         <select id="inputArea" class="app-input">
                             <option value="" disabled selected>Seleccione área...</option>
                             {% for area in areas %}
                             <option value="{{ area }}">{{ area }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-bottom:0">
+                        <label class="input-label" for="inputSubarea">Subárea</label>
+                        <select id="inputSubarea" class="app-input">
+                            <option value="" disabled selected>Seleccione subárea...</option>
+                            {% for subarea in subareas %}
+                            <option value="{{ subarea }}">{{ subarea }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -494,6 +503,14 @@
             <select id="editRegistroArea" class="app-input">
                 {% for area in areas %}
                 <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label" for="editRegistroSubarea">Subárea</label>
+            <select id="editRegistroSubarea" class="app-input">
+                {% for subarea in subareas %}
+                <option value="{{ subarea }}">{{ subarea }}</option>
                 {% endfor %}
             </select>
         </div>
