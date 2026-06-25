@@ -615,6 +615,7 @@ App.renderHistorial = function() {
                     ${workerLine}
                 </div>
                 <div class="hist-time">${App.escHtml(h.hora)}</div>
+            </div>
         `;
     }).join("");
 };
