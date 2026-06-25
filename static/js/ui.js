@@ -206,7 +206,20 @@ App.showView = function(name) {
         App.stopArticleScanner("view_change", { focusLaser: false });
     }
 
-    if (name === "stock") App.renderStockList();
+    if (name === "operacion") {
+        App.loadArticulos().then(() => {
+            if (App.state.scanMethod === "manual" && typeof App.onManualSearch === "function") {
+                App.onManualSearch();
+            }
+        });
+    }
+    if (name === "stock") {
+        App.showLoading();
+        App.loadArticulos().then(() => {
+            App.hideLoading();
+            App.renderStockList();
+        });
+    }
     if (name === "registros") App.loadRegistros();
     if (name === "cierre") App.initCierreView();
 };
