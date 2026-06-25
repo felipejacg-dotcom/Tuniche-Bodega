@@ -193,6 +193,12 @@ App.init = function() {
         if (typeof App.onWorkerFieldChange === "function") App.onWorkerFieldChange();
         App.updateConfirmButton();
     });
+    if (App.els.inputSubarea) {
+        App.els.inputSubarea.addEventListener("change", () => {
+            if (typeof App.onWorkerFieldChange === "function") App.onWorkerFieldChange();
+            App.updateConfirmButton();
+        });
+    }
 
     // Stock search with 300ms debounce
     if (App.els.stockSearch) {
