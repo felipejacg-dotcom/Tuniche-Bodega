@@ -417,6 +417,9 @@ App.confirmOperation = async function() {
                 App.stopArticleScanner("confirm_success", { focusLaser: true });
                 App.renderMultiScanList();
                 App.clearArticulo();
+                if (App.state.scanMethod === "manual" && typeof App.onManualSearch === "function") {
+                    App.onManualSearch();
+                }
             } else {
                 App.vibrate([300]);
                 App.toast(data.message || "Error al registrar entrega.", "error", 4000);
