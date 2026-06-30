@@ -237,7 +237,8 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida AS hora_evento,
-                   'SALIDA' AS evento, IFNULL(t.cantidad, 1) AS cantidad
+                   'SALIDA' AS evento, IFNULL(t.cantidad, 1) AS cantidad,
+                   a.codigo_material, a.id AS articulo_id
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE t.hora_salida >= %s AND t.hora_salida <= %s
@@ -250,7 +251,8 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_entrada AS hora_evento,
-                   'DEVOLUCION' AS evento, IFNULL(t.cantidad, 1) AS cantidad
+                   'DEVOLUCION' AS evento, IFNULL(t.cantidad, 1) AS cantidad,
+                   a.codigo_material, a.id AS articulo_id
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE t.estado = 'DEVUELTO'
@@ -259,6 +261,18 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             LIMIT 500
         """, (start_time, end_time))
         devoluciones_eventos = cur.fetchall()
+
+        # Prepende código a la descripción de artículo para eventos
+        for row in salidas_eventos:
+            codigo = row.get("codigo_material") or str(row.get("articulo_id") or "")
+            if codigo:
+                row["articulo"] = f"[{codigo}] {row['articulo']}"
+
+        for row in devoluciones_eventos:
+            codigo = row.get("codigo_material") or str(row.get("articulo_id") or "")
+            if codigo:
+                row["articulo"] = f"[{codigo}] {row['articulo']}"
+
         eventos = salidas_eventos + devoluciones_eventos
         eventos.sort(key=lambda row: row.get("hora_evento") or datetime.min, reverse=True)
         for row in eventos:
@@ -271,7 +285,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
         cur.execute("""
             SELECT t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
-                   t.hora_salida
+                   t.hora_salida, a.codigo_material, a.id AS articulo_id
             FROM (
                 SELECT rut, trabajador, area, subarea, articulo_id, hora_salida
                 FROM transacciones
@@ -284,6 +298,11 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             ORDER BY t.hora_salida DESC
         """, (start_time, end_time))
         raw_pendientes = cur.fetchall()
+
+        for row in raw_pendientes:
+            codigo = row.get("codigo_material") or str(row.get("articulo_id") or "")
+            if codigo:
+                row["articulo"] = f"[{codigo}] {row['articulo']}"
 
         cur.close()
     finally:
