@@ -168,6 +168,7 @@ class FlaskTestCase(unittest.TestCase):
                     "rut": "12.345.678-9",
                     "trabajador": "Juan Perez",
                     "area": "BODEGA",
+                    "subarea": "BAÑOS PLANTA",
                     "articulo": "Casco [Única]",
                     "hora_evento": "2026-05-28 14:30:00",
                     "evento": "DEVOLUCION"
@@ -252,6 +253,7 @@ class FlaskTestCase(unittest.TestCase):
             "rut": "12.345.678-9",
             "trabajador": "Juan Perez",
             "area": "BODEGA",
+            "subarea": "BAÑOS PLANTA",
             "articulo_ids": [101, 102]
         })
         data = json.loads(response.data)
@@ -281,6 +283,7 @@ class FlaskTestCase(unittest.TestCase):
             "rut": "",
             "trabajador": "",
             "area": "BODEGA",
+            "subarea": "BAÑOS PLANTA",
             "articulos": [{"id": 90001, "cantidad": 5}]
         })
         data = json.loads(response.data)
@@ -308,6 +311,7 @@ class FlaskTestCase(unittest.TestCase):
             "rut": "",
             "trabajador": "",
             "area": "BODEGA",
+            "subarea": "BAÑOS PLANTA",
             "articulos": [{"id": 101, "cantidad": 1}]
         })
         data = json.loads(response.data)
@@ -328,6 +332,7 @@ class FlaskTestCase(unittest.TestCase):
                 "articulo_id": 101,
                 "trabajador": "Juan Perez",
                 "area": "BODEGA",
+                "subarea": "BAÑOS PLANTA",
                 "descripcion": "Casco [Única]",
                 "hora_salida": "2026-05-28 09:30:00"
             }
@@ -361,6 +366,7 @@ class FlaskTestCase(unittest.TestCase):
                 "rut": "12.345.678-9",
                 "trabajador": "Juan Perez",
                 "area": "BODEGA",
+                "subarea": "BAÑOS PLANTA",
                 "articulo": "Casco [L]",
                 "hora_salida": "2026-05-28 10:00:00",
                 "hora_entrada": "2026-05-29 15:30:00",
@@ -371,6 +377,7 @@ class FlaskTestCase(unittest.TestCase):
                 "rut": "98.765.432-1",
                 "trabajador": "Maria Lopez",
                 "area": "PACKING",
+                "subarea": "BAÑOS PLANTA",
                 "articulo": "Guantes [M]",
                 "hora_salida": "2026-05-29 11:00:00",
                 "hora_entrada": None,
@@ -405,6 +412,7 @@ class FlaskTestCase(unittest.TestCase):
                 "rut": "12.345.678-9",
                 "trabajador": "Juan Perez",
                 "area": "BODEGA",
+                "subarea": "BAÑOS PLANTA",
                 "cantidad": 2,
                 "articulo_id": 101,
                 "estado": "EN TERRENO"
@@ -423,6 +431,7 @@ class FlaskTestCase(unittest.TestCase):
             "rut": "98.765.432-1",
             "trabajador": "Pedro Picapiedra",
             "area": "PACKING",
+            "subarea": "BAÑOS PLANTA",
             "cantidad": 5,
             "admin_password": "correct_pass"
         })

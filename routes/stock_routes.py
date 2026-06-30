@@ -237,7 +237,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_salida AS hora_evento,
-                   'SALIDA' AS evento
+                   'SALIDA' AS evento, IFNULL(t.cantidad, 1) AS cantidad
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE t.hora_salida >= %s AND t.hora_salida <= %s
@@ -250,7 +250,7 @@ def _build_cierre_turno_data(planta, tipo_turno, desde_str, hasta_str, responsab
             SELECT t.id, t.rut, t.trabajador, t.area, t.subarea,
                    CONCAT(a.descripcion, ' [', a.talla, ']') AS articulo,
                    t.hora_entrada AS hora_evento,
-                   'DEVOLUCION' AS evento
+                   'DEVOLUCION' AS evento, IFNULL(t.cantidad, 1) AS cantidad
             FROM transacciones t
             JOIN articulos a ON t.articulo_id = a.id
             WHERE t.estado = 'DEVUELTO'
@@ -564,6 +564,30 @@ def _build_cierre_turno_pdf(data):
         table.setStyle(TableStyle(base_styles))
         story.append(table)
         story.append(Spacer(1, 3 * mm))
+
+    # MOVIMIENTOS DEL TURNO
+    movimientos_list = data.get("eventos") or []
+    movimientos_rows = []
+    for m in movimientos_list:
+        hora_str = m.get("hora_evento") or ""
+        tipo_str = "Entrega" if m.get("evento") == "SALIDA" else "Devolución"
+        articulo_str = m.get("articulo") or ""
+        cantidad_str = str(m.get("cantidad") or 1)
+        movimientos_rows.append([
+            Paragraph(_safe_pdf_text(hora_str), styles["TableCell"]),
+            Paragraph(_safe_pdf_text(tipo_str), styles["TableCell"]),
+            Paragraph(f"<b>{_safe_pdf_text(m.get('trabajador'))}</b> ({_safe_pdf_text(m.get('rut'))} &middot; {_safe_pdf_text(m.get('area'))} &middot; {_safe_pdf_text(m.get('subarea'))})", styles["TableCell"]),
+            Paragraph(_safe_pdf_text(articulo_str), styles["TableCell"]),
+            Paragraph(_safe_pdf_text(cantidad_str), styles["TableCell"]),
+        ])
+
+    section_table(
+        "Movimientos del Turno (Historial Completo)",
+        ["Hora", "Tipo", "Trabajador / Área / Subárea", "Artículo", "Cant."],
+        movimientos_rows,
+        "Sin movimientos en este turno.",
+        [16 * mm, 18 * mm, 68 * mm, 65 * mm, 15 * mm],
+    )
 
     # PENDIENTES DEL TURNO
     pendientes_list = data.get("pendientes") or []

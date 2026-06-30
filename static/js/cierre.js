@@ -215,6 +215,35 @@ App.renderCierreTurno = function(data) {
         }).join("");
     }
 
+    function buildMovimientosHtml(list) {
+        if (!list.length) {
+            return `<div class="cierre-empty">Sin movimientos en este turno.</div>`;
+        }
+        return list.map(m => {
+            const isSalida = m.evento === "SALIDA";
+            const badge = isSalida 
+                ? `<span class="reg-badge badge-terreno" style="font-size: 0.65rem; padding: 2px 6px; background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;">Entrega</span>` 
+                : `<span class="reg-badge badge-devuelto" style="font-size: 0.65rem; padding: 2px 6px; background-color: #dcfce7; color: #166534; border: 1px solid #86efac;">Devolución</span>`;
+            const cantStr = m.cantidad > 1 ? ` x ${m.cantidad}` : "";
+            
+            return `
+                <div class="cierre-worker-card" style="border-left: 3px solid ${isSalida ? '#ef4444' : '#22c55e'};">
+                    <div class="cierre-worker-info">
+                        <strong>${App.escHtml(m.trabajador)}</strong>
+                        <span>${App.escHtml(m.rut)} · ${App.escHtml(m.area || "Sin área")} · ${App.escHtml(m.subarea || "Sin subárea")}</span>
+                    </div>
+                    <div class="cierre-worker-items">
+                        <div class="cierre-sub-item">
+                            <div class="cierre-sub-item-name">${App.escHtml(m.articulo)}${cantStr}</div>
+                            <div class="cierre-sub-item-time">${App.escHtml(m.hora_evento)} ${badge}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    const movimientosHtml = buildMovimientosHtml(data.eventos || []);
     const pendientesHtml = buildPendientesHtml(pendientes);
     const devolucionesHtml = buildDevolucionesHtml(devoluciones);
 
@@ -249,8 +278,18 @@ App.renderCierreTurno = function(data) {
             </div>
         </div>
 
-        <!-- SECCIÓN 2: PENDIENTES DEL TURNO -->
-        <div class="card">
+        <!-- SECCIÓN 2: MOVIMIENTOS DEL TURNO -->
+        <div class="card" style="margin-top:15px;">
+            <div class="card-header" style="background:#f3f4f6; border-bottom-color:#d1d5db;">
+                <span class="card-title" style="color:var(--text); font-weight:800;">Movimientos del Turno (Historial)</span>
+            </div>
+            <div class="card-body cierre-list">
+                ${movimientosHtml}
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: PENDIENTES DEL TURNO -->
+        <div class="card" style="margin-top:15px;">
             <div class="card-header" style="background:#fffbeb; border-bottom-color:#fcd34d;">
                 <span class="card-title" style="color:var(--warning); font-weight:800;">Pendientes del Turno</span>
             </div>
