@@ -35,6 +35,13 @@
             </select>
         </div>
         <div class="form-group">
+            <label for="loginModulo">Módulo</label>
+            <select id="loginModulo" class="form-ctrl">
+                <option value="PANOL">Material menor / Pañol</option>
+                <option value="EMBALAJE">Materiales de embalaje</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label for="loginUser">Usuario</label>
             <input type="text" id="loginUser" class="form-ctrl" placeholder="Ej: bodega"
                    autocorrect="off" autocapitalize="none" autocomplete="username">
@@ -410,10 +417,156 @@
             </div>
         </section>
 
+        <!-- ====================================================
+             VIEW: EMBALAJE
+             ==================================================== -->
+        <section id="viewEmbalaje" class="view" aria-label="Embalaje">
+            <div class="card embalaje-hero">
+                <div class="card-header">
+                    <div class="card-step">E</div>
+                    <span class="card-title">Materiales de Embalaje</span>
+                </div>
+                <div class="card-body">
+                    <p class="embalaje-helper">
+                        Registra armados, controla existencias por QR y mueve pallets entre packing, altillo y bodega.
+                    </p>
+                    <div class="embalaje-actions">
+                        <button class="btn-primary" id="embalajeRefreshBtn" type="button">Actualizar</button>
+                        <button class="btn-refresh" id="embalajeScanBtn" type="button">Escanear QR</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">1</div>
+                    <span class="card-title">Buscar / Escanear</span>
+                </div>
+                <div class="card-body">
+                    <div class="search-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                        </svg>
+                        <input type="search" id="embalajeSearch" class="search-ctrl" placeholder="Buscar por código, lote, pallet o QR...">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="embalajeQr">QR / Código</label>
+                        <input type="text" id="embalajeQr" class="app-input" placeholder="Escanea o pega el QR del pallet" autocomplete="off">
+                    </div>
+
+                    <div id="embalajeScannerWrap" class="embalaje-scanner-wrap" style="display:none;">
+                        <div id="readerEmbalaje"></div>
+                        <p class="modal-hint">Apunta la cámara al QR de la etiqueta del pallet armado.</p>
+                    </div>
+
+                    <div class="embalaje-filters">
+                        <div class="input-group">
+                            <label class="input-label" for="embalajeUbicacion">Ubicación actual</label>
+                            <select id="embalajeUbicacion" class="app-input">
+                                <option value="Todas">Todas</option>
+                                <option value="PACKING GRANEROS">PACKING GRANEROS</option>
+                                <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
+                                <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
+                                <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
+                                <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
+                                <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="embalajeEstado">Estado</label>
+                            <select id="embalajeEstado" class="app-input">
+                                <option value="Todos">Todos</option>
+                                <option value="ARMADO">ARMADO</option>
+                                <option value="EN PACKING">EN PACKING</option>
+                                <option value="EN ALTILLO">EN ALTILLO</option>
+                                <option value="EN BODEGA">EN BODEGA</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label class="input-label" for="embalajeDestino">Destino traslado</label>
+                        <select id="embalajeDestino" class="app-input">
+                            <option value="">Seleccione destino...</option>
+                            <option value="PACKING GRANEROS">PACKING GRANEROS</option>
+                            <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
+                            <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
+                            <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
+                            <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
+                            <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="embalajeObservacion">Observación</label>
+                        <input type="text" id="embalajeObservacion" class="app-input" placeholder="Opcional: motivo, conteo o detalle" autocomplete="off">
+                    </div>
+
+                    <div class="embalaje-actions">
+                        <button class="btn-primary" id="embalajeConsultarBtn" type="button">Consultar</button>
+                        <button class="btn-refresh" id="embalajeTrasladarBtn" type="button">Registrar traslado</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="embalajeCurrentCard">
+                <div class="card-header">
+                    <div class="card-step">2</div>
+                    <span class="card-title">Pallet seleccionado</span>
+                </div>
+                <div class="card-body" id="embalajeCurrent">
+                    <div class="empty-state" style="padding: 22px 10px;">
+                        <p>Escanea un QR o consulta un pallet para ver su detalle.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">3</div>
+                    <span class="card-title">Resumen</span>
+                </div>
+                <div class="card-body" id="embalajeSummary">
+                    <div class="empty-state" style="padding: 22px 10px;">
+                        <p>Cargando resumen...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">4</div>
+                    <span class="card-title">Existencias</span>
+                </div>
+                <div class="card-body">
+                    <div id="embalajeExistencias">
+                        <div class="empty-state" style="padding: 22px 10px;">
+                            <p>Cargando existencias...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-step">5</div>
+                    <span class="card-title">Movimientos recientes</span>
+                </div>
+                <div class="card-body">
+                    <div id="embalajeMovimientos">
+                        <div class="empty-state" style="padding: 22px 10px;">
+                            <p>Cargando movimientos...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- BOTTOM NAV -->
-    <nav class="bottom-nav" aria-label="Navegacion principal">
+    <nav class="bottom-nav" id="mainNav" aria-label="Navegacion principal">
         <button class="nav-item active" id="navOperacion" data-view="operacion"
                 onclick="App.showView('operacion')" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -545,6 +698,7 @@
 <script src="{{ url_for('static', filename='js/stock.js') }}?v=20260605-con-stock"></script>
 <script src="{{ url_for('static', filename='js/registros.js') }}?v=20260612-cantidad"></script>
 <script src="{{ url_for('static', filename='js/cierre.js') }}?v=20260604-filtro-fechas"></script>
+<script src="{{ url_for('static', filename='js/embalaje.js') }}?v=20260701-embalaje"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}?v=20260604-filtro-fechas"></script>
 
 </body>

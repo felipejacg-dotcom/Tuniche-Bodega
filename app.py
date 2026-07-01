@@ -56,17 +56,20 @@ app.secret_key = secret_key
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 
 from routes.auth_routes import auth_bp
+from routes.embalaje_routes import embalaje_bp
 from routes.worker_routes import worker_bp
 from routes.stock_routes import stock_bp
 from routes.operation_routes import operation_bp
 
 app.register_blueprint(auth_bp)
+app.register_blueprint(embalaje_bp)
 app.register_blueprint(worker_bp)
 app.register_blueprint(stock_bp)
 app.register_blueprint(operation_bp)
 
-from db import ensure_cierres_table_exists
+from db import ensure_cierres_table_exists, ensure_embalaje_tables_exist
 ensure_cierres_table_exists()
+ensure_embalaje_tables_exist()
 
 
 @app.route("/")

@@ -8,6 +8,7 @@ App.checkSession = async function() {
         if (data.success) {
             App.state.user = data.user;
             App.state.planta = data.planta;
+            App.state.modulo = data.modulo || "PANOL";
             App.unlockApp();
             return true;
         }
@@ -19,6 +20,7 @@ App.doLogin = async function() {
     const u = App.els.loginUser.value.trim();
     const p = App.els.loginPass.value.trim();
     const pl = App.els.loginPlanta.value;
+    const mo = App.els.loginModulo ? App.els.loginModulo.value : "PANOL";
 
     App.els.loginError.textContent = "";
     if (!u || !p) { App.els.loginError.textContent = "Completa usuario y contraseña."; return; }
@@ -27,10 +29,11 @@ App.doLogin = async function() {
     App.els.btnLogin.textContent = "Conectando...";
 
     try {
-        const data = await API.login(u, p, pl);
+        const data = await API.login(u, p, pl, mo);
         if (data.success) {
             App.state.user = data.user;
             App.state.planta = data.planta;
+            App.state.modulo = data.modulo || "PANOL";
             App.unlockApp();
         } else {
             App.els.loginError.textContent = data.message || "Credenciales incorrectas.";
@@ -48,16 +51,26 @@ App.unlockApp = function() {
     App.els.loginScreen.classList.add("hidden");
     App.els.appContent.classList.add("visible");
     const sucursalLabel = App.state.planta === "TUNICHE" ? "Graneros" : App.state.planta;
-    App.els.headerPlanta.textContent = `Sucursal: ${sucursalLabel}`;
+    const moduloLabel = App.state.modulo === "EMBALAJE" ? "Embalaje" : "Pañol";
+    App.els.headerPlanta.textContent = `Sucursal: ${sucursalLabel} | Módulo: ${moduloLabel}`;
     App.els.headerPlantaBadge.textContent = sucursalLabel;
-    App.showView("operacion");
-    App.loadArticulos();
+    if (App.els.loginModulo) App.els.loginModulo.value = App.state.modulo;
+    if (App.els.mainNav) {
+        App.els.mainNav.style.display = App.state.modulo === "EMBALAJE" ? "none" : "";
+    }
+    if (App.state.modulo === "EMBALAJE") {
+        App.showView("embalaje");
+    } else {
+        App.showView("operacion");
+        App.loadArticulos();
+    }
 };
 
 App.logout = function() {
     API.logout().catch(() => {});
     App.state.user = null;
     App.state.planta = "TUNICHE";
+    App.state.modulo = "PANOL";
     App.state.articulos = [];
     App.state.historial = [];
     App.state.cierreTurno = null;
@@ -70,6 +83,9 @@ App.logout = function() {
     }
     if (typeof Scanner !== "undefined" && typeof Scanner.stopCarnetCamera === "function") {
         Scanner.stopCarnetCamera();
+    }
+    if (typeof App.stopEmbalajeScanner === "function") {
+        App.stopEmbalajeScanner("logout");
     }
 
     App.els.appContent.classList.remove("visible");

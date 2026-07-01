@@ -5,6 +5,7 @@ window.App = window.App || {};
 App.state = {
     user: null,
     planta: "TUNICHE",
+    modulo: "PANOL",
     mode: "SALIDA",           // "SALIDA" | "DEVOLUCION"
     scanMethod: "laser",      // "laser" | "camera"
     currentWorker: null,      // { rut }
@@ -56,11 +57,13 @@ App.initEls = function() {
         loginUser: $("loginUser"),
         loginPass: $("loginPass"),
         loginPlanta: $("loginPlanta"),
+        loginModulo: $("loginModulo"),
         btnLogin: $("btnLogin"),
         appContent: $("appContent"),
         headerPlanta: $("headerPlanta"),
         headerPlantaBadge: $("headerPlantaBadge"),
         btnLogout: $("btnLogout"),
+        mainNav: $("mainNav"),
         // Operacion
         modeSalidaBtn: $("modeSalidaBtn"),
         modeDevolucionBtn: $("modeDevolucionBtn"),
@@ -117,6 +120,24 @@ App.initEls = function() {
         btnGenerarCierre: $("btnGenerarCierre"),
         btnConfirmarCierre: $("btnConfirmarCierre"),
         btnDownloadCierre: $("btnDownloadCierre"),
+        // Embalaje
+        embalajeView: $("viewEmbalaje"),
+        embalajeCurrentCard: $("embalajeCurrentCard"),
+        embalajeCurrent: $("embalajeCurrent"),
+        embalajeSearch: $("embalajeSearch"),
+        embalajeQr: $("embalajeQr"),
+        embalajeScanBtn: $("embalajeScanBtn"),
+        embalajeScannerWrap: $("embalajeScannerWrap"),
+        embalajeObservacion: $("embalajeObservacion"),
+        embalajeDestino: $("embalajeDestino"),
+        embalajeUbicacion: $("embalajeUbicacion"),
+        embalajeEstado: $("embalajeEstado"),
+        embalajeSummary: $("embalajeSummary"),
+        embalajeExistencias: $("embalajeExistencias"),
+        embalajeMovimientos: $("embalajeMovimientos"),
+        embalajeConsultarBtn: $("embalajeConsultarBtn"),
+        embalajeTrasladarBtn: $("embalajeTrasladarBtn"),
+        embalajeRefreshBtn: $("embalajeRefreshBtn"),
         // Modal carnet
         carnetModal: $("carnetModal"),
         btnCloseCarnet: $("btnCloseCarnet"),
@@ -191,7 +212,7 @@ App.stopArticleScanner = function(reason = "", options = {}) {
 App.showView = function(name) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-    const viewId = { operacion: "viewOperacion", stock: "viewStock", registros: "viewRegistros", cierre: "viewCierre" }[name];
+    const viewId = { operacion: "viewOperacion", stock: "viewStock", registros: "viewRegistros", cierre: "viewCierre", embalaje: "viewEmbalaje" }[name];
     const navId = { operacion: "navOperacion", stock: "navStock", registros: "navRegistros", cierre: "navCierre" }[name];
     if (viewId) {
         const el = App.$(viewId);
@@ -204,6 +225,9 @@ App.showView = function(name) {
 
     if (name !== "operacion") {
         App.stopArticleScanner("view_change", { focusLaser: false });
+    }
+    if (name !== "embalaje" && typeof App.stopEmbalajeScanner === "function") {
+        App.stopEmbalajeScanner("view_change");
     }
 
     if (name === "operacion") {
@@ -222,4 +246,5 @@ App.showView = function(name) {
     }
     if (name === "registros") App.loadRegistros();
     if (name === "cierre") App.initCierreView();
+    if (name === "embalaje" && typeof App.loadEmbalajeView === "function") App.loadEmbalajeView();
 };

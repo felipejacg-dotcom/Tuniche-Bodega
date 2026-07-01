@@ -56,10 +56,10 @@ const API = (() => {
     }
 
     return {
-        login: (username, password, planta) =>
+        login: (username, password, planta, modulo = "PANOL") =>
             _req("/api/login", {
                 method: "POST",
-                body: { username, password, planta },
+                body: { username, password, planta, modulo },
                 skipAuthHandler: true,
             }),
 
@@ -146,5 +146,47 @@ const API = (() => {
 
         getUltimoRetiro: (rut, articulo_id) =>
             _req(`/api/ultimo_retiro?rut=${encodeURIComponent(rut)}&articulo_id=${articulo_id}`),
+
+        getEmbalajeResumen: (texto = "", ubicacion = "Todas", estado = "Todos", desde = "", hasta = "") => {
+            const params = new URLSearchParams();
+            if (texto) params.append("texto", texto);
+            if (ubicacion) params.append("ubicacion", ubicacion);
+            if (estado) params.append("estado", estado);
+            if (desde) params.append("desde", desde);
+            if (hasta) params.append("hasta", hasta);
+            return _req(`/api/embalaje/resumen?${params.toString()}`);
+        },
+
+        getEmbalajeExistencias: (texto = "", ubicacion = "Todas", estado = "Todos", desde = "", hasta = "") => {
+            const params = new URLSearchParams();
+            if (texto) params.append("texto", texto);
+            if (ubicacion) params.append("ubicacion", ubicacion);
+            if (estado) params.append("estado", estado);
+            if (desde) params.append("desde", desde);
+            if (hasta) params.append("hasta", hasta);
+            return _req(`/api/embalaje/existencias?${params.toString()}`);
+        },
+
+        getEmbalajeExistencia: (clave) =>
+            _req(`/api/embalaje/existencia?clave=${encodeURIComponent(clave)}`),
+
+        getEmbalajeMovimientos: (texto = "", limite = 200) => {
+            const params = new URLSearchParams();
+            if (texto) params.append("texto", texto);
+            if (limite) params.append("limite", limite);
+            return _req(`/api/embalaje/movimientos?${params.toString()}`);
+        },
+
+        registrarEmbalajeArmado: (payload) =>
+            _req("/api/embalaje/armado", {
+                method: "POST",
+                body: payload,
+            }),
+
+        registrarEmbalajeTraslado: (payload) =>
+            _req("/api/embalaje/traslado", {
+                method: "POST",
+                body: payload,
+            }),
     };
 })();

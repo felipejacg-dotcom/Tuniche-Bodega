@@ -6,6 +6,7 @@ from auth import (
     logout_user,
     get_current_user,
     get_current_planta,
+    get_current_modulo,
     login_required,
 )
 
@@ -18,6 +19,7 @@ def login():
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
     planta = data.get("planta", "TUNICHE").strip()
+    modulo = data.get("modulo", "PANOL").strip().upper()
 
     if not username or not password:
         return jsonify({"success": False, "message": "Usuario y contraseña requeridos."}), 400
@@ -31,8 +33,11 @@ def login():
             "message": "Usuarios no configurados en el servidor. Revisa LOGIN_USERS."
         }), 503
 
-    if login_user(username, password, planta):
-        return jsonify({"success": True, "user": username, "planta": planta})
+    if modulo not in ("PANOL", "EMBALAJE"):
+        return jsonify({"success": False, "message": "Modulo invalido."}), 400
+
+    if login_user(username, password, planta, modulo):
+        return jsonify({"success": True, "user": username, "planta": planta, "modulo": modulo})
 
     return jsonify({"success": False, "message": "Usuario o contraseña incorrectos."}), 401
 
@@ -51,4 +56,5 @@ def me():
         "success": True,
         "user": get_current_user(),
         "planta": get_current_planta(),
+        "modulo": get_current_modulo(),
     })

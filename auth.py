@@ -87,7 +87,7 @@ def get_user_display_name(username: str) -> str:
     return username.title()
 
 
-def login_user(username: str, password: str, planta: str) -> bool:
+def login_user(username: str, password: str, planta: str, modulo: str = "PANOL") -> bool:
     users = _get_users()
     username_key = username.strip().lower()
     stored_password = users.get(username_key)
@@ -98,6 +98,7 @@ def login_user(username: str, password: str, planta: str) -> bool:
         session["user"] = username_key
         session["user_display"] = get_user_display_name(username)
         session["planta"] = planta
+        session["modulo"] = str(modulo or "PANOL").strip().upper()
         return True
     return False
 
@@ -108,6 +109,10 @@ def get_current_user() -> str:
 
 def get_current_planta() -> str:
     return session.get("planta", "TUNICHE")
+
+
+def get_current_modulo() -> str:
+    return session.get("modulo", "PANOL")
 
 
 def is_authenticated() -> bool:
