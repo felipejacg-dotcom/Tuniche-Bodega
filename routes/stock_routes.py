@@ -584,8 +584,63 @@ def _build_cierre_turno_pdf(data):
         story.append(table)
         story.append(Spacer(1, 3 * mm))
 
-    # MOVIMIENTOS DEL TURNO
+    # === CÁLCULO DE CONSUMOS ===
     movimientos_list = data.get("eventos") or []
+    
+    # 1. Consumo General
+    consumo_totales = {}
+    for m in movimientos_list:
+        if m.get("evento") == "SALIDA":
+            art = m.get("articulo") or ""
+            cant = int(m.get("cantidad") or 1)
+            consumo_totales[art] = consumo_totales.get(art, 0) + cant
+    
+    consumo_totales_rows = []
+    for art, cant in sorted(consumo_totales.items(), key=lambda x: x[1], reverse=True):
+        consumo_totales_rows.append([
+            Paragraph(_safe_pdf_text(art), styles["TableCell"]),
+            Paragraph(f"<b>{cant}</b>", styles["TableCell"]),
+        ])
+
+    # 2. Consumo por Área
+    consumo_areas = {}
+    for m in movimientos_list:
+        if m.get("evento") == "SALIDA":
+            area = m.get("area") or "Sin área"
+            art = m.get("articulo") or ""
+            cant = int(m.get("cantidad") or 1)
+            if area not in consumo_areas:
+                consumo_areas[area] = {}
+            consumo_areas[area][art] = consumo_areas[area].get(art, 0) + cant
+
+    consumo_areas_rows = []
+    for area in sorted(consumo_areas.keys()):
+        for art, cant in sorted(consumo_areas[area].items(), key=lambda x: x[1], reverse=True):
+            consumo_areas_rows.append([
+                Paragraph(f"<b>{_safe_pdf_text(area)}</b>", styles["TableCell"]),
+                Paragraph(_safe_pdf_text(art), styles["TableCell"]),
+                Paragraph(f"<b>{cant}</b>", styles["TableCell"]),
+            ])
+
+    # === INSERTAR TABLAS EN EL STORY ===
+    section_table(
+        "Resumen de Consumo General del Turno",
+        ["Artículo", "Cantidad Total"],
+        consumo_totales_rows,
+        "No se registraron consumos (entregas) en este turno.",
+        [142 * mm, 40 * mm],
+    )
+
+    section_table(
+        "Consumo Desglosado por Área",
+        ["Área de Destino", "Artículo", "Cantidad"],
+        consumo_areas_rows,
+        "No se registraron consumos (entregas) en este turno.",
+        [50 * mm, 97 * mm, 35 * mm],
+    )
+
+    # MOVIMIENTOS DEL TURNO
+    # movimientos_list ya fue asignado arriba
     movimientos_rows = []
     for m in movimientos_list:
         hora_str = m.get("hora_evento") or ""
