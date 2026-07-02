@@ -47,6 +47,12 @@ def _serializar_existencia(row):
         "guia_proveedor": row[14],
         "qr_payload": row[15],
         "ultimo_movimiento": row[16],
+        "numero_pallet": row[17] if len(row) > 17 else "",
+        "correlativo_inicio": row[18] if len(row) > 18 else "",
+        "orden_compra": row[19] if len(row) > 19 else "",
+        "documento_recepcion": row[20] if len(row) > 20 else "",
+        "maquina": row[21] if len(row) > 21 else "",
+        "turno": row[22] if len(row) > 22 else "",
     }
 
 
@@ -190,7 +196,13 @@ def existencias():
             IFNULL(e.guia_recepcion, ''),
             IFNULL(e.guia_proveedor, ''),
             e.qr_payload,
-            IFNULL(DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%s'), '')
+            IFNULL(DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%s'), ''),
+            IFNULL(e.numero_pallet, ''),
+            IFNULL(e.correlativo_inicio, ''),
+            IFNULL(e.orden_compra, ''),
+            IFNULL(e.documento_recepcion, ''),
+            IFNULL(e.maquina, ''),
+            IFNULL(e.turno, '')
         FROM embalaje_existencias e
         LEFT JOIN (
             SELECT em1.*
@@ -265,7 +277,10 @@ def existencia():
                 e.estado, DATE_FORMAT(e.fecha_armado, '%%d-%%m-%%Y %%H:%%i:%%s'),
                 e.usuario_armado, IFNULL(e.proveedor_origen, ''),
                 IFNULL(e.guia_recepcion, ''), IFNULL(e.guia_proveedor, ''),
-                e.qr_payload, ''
+                e.qr_payload, '',
+                IFNULL(e.numero_pallet, ''), IFNULL(e.correlativo_inicio, ''),
+                IFNULL(e.orden_compra, ''), IFNULL(e.documento_recepcion, ''),
+                IFNULL(e.maquina, ''), IFNULL(e.turno, '')
             FROM embalaje_existencias e
             WHERE e.sucursal = %s AND (e.qr_payload = %s OR e.correlativo = %s OR e.codigo_material = %s)
             ORDER BY e.fecha_armado DESC, e.id DESC
@@ -366,6 +381,12 @@ def armado():
     proveedor_origen = str(data.get("proveedor_origen") or "").strip()
     guia_recepcion = str(data.get("guia_recepcion") or "").strip()
     guia_proveedor = str(data.get("guia_proveedor") or "").strip()
+    numero_pallet = str(data.get("numero_pallet") or "").strip().upper()
+    correlativo_inicio = str(data.get("correlativo_inicio") or "").strip().upper()
+    orden_compra = str(data.get("orden_compra") or "").strip().upper()
+    documento_recepcion = str(data.get("documento_recepcion") or "").strip().upper()
+    maquina = str(data.get("maquina") or "").strip().upper()
+    turno = str(data.get("turno") or "").strip().upper()
     observacion = str(data.get("observacion") or "").strip()
     medida = str(data.get("medida") or "").strip()
     unidad = str(data.get("unidad") or "UND").strip().upper() or "UND"
@@ -414,13 +435,16 @@ def armado():
             INSERT INTO embalaje_existencias (
                 correlativo, sucursal, formato_id, codigo_material, descripcion, medida, unidad,
                 lote, cantidad_armada, merma, cantidad_neta, bodega_actual, estado, qr_payload,
-                fecha_armado, usuario_armado, proveedor_origen, guia_recepcion, guia_proveedor, observacion
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                fecha_armado, usuario_armado, proveedor_origen, guia_recepcion, guia_proveedor,
+                numero_pallet, correlativo_inicio, orden_compra, documento_recepcion, maquina, turno,
+                observacion
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             correlativo, sucursal, formato_id, codigo_material, descripcion, medida, unidad,
             lote, cantidad_armada, merma, cantidad_neta, bodega_actual, estado, qr_payload,
             fecha_armado, usuario, proveedor_origen or None, guia_recepcion or None, guia_proveedor or None,
-            observacion or None,
+            numero_pallet or None, correlativo_inicio or None, orden_compra or None, documento_recepcion or None,
+            maquina or None, turno or None, observacion or None,
         ))
         existencia_id = cur.lastrowid
         cur.execute("""
@@ -446,6 +470,12 @@ def armado():
                 "cantidad_neta": cantidad_neta,
                 "bodega_actual": bodega_actual,
                 "estado": estado,
+                "numero_pallet": numero_pallet,
+                "correlativo_inicio": correlativo_inicio,
+                "orden_compra": orden_compra,
+                "documento_recepcion": documento_recepcion,
+                "maquina": maquina,
+                "turno": turno,
             },
         })
     except Exception as e:

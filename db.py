@@ -146,6 +146,12 @@ def ensure_embalaje_tables_exist():
                     proveedor_origen VARCHAR(150) NULL,
                     guia_recepcion VARCHAR(80) NULL,
                     guia_proveedor VARCHAR(80) NULL,
+                    numero_pallet VARCHAR(80) NULL,
+                    correlativo_inicio VARCHAR(80) NULL,
+                    orden_compra VARCHAR(80) NULL,
+                    documento_recepcion VARCHAR(80) NULL,
+                    maquina VARCHAR(80) NULL,
+                    turno VARCHAR(40) NULL,
                     observacion VARCHAR(255) NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -197,8 +203,22 @@ def ensure_embalaje_tables_exist():
                     KEY idx_embalaje_impresiones_existencia (existencia_id),
                     KEY idx_embalaje_impresiones_fecha (fecha_hora),
                     KEY idx_embalaje_impresiones_usuario (usuario)
-                )
-            """)
+                 )
+             """)
+            # Asegurar las nuevas columnas en embalaje_existencias para bases existentes en el backend
+            for col_def in (
+                "ADD COLUMN IF NOT EXISTS numero_pallet VARCHAR(80) NULL",
+                "ADD COLUMN IF NOT EXISTS correlativo_inicio VARCHAR(80) NULL",
+                "ADD COLUMN IF NOT EXISTS orden_compra VARCHAR(80) NULL",
+                "ADD COLUMN IF NOT EXISTS documento_recepcion VARCHAR(80) NULL",
+                "ADD COLUMN IF NOT EXISTS maquina VARCHAR(80) NULL",
+                "ADD COLUMN IF NOT EXISTS turno VARCHAR(40) NULL"
+            ):
+                try:
+                    cur.execute(f"ALTER TABLE embalaje_existencias {col_def}")
+                except Exception as alter_err:
+                    pass
+
             for sucursal in ("GRANEROS", "PUQUILLAY"):
                 for tipo_bodega, nombre_bodega in (
                     ("PACKING", f"PACKING {sucursal}"),
