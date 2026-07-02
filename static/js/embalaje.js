@@ -93,6 +93,7 @@ App.initEmbalajeView = function() {
 
 App.loadEmbalajeView = async function() {
     App.initEmbalajeView();
+    App.setEmbalajeSubView("traslados");
     if (!App.state.embalaje.loaded) {
         App.renderEmbalajeCurrent();
         App.renderEmbalajeSummary();
@@ -486,5 +487,28 @@ App.toggleEmbalajeScanner = function() {
         App.stopEmbalajeScanner("toggle");
     } else {
         App.startEmbalajeScanner();
+    }
+};
+
+App.setEmbalajeSubView = function(viewName) {
+    const tabTraslados = document.getElementById("embTabTrasladosBtn");
+    const tabConsultas = document.getElementById("embTabConsultasBtn");
+    const contentTraslados = document.getElementById("embalajeSubViewTraslados");
+    const contentConsultas = document.getElementById("embalajeSubViewConsultas");
+
+    if (!contentTraslados || !contentConsultas) return;
+
+    if (viewName === "traslados") {
+        if (tabTraslados) tabTraslados.classList.add("active");
+        if (tabConsultas) tabConsultas.classList.remove("active");
+        contentTraslados.style.display = "block";
+        contentConsultas.style.display = "none";
+    } else {
+        if (tabTraslados) tabTraslados.classList.remove("active");
+        if (tabConsultas) tabConsultas.classList.add("active");
+        contentTraslados.style.display = "none";
+        contentConsultas.style.display = "block";
+        // Al entrar a consultas, refrescar para mostrar datos actualizados
+        App.refreshEmbalaje();
     }
 };

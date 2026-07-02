@@ -190,13 +190,13 @@ def existencias():
             e.cantidad_neta,
             e.bodega_actual,
             e.estado,
-            DATE_FORMAT(e.fecha_armado, '%%d-%%m-%%Y %%H:%%i:%%s'),
+            DATE_FORMAT(e.fecha_armado, '%%d-%%m-%%Y %%H:%%i:%%S'),
             e.usuario_armado,
             IFNULL(e.proveedor_origen, ''),
             IFNULL(e.guia_recepcion, ''),
             IFNULL(e.guia_proveedor, ''),
             e.qr_payload,
-            IFNULL(DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%s'), ''),
+            IFNULL(DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%S'), ''),
             IFNULL(e.numero_pallet, ''),
             IFNULL(e.correlativo_inicio, ''),
             IFNULL(e.orden_compra, ''),
@@ -274,7 +274,7 @@ def existencia():
             SELECT
                 e.id, e.correlativo, e.codigo_material, e.descripcion, e.lote,
                 e.cantidad_armada, e.merma, e.cantidad_neta, e.bodega_actual,
-                e.estado, DATE_FORMAT(e.fecha_armado, '%%d-%%m-%%Y %%H:%%i:%%s'),
+                e.estado, DATE_FORMAT(e.fecha_armado, '%%d-%%m-%%Y %%H:%%i:%%S'),
                 e.usuario_armado, IFNULL(e.proveedor_origen, ''),
                 IFNULL(e.guia_recepcion, ''), IFNULL(e.guia_proveedor, ''),
                 e.qr_payload, '',
@@ -308,7 +308,7 @@ def movimientos():
 
     query = """
         SELECT
-            DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%s'),
+            DATE_FORMAT(m.fecha_hora, '%%d-%%m-%%Y %%H:%%i:%%S'),
             e.correlativo,
             m.bodega_origen,
             m.bodega_destino,
