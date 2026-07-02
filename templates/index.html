@@ -421,187 +421,237 @@
              VIEW: EMBALAJE
              ==================================================== -->
         <section id="viewEmbalaje" class="view" aria-label="Embalaje">
-            <!-- Mode Segmented for Embalaje -->
-            <div class="mode-segmented" id="embalajeModeSegmented" role="group" aria-label="Modo embalaje" style="margin-bottom: 16px;">
-                <button class="mode-option active" id="embTabTrasladosBtn" type="button" onclick="App.setEmbalajeSubView('traslados')" style="flex: 1;">
-                    <span class="mode-option-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" width="17" height="17">
-                            <path d="M19 12H5M12 19l-7-7 7-7"/>
-                        </svg>
-                    </span>
-                    <span>TRASLADOS</span>
-                </button>
-                <button class="mode-option" id="embTabConsultasBtn" type="button" onclick="App.setEmbalajeSubView('consultas')" style="flex: 1;">
-                    <span class="mode-option-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" width="17" height="17">
-                            <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
-                        </svg>
-                    </span>
-                    <span>CONSULTAS</span>
-                </button>
-            </div>
 
-            <!-- SUBVIEW: TRASLADOS -->
-            <div id="embalajeSubViewTraslados" class="embalaje-subview-content">
-                <!-- Hero/Ayuda rápido -->
-                <div class="card" style="margin-bottom: 12px; background: #f8fafc; border: 1px solid #e2e8f0;">
-                    <div class="card-body" style="padding: 12px 14px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-weight: 700; color: var(--navy); font-size: 1.05rem;">Movimiento de Pallets</span>
-                        </div>
-                        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b; line-height: 1.35;">
-                            Escanea un QR para identificar el pallet y registrar su traslado.
-                        </p>
+            <!-- ── SUB-VIEW: DASHBOARD ──────────────────────────── -->
+            <div id="embViewDashboard" class="emb-subview">
+                <div class="emb-greeting">
+                    <div>
+                        <div class="emb-greeting-title">Embalaje</div>
+                        <div class="emb-greeting-sub" id="embGreetingPlanta">Cargando...</div>
                     </div>
+                    <button class="emb-icon-btn" id="embalajeRefreshBtn" title="Actualizar" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+                            <path d="M1 4v6h6M23 20v-6h-6"/>
+                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                        </svg>
+                    </button>
                 </div>
 
-                <!-- Escaneo y Traslado -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-step">1</div>
-                        <span class="card-title">Identificación y Destino</span>
-                    </div>
-                    <div class="card-body">
-                        <button class="btn-scan" id="embalajeScanBtn" type="button" style="margin-bottom: 14px; background: var(--green); border-color: var(--green); color: white;">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="vertical-align: middle; margin-right: 6px;">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                <circle cx="12" cy="13" r="4"/>
+                <div class="emb-section-title">KPI</div>
+                <div class="emb-kpi-scroll" id="embalajeSummary">
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#dcfce7">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.2">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
                             </svg>
-                            ESCANEAR QR PALLET
-                        </button>
-
-                        <div class="input-group">
-                            <label class="input-label" for="embalajeQr">QR / Código de Pallet</label>
-                            <input type="text" id="embalajeQr" class="app-input" placeholder="Escanea o escribe código..." autocomplete="off">
                         </div>
-
-                        <div id="embalajeScannerWrap" class="embalaje-scanner-wrap" style="display:none; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 14px;">
-                            <div id="readerEmbalaje" style="width:100%; border-radius: 6px; overflow:hidden;"></div>
-                            <p class="modal-hint" style="text-align:center; margin-top: 6px; font-size: 0.8rem; color: #64748b;">Apunta al código QR de la etiqueta.</p>
+                        <div class="emb-kpi-label">Total Armado</div>
+                        <div class="emb-kpi-value" id="kpiTotalArmado">—</div>
+                    </div>
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#dcfce7">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            </svg>
                         </div>
-
-                        <div class="input-group" style="margin-bottom: 12px;">
-                            <label class="input-label" for="embalajeDestino">Destino traslado</label>
-                            <select id="embalajeDestino" class="app-input">
-                                <option value="">Seleccione destino...</option>
-                                <option value="PACKING GRANEROS">PACKING GRANEROS</option>
-                                <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
-                                <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
-                                <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
-                                <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
-                                <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
-                            </select>
+                        <div class="emb-kpi-label">Stock Actual</div>
+                        <div class="emb-kpi-value" id="kpiStockActual">—</div>
+                    </div>
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#fef3c7">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
+                                <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/>
+                            </svg>
                         </div>
-
-                        <div class="input-group" style="margin-bottom: 16px;">
-                            <label class="input-label" for="embalajeObservacion">Observación (Opcional)</label>
-                            <input type="text" id="embalajeObservacion" class="app-input" placeholder="Ej: traslado de sede, reubicación..." autocomplete="off">
+                        <div class="emb-kpi-label">En Packing</div>
+                        <div class="emb-kpi-value" id="kpiEnPacking">—</div>
+                    </div>
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#dbeafe">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2">
+                                <path d="M12 19V5M5 12l7-7 7 7"/>
+                            </svg>
                         </div>
-
-                        <div class="embalaje-actions" style="display: flex; gap: 10px;">
-                            <button class="btn-primary" id="embalajeConsultarBtn" type="button" style="flex: 1; font-weight: 700;">Buscar</button>
-                            <button class="btn-refresh" id="embalajeTrasladarBtn" type="button" style="flex: 1.5; background: var(--navy); border-color: var(--navy); color: white; font-weight: 700; height: 42px; border-radius: 8px;">REGISTRAR TRASLADO</button>
+                        <div class="emb-kpi-label">En Altillo</div>
+                        <div class="emb-kpi-value" id="kpiEnAltillo">—</div>
+                    </div>
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#f3e8ff">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2">
+                                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                            </svg>
                         </div>
+                        <div class="emb-kpi-label">Trasl. Hoy</div>
+                        <div class="emb-kpi-value" id="kpiTrasladado">—</div>
+                    </div>
+                    <div class="emb-kpi-card">
+                        <div class="emb-kpi-icon" style="background:#fee2e2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                            </svg>
+                        </div>
+                        <div class="emb-kpi-label">Mermas</div>
+                        <div class="emb-kpi-value" id="kpiMermas">—</div>
                     </div>
                 </div>
 
-                <!-- Pallet Seleccionado -->
-                <div class="card" id="embalajeCurrentCard" style="margin-top: 14px;">
-                    <div class="card-header">
-                        <div class="card-step">2</div>
-                        <span class="card-title">Información del Pallet</span>
-                    </div>
-                    <div class="card-body" id="embalajeCurrent">
-                        <div class="empty-state" style="padding: 22px 10px;">
-                            <p>Escanea un QR o consulta un pallet para ver su detalle.</p>
-                        </div>
-                    </div>
+                <div class="emb-section-title">Acción Rápida</div>
+                <div class="emb-quick-grid">
+                    <button class="emb-qa-btn emb-qa-green" type="button" onclick="App.setEmbalajeView('movimientos')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                        </svg>
+                        Registrar Traslado
+                    </button>
+                    <button class="emb-qa-btn emb-qa-navy" type="button" onclick="App.setEmbalajeView('armados')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
+                        </svg>
+                        Ver Pallets
+                    </button>
+                </div>
+
+                <div class="emb-section-title">Movimientos Recientes</div>
+                <div class="emb-card" id="embDashboardMovimientos">
+                    <div class="emb-empty"><p>Cargando...</p></div>
                 </div>
             </div>
 
-            <!-- SUBVIEW: CONSULTAS / STOCK -->
-            <div id="embalajeSubViewConsultas" class="embalaje-subview-content" style="display: none;">
-                <!-- KPIs resumen -->
-                <div class="card">
-                    <div class="card-header" style="justify-content: space-between;">
-                        <span class="card-title" style="font-size: 0.95rem; font-weight: 700;">Resumen General</span>
-                        <button class="btn-refresh" id="embalajeRefreshBtn" type="button" style="padding: 4px 8px; font-size: 0.75rem;">&#8635; Actualizar</button>
-                    </div>
-                    <div class="card-body" id="embalajeSummary" style="padding: 10px 12px;">
-                        <div class="empty-state" style="padding: 12px 10px;">
-                            <p>Cargando resumen...</p>
-                        </div>
+            <!-- ── SUB-VIEW: ARMADOS ─────────────────────────────── -->
+            <div id="embViewArmados" class="emb-subview" style="display:none">
+                <div class="emb-page-header">
+                    <div class="emb-page-title">Pallets en Planta</div>
+                </div>
+                <div class="emb-search-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                    </svg>
+                    <input type="search" id="embalajeSearch" placeholder="Buscar código, lote, descripción...">
+                </div>
+                <div class="emb-filter-row">
+                    <select id="embalajeUbicacion">
+                        <option value="Todas">Todas las ubicaciones</option>
+                        <option value="PACKING GRANEROS">PACKING GRANEROS</option>
+                        <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
+                        <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
+                        <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
+                        <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
+                        <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
+                    </select>
+                    <select id="embalajeEstado">
+                        <option value="Todos">Todos los estados</option>
+                        <option value="ARMADO">ARMADO</option>
+                        <option value="EN PACKING">EN PACKING</option>
+                        <option value="EN ALTILLO">EN ALTILLO</option>
+                        <option value="EN BODEGA">EN BODEGA</option>
+                    </select>
+                </div>
+                <div id="embalajeExistencias">
+                    <div class="emb-empty"><p>Cargando pallets...</p></div>
+                </div>
+            </div>
+
+            <!-- ── SUB-VIEW: MOVIMIENTOS ─────────────────────────── -->
+            <div id="embViewMovimientos" class="emb-subview" style="display:none">
+                <div class="emb-page-header">
+                    <div class="emb-page-title">Registrar Traslado</div>
+                </div>
+
+                <button class="emb-scan-btn" id="embalajeScanBtn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    ESCANEAR QR DEL PALLET
+                </button>
+
+                <div id="embalajeScannerWrap" class="emb-scanner-wrap" style="display:none">
+                    <div id="readerEmbalaje"></div>
+                    <p class="emb-scanner-hint">Apunta la cámara al QR de la etiqueta del pallet.</p>
+                </div>
+
+                <div class="emb-card">
+                    <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">O ingresa el código manualmente</div>
+                    <div class="emb-input-row">
+                        <input type="text" id="embalajeQr" placeholder="Código del pallet..." autocomplete="off">
+                        <button class="emb-search-btn" id="embalajeConsultarBtn" type="button">Buscar</button>
                     </div>
                 </div>
 
-                <!-- Buscar y Filtrar existencias -->
-                <div class="card" style="margin-top: 12px;">
-                    <div class="card-header">
-                        <span class="card-title" style="font-size: 0.95rem; font-weight: 700;">Buscar Existencias</span>
+                <div id="embalajeCurrent">
+                    <div class="emb-pallet-info-card" style="background:#f9fafb; border-color:#e5e7eb;">
+                        <div class="emb-pallet-info-head">
+                            <div class="emb-pallet-info-name" style="color:#9ca3af;">Ningún pallet seleccionado</div>
+                        </div>
+                        <div style="font-size:12px; color:#9ca3af;">Escanea o busca un código para ver el detalle.</div>
                     </div>
-                    <div class="card-body" style="padding: 12px 14px;">
-                        <div class="search-wrap" style="margin-bottom: 12px;">
+                </div>
+
+                <div class="emb-card">
+                    <div class="emb-field">
+                        <label for="embalajeDestino">Bodega destino</label>
+                        <select id="embalajeDestino">
+                            <option value="">Seleccione destino...</option>
+                            <option value="PACKING GRANEROS">PACKING GRANEROS</option>
+                            <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
+                            <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
+                            <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
+                            <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
+                            <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
+                        </select>
+                    </div>
+                    <div class="emb-field">
+                        <label for="embalajeObservacion">Observación (opcional)</label>
+                        <input type="text" id="embalajeObservacion" placeholder="Ej: traslado de sede, reubicación..." autocomplete="off">
+                    </div>
+                    <button class="emb-traslado-btn" id="embalajeTrasladarBtn" type="button">
+                        REGISTRAR TRASLADO
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── SUB-VIEW: REPORTES ────────────────────────────── -->
+            <div id="embViewReportes" class="emb-subview" style="display:none">
+                <div class="emb-page-header">
+                    <div class="emb-page-title">Reportes</div>
+                </div>
+                <div class="emb-section-title">Resumen de stock</div>
+                <div class="emb-rep-grid">
+                    <div class="emb-rep-card"><div class="emb-rep-label">Total armado</div><div class="emb-rep-value" id="repTotalArmado">—</div></div>
+                    <div class="emb-rep-card"><div class="emb-rep-label">Stock neto</div><div class="emb-rep-value" id="repStockActual">—</div></div>
+                    <div class="emb-rep-card"><div class="emb-rep-label">En packing</div><div class="emb-rep-value" id="repEnPacking">—</div></div>
+                    <div class="emb-rep-card"><div class="emb-rep-label">En altillo</div><div class="emb-rep-value" id="repEnAltillo">—</div></div>
+                    <div class="emb-rep-card"><div class="emb-rep-label">Trasl. hoy</div><div class="emb-rep-value" id="repTrasladado">—</div></div>
+                    <div class="emb-rep-card"><div class="emb-rep-label">Mermas</div><div class="emb-rep-value" id="repMermas">—</div></div>
+                </div>
+                <div class="emb-section-title">Historial de movimientos</div>
+                <div id="embalajeMovimientos">
+                    <div class="emb-empty"><p>Cargando historial...</p></div>
+                </div>
+            </div>
+
+            <!-- ── SUB-VIEW: MÁS ─────────────────────────────────── -->
+            <div id="embViewMas" class="emb-subview" style="display:none">
+                <div class="emb-mas-content">
+                    <div class="emb-mas-user-card">
+                        <div class="emb-mas-avatar">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
                             </svg>
-                            <input type="search" id="embalajeSearch" class="search-ctrl" placeholder="Buscar por código, lote o correlativo...">
                         </div>
-
-                        <div class="embalaje-filters" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div class="input-group" style="margin-bottom: 0;">
-                                <label class="input-label" for="embalajeUbicacion" style="font-size: 0.75rem;">Ubicación</label>
-                                <select id="embalajeUbicacion" class="app-input" style="font-size: 0.8rem; height: 36px; padding: 4px 8px;">
-                                    <option value="Todas">Todas</option>
-                                    <option value="PACKING GRANEROS">PACKING GRANEROS</option>
-                                    <option value="ALTILLO GRANEROS">ALTILLO GRANEROS</option>
-                                    <option value="BODEGA GRANEROS">BODEGA GRANEROS</option>
-                                    <option value="PACKING PUQUILLAY">PACKING PUQUILLAY</option>
-                                    <option value="ALTILLO PUQUILLAY">ALTILLO PUQUILLAY</option>
-                                    <option value="BODEGA PUQUILLAY">BODEGA PUQUILLAY</option>
-                                </select>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 0;">
-                                <label class="input-label" for="embalajeEstado" style="font-size: 0.75rem;">Estado</label>
-                                <select id="embalajeEstado" class="app-input" style="font-size: 0.8rem; height: 36px; padding: 4px 8px;">
-                                    <option value="Todos">Todos</option>
-                                    <option value="ARMADO">ARMADO</option>
-                                    <option value="EN PACKING">EN PACKING</option>
-                                    <option value="EN ALTILLO">EN ALTILLO</option>
-                                    <option value="EN BODEGA">EN BODEGA</option>
-                                </select>
-                            </div>
+                        <div>
+                            <div class="emb-mas-name" id="embMasNombre">Operario</div>
+                            <div class="emb-mas-modulo">Módulo Embalaje</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Lista de existencias -->
-                <div class="card" style="margin-top: 12px;">
-                    <div class="card-header">
-                        <span class="card-title" style="font-size: 0.95rem; font-weight: 700;">Existencias en Planta</span>
-                    </div>
-                    <div class="card-body" style="padding: 10px 12px;">
-                        <div id="embalajeExistencias">
-                            <div class="empty-state" style="padding: 22px 10px;">
-                                <p>Cargando existencias...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de movimientos -->
-                <div class="card" style="margin-top: 12px;">
-                    <div class="card-header">
-                        <span class="card-title" style="font-size: 0.95rem; font-weight: 700;">Historial de Movimientos</span>
-                    </div>
-                    <div class="card-body" style="padding: 10px 12px;">
-                        <div id="embalajeMovimientos">
-                            <div class="empty-state" style="padding: 22px 10px;">
-                                <p>Cargando movimientos...</p>
-                            </div>
-                        </div>
-                    </div>
+                    <button class="emb-logout-btn" type="button" onclick="App.logout()">
+                        Cerrar Sesión
+                    </button>
                 </div>
             </div>
+
         </section>
 
     </main>
@@ -645,6 +695,46 @@
             <div class="nav-dot"></div>
         </button>
     </nav>
+
+    <!-- EMBALAJE BOTTOM NAV -->
+    <nav class="emb-bottom-nav" id="embalajeNav" style="display:none" aria-label="Navegacion Embalaje">
+        <button class="emb-nav-item active" id="embNavDashboard" type="button" onclick="App.setEmbalajeView('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span>Dashboard</span>
+        </button>
+        <button class="emb-nav-item" id="embNavArmados" type="button" onclick="App.setEmbalajeView('armados')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/>
+            </svg>
+            <span>Armados</span>
+        </button>
+        <button class="emb-nav-item" id="embNavMovimientos" type="button" onclick="App.setEmbalajeView('movimientos')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <span>Traslados</span>
+        </button>
+        <button class="emb-nav-item" id="embNavReportes" type="button" onclick="App.setEmbalajeView('reportes')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span>Reportes</span>
+        </button>
+        <button class="emb-nav-item" id="embNavMas" type="button" onclick="App.setEmbalajeView('mas')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+            </svg>
+            <span>Más</span>
+        </button>
+    </nav>
+
+</div><!-- #appContent -->
+
 
 </div><!-- #appContent -->
 

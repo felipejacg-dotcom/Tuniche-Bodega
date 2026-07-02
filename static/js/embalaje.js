@@ -93,17 +93,22 @@ App.initEmbalajeView = function() {
 
 App.loadEmbalajeView = async function() {
     App.initEmbalajeView();
-    App.setEmbalajeSubView("traslados");
+    App.setEmbalajeView("dashboard");
+
+    // Set greeting planta
+    const greet = document.getElementById("embGreetingPlanta");
+    if (greet) greet.textContent = "Planta " + (App.state.planta || "");
+    const masNombre = document.getElementById("embMasNombre");
+    if (masNombre) masNombre.textContent = App.state.usuario || "Operario";
+
     if (!App.state.embalaje.loaded) {
         App.renderEmbalajeCurrent();
         App.renderEmbalajeSummary();
         App.renderEmbalajeExistencias();
         App.renderEmbalajeMovimientos();
+        App.renderEmbDashboardMovimientos();
     }
     await App.refreshEmbalaje();
-    if (App.els.embalajeSearch) {
-        setTimeout(() => App.els.embalajeSearch.focus(), 120);
-    }
 };
 
 App.getEmbalajeFilters = function() {
@@ -157,6 +162,8 @@ App.renderEmbalajeDashboard = function() {
     App.renderEmbalajeSummary();
     App.renderEmbalajeExistencias();
     App.renderEmbalajeMovimientos();
+    App.renderEmbDashboardMovimientos();
+    App.renderEmbReportes();
 };
 
 App.renderEmbalajeCurrent = function() {
@@ -166,79 +173,81 @@ App.renderEmbalajeCurrent = function() {
     const current = App.state.embalaje.selected;
     if (!current) {
         container.innerHTML = `
-            <div class="embalaje-current-empty">
-                Escanea un QR o selecciona un pallet desde la lista para revisar o trasladar su existencia.
+            <div class="emb-pallet-info-card" style="background:#f9fafb; border-color:#e5e7eb;">
+                <div class="emb-pallet-info-head">
+                    <div class="emb-pallet-info-name" style="color:#9ca3af;">Ningún pallet seleccionado</div>
+                </div>
+                <div style="font-size:12px; color:#9ca3af;">Escanea o busca un código para ver el detalle.</div>
             </div>
         `;
         return;
     }
 
-    const chipClass = App.embalajeChipClass(current.bodega_actual || current.estado || "");
+    const estado = current.estado || "ARMADO";
     const destinoSugerido = App.embalajeSuggestDestino(current.bodega_actual || "");
+    if (App.els.embalajeDestino && destinoSugerido) {
+        App.els.embalajeDestino.value = destinoSugerido;
+    }
 
     container.innerHTML = `
-        <div class="embalaje-current">
-            <div class="embalaje-current-head">
-                <div>
-                    <div class="embalaje-current-title">${App.escHtml(current.correlativo || current.qr_payload || "Pallet")}</div>
-                    <div class="embalaje-current-sub">${App.escHtml(current.codigo_material || "")} · ${App.escHtml(current.descripcion || "")}</div>
-                </div>
-                <span class="embalaje-chip ${chipClass}">${App.escHtml(current.estado || "ARMADO")}</span>
+        <div class="emb-pallet-info-card">
+            <div class="emb-pallet-info-head">
+                <div class="emb-pallet-info-name">${App.escHtml(current.correlativo || current.qr_payload || "Pallet")}</div>
+                <div class="emb-pallet-info-badge">${App.escHtml(estado)}</div>
             </div>
-
-            <div class="embalaje-meta-grid">
-                <div class="embalaje-meta-card">
-                    <span>Lote</span>
-                    <strong>${App.escHtml(current.lote || "-")}</strong>
+            <div class="emb-pallet-info-grid">
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Código</div>
+                    <div class="emb-pallet-info-value">${App.escHtml(current.codigo_material || "-")}</div>
                 </div>
-                <div class="embalaje-meta-card">
-                    <span>Ubicación</span>
-                    <strong>${App.escHtml(current.bodega_actual || "-")}</strong>
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Lote</div>
+                    <div class="emb-pallet-info-value">${App.escHtml(current.lote || "-")}</div>
                 </div>
-                <div class="embalaje-meta-card">
-                    <span>Cantidad neta</span>
-                    <strong>${App.embalajeNumber(current.cantidad_neta)}</strong>
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Ubicación actual</div>
+                    <div class="emb-pallet-info-value">${App.escHtml(current.bodega_actual || "-")}</div>
                 </div>
-                <div class="embalaje-meta-card">
-                    <span>Merma</span>
-                    <strong>${App.embalajeNumber(current.merma)}</strong>
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Cantidad neta</div>
+                    <div class="emb-pallet-info-value">${App.embalajeNumber(current.cantidad_neta)}</div>
                 </div>
-            </div>
-
-            <div class="embalaje-item-meta">
-                Armado: ${App.escHtml(current.fecha_armado || "-")} · Usuario: ${App.escHtml(current.usuario_armado || "-")}
-            </div>
-            <div class="embalaje-item-meta">
-                QR: ${App.escHtml(current.qr_payload || current.correlativo || "-")} · Destino sugerido: ${App.escHtml(destinoSugerido || "Sin sugerencia")}
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Merma</div>
+                    <div class="emb-pallet-info-value">${App.embalajeNumber(current.merma)}</div>
+                </div>
+                <div class="emb-pallet-info-item">
+                    <div class="emb-pallet-info-label">Destino sugerido</div>
+                    <div class="emb-pallet-info-value" style="color:#27ae60;">${App.escHtml(destinoSugerido || "-")}</div>
+                </div>
             </div>
         </div>
     `;
 };
 
 App.renderEmbalajeSummary = function() {
-    const container = App.els.embalajeSummary;
-    if (!container) return;
-
+    // Update the KPI value elements in the static dashboard cards
     const resumen = App.state.embalaje.resumen || {};
-    const cards = [
-        ["Pallets armados", resumen.total_armado || 0],
-        ["Stock neto", resumen.stock_actual || 0],
-        ["En packing", resumen.en_packing || 0],
-        ["En altillo", resumen.en_altillo || 0],
-        ["Trasladado hoy", resumen.trasladado_hoy || 0],
-        ["Mermas", resumen.mermas || 0],
-    ];
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = App.embalajeNumber(val); };
+    set("kpiTotalArmado", resumen.total_armado || 0);
+    set("kpiStockActual", resumen.stock_actual || 0);
+    set("kpiEnPacking", resumen.en_packing || 0);
+    set("kpiEnAltillo", resumen.en_altillo || 0);
+    set("kpiTrasladado", resumen.trasladado_hoy || 0);
+    set("kpiMermas", resumen.mermas || 0);
+    // Also update Reportes view
+    App.renderEmbReportes();
+};
 
-    container.innerHTML = `
-        <div class="embalaje-summary-grid">
-            ${cards.map(([label, value]) => `
-                <div class="embalaje-summary-card">
-                    <strong>${App.embalajeNumber(value)}</strong>
-                    <span>${App.escHtml(label)}</span>
-                </div>
-            `).join("")}
-        </div>
-    `;
+App.renderEmbReportes = function() {
+    const resumen = App.state.embalaje.resumen || {};
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = App.embalajeNumber(val); };
+    set("repTotalArmado", resumen.total_armado || 0);
+    set("repStockActual", resumen.stock_actual || 0);
+    set("repEnPacking", resumen.en_packing || 0);
+    set("repEnAltillo", resumen.en_altillo || 0);
+    set("repTrasladado", resumen.trasladado_hoy || 0);
+    set("repMermas", resumen.mermas || 0);
 };
 
 App.renderEmbalajeExistencias = function() {
@@ -247,101 +256,93 @@ App.renderEmbalajeExistencias = function() {
 
     const items = App.state.embalaje.existencias || [];
     if (items.length === 0) {
-        container.innerHTML = `
-            <div class="embalaje-empty">
-                No hay existencias para los filtros actuales.
-            </div>
-        `;
+        container.innerHTML = `<div class="emb-empty"><p>No hay pallets para los filtros actuales.</p></div>`;
         return;
     }
 
-    container.innerHTML = `
-        <div class="embalaje-list">
-            ${items.map(item => {
-                const chipClass = App.embalajeChipClass(item.bodega_actual || item.estado || "");
-                return `
-                    <div class="embalaje-item">
-                        <div class="embalaje-item-top">
-                            <div>
-                                <div class="embalaje-item-title">
-                                    ${App.escHtml(item.correlativo || item.qr_payload || "Pallet")}
-                                </div>
-                                <div class="embalaje-item-meta">
-                                    ${App.escHtml(item.codigo_material || "")} · ${App.escHtml(item.descripcion || "")}
-                                </div>
-                            </div>
-                            <span class="embalaje-item-chip ${chipClass}">${App.escHtml(item.estado || "ARMADO")}</span>
-                        </div>
-                        <div class="embalaje-item-meta">
-                            Lote: ${App.escHtml(item.lote || "-")} · Fecha: ${App.escHtml(item.fecha_armado || "-")}
-                        </div>
-                        <div class="embalaje-meta-grid" style="margin-top: 8px;">
-                            <div class="embalaje-meta-card">
-                                <span>Cantidad neta</span>
-                                <strong>${App.embalajeNumber(item.cantidad_neta)}</strong>
-                            </div>
-                            <div class="embalaje-meta-card">
-                                <span>Merma</span>
-                                <strong>${App.embalajeNumber(item.merma)}</strong>
-                            </div>
-                            <div class="embalaje-meta-card">
-                                <span>Ubicación</span>
-                                <strong>${App.escHtml(item.bodega_actual || "-")}</strong>
-                            </div>
-                            <div class="embalaje-meta-card">
-                                <span>Usuario</span>
-                                <strong>${App.escHtml(item.usuario_armado || "-")}</strong>
-                            </div>
-                        </div>
-                        <div class="embalaje-item-footer">
-                            <div class="embalaje-item-badges">
-                                <span class="embalaje-item-chip ${chipClass}">${App.escHtml(item.bodega_actual || "-")}</span>
-                                <span class="embalaje-item-chip">QR: ${App.escHtml(item.qr_payload || "-")}</span>
-                            </div>
-                            <button type="button" class="embalaje-item-link" onclick="App.selectEmbalajeExistenciaById(${item.id})">Ver</button>
-                        </div>
-                    </div>
-                `;
-            }).join("")}
+    const dotClass = (ubicacion) => {
+        const u = String(ubicacion || "").toUpperCase();
+        if (u.includes("PACKING")) return "dot-packing";
+        if (u.includes("ALTILLO")) return "dot-altillo";
+        if (u.includes("BODEGA")) return "dot-bodega";
+        return "dot-armado";
+    };
+    const badgeClass = (ubicacion) => {
+        const u = String(ubicacion || "").toUpperCase();
+        if (u.includes("PACKING")) return "badge-packing";
+        if (u.includes("ALTILLO")) return "badge-altillo";
+        if (u.includes("BODEGA")) return "badge-bodega";
+        return "badge-armado";
+    };
+
+    container.innerHTML = `<div class="emb-list">${items.map(item => `
+        <div class="emb-pallet-row" onclick="App.selectEmbalajeExistenciaById(${item.id}); App.setEmbalajeView('movimientos');">
+            <div class="emb-pallet-dot ${dotClass(item.bodega_actual)}"></div>
+            <div class="emb-pallet-body">
+                <div class="emb-pallet-code">${App.escHtml(item.correlativo || item.qr_payload || "Pallet")}</div>
+                <div class="emb-pallet-desc">${App.escHtml(item.codigo_material || "")} · ${App.escHtml(item.descripcion || "")}</div>
+                <div class="emb-pallet-meta">Lote: ${App.escHtml(item.lote || "-")} · Neto: ${App.embalajeNumber(item.cantidad_neta)}</div>
+            </div>
+            <span class="emb-pallet-badge ${badgeClass(item.bodega_actual)}">${App.escHtml(item.bodega_actual || "ARMADO")}</span>
         </div>
-    `;
+    `).join("")}</div>`;
 };
 
 App.renderEmbalajeMovimientos = function() {
+    // Full list in Reportes view
     const container = App.els.embalajeMovimientos;
     if (!container) return;
 
     const items = App.state.embalaje.movimientos || [];
     if (items.length === 0) {
-        container.innerHTML = `
-            <div class="embalaje-empty">
-                No hay movimientos recientes para mostrar.
-            </div>
-        `;
+        container.innerHTML = `<div class="emb-empty"><p>No hay movimientos para mostrar.</p></div>`;
         return;
     }
 
-    container.innerHTML = `
-        <div class="embalaje-list">
-            ${items.map(item => `
-                <div class="embalaje-item">
-                    <div class="embalaje-item-top">
-                        <div>
-                            <div class="embalaje-item-title">${App.escHtml(item.correlativo || "-")}</div>
-                            <div class="embalaje-item-meta">
-                                ${App.escHtml(item.fecha_hora || "-")} · Usuario: ${App.escHtml(item.usuario || "-")}
-                            </div>
-                        </div>
-                        <span class="embalaje-item-chip">${App.escHtml(item.cantidad || 0)} UND</span>
-                    </div>
-                    <div class="embalaje-item-meta">
-                        ${App.escHtml(item.origen || "-")} → ${App.escHtml(item.destino || "-")}
-                    </div>
-                    ${item.observacion ? `<div class="embalaje-item-meta">Obs: ${App.escHtml(item.observacion)}</div>` : ""}
-                </div>
-            `).join("")}
+    container.innerHTML = `<div class="emb-list">${items.map(item => `
+        <div class="emb-pallet-row" style="cursor:default;">
+            <div class="emb-mov-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+            </div>
+            <div class="emb-pallet-body">
+                <div class="emb-pallet-code">${App.escHtml(item.correlativo || "-")}</div>
+                <div class="emb-pallet-desc">${App.escHtml(item.origen || "-")} → ${App.escHtml(item.destino || "-")}</div>
+                <div class="emb-pallet-meta">${App.escHtml(item.fecha_hora || "-")} · ${App.escHtml(item.usuario || "-")}</div>
+            </div>
+            <span class="emb-pallet-badge badge-altillo">${App.escHtml(item.cantidad || 0)} uds</span>
         </div>
-    `;
+    `).join("")}</div>`;
+};
+
+App.renderEmbDashboardMovimientos = function() {
+    // Last 5 movements in Dashboard card
+    const container = document.getElementById("embDashboardMovimientos");
+    if (!container) return;
+
+    const items = (App.state.embalaje.movimientos || []).slice(0, 5);
+    if (items.length === 0) {
+        container.innerHTML = `<div class="emb-empty"><p>Sin movimientos recientes.</p></div>`;
+        return;
+    }
+
+    container.innerHTML = items.map(item => `
+        <div class="emb-mov-item">
+            <div class="emb-mov-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+            </div>
+            <div class="emb-mov-body">
+                <div class="emb-mov-correlativo">${App.escHtml(item.correlativo || "-")}</div>
+                <div class="emb-mov-route">${App.escHtml(item.origen || "-")} → ${App.escHtml(item.destino || "-")}</div>
+            </div>
+            <div class="emb-mov-time">${App.escHtml((item.fecha_hora || "-").split(" ")[1] || item.fecha_hora || "-")}</div>
+        </div>
+    `).join("");
 };
 
 App.selectEmbalajeExistenciaById = function(id) {
@@ -490,25 +491,32 @@ App.toggleEmbalajeScanner = function() {
     }
 };
 
-App.setEmbalajeSubView = function(viewName) {
-    const tabTraslados = document.getElementById("embTabTrasladosBtn");
-    const tabConsultas = document.getElementById("embTabConsultasBtn");
-    const contentTraslados = document.getElementById("embalajeSubViewTraslados");
-    const contentConsultas = document.getElementById("embalajeSubViewConsultas");
+App.setEmbalajeView = function(viewName) {
+    const views = ["dashboard", "armados", "movimientos", "reportes", "mas"];
+    const navIds = ["embNavDashboard", "embNavArmados", "embNavMovimientos", "embNavReportes", "embNavMas"];
 
-    if (!contentTraslados || !contentConsultas) return;
+    views.forEach((name, i) => {
+        const el = document.getElementById("embView" + name.charAt(0).toUpperCase() + name.slice(1));
+        const nav = document.getElementById(navIds[i]);
+        if (el) el.style.display = name === viewName ? "block" : "none";
+        if (nav) nav.classList.toggle("active", name === viewName);
+    });
 
-    if (viewName === "traslados") {
-        if (tabTraslados) tabTraslados.classList.add("active");
-        if (tabConsultas) tabConsultas.classList.remove("active");
-        contentTraslados.style.display = "block";
-        contentConsultas.style.display = "none";
-    } else {
-        if (tabTraslados) tabTraslados.classList.remove("active");
-        if (tabConsultas) tabConsultas.classList.add("active");
-        contentTraslados.style.display = "none";
-        contentConsultas.style.display = "block";
-        // Al entrar a consultas, refrescar para mostrar datos actualizados
-        App.refreshEmbalaje();
+    // Stop scanner if leaving movimientos
+    if (viewName !== "movimientos" && App.state.embalaje.scannerOpen) {
+        App.stopEmbalajeScanner();
     }
+
+    // Load data for specific views
+    if (viewName === "reportes" && App.state.embalaje.loaded) {
+        App.renderEmbalajeMovimientos();
+        App.renderEmbReportes();
+    }
+};
+
+// Backward compat alias
+App.setEmbalajeSubView = function(viewName) {
+    if (viewName === "traslados") App.setEmbalajeView("movimientos");
+    else if (viewName === "consultas") App.setEmbalajeView("armados");
+    else App.setEmbalajeView(viewName);
 };

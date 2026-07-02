@@ -58,6 +58,9 @@ App.unlockApp = function() {
     if (App.els.mainNav) {
         App.els.mainNav.style.display = App.state.modulo === "EMBALAJE" ? "none" : "";
     }
+    if (App.els.embalajeNav) {
+        App.els.embalajeNav.style.display = App.state.modulo === "EMBALAJE" ? "" : "none";
+    }
     if (App.state.modulo === "EMBALAJE") {
         App.showView("embalaje");
     } else {

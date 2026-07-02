@@ -138,6 +138,7 @@ App.initEls = function() {
         embalajeConsultarBtn: $("embalajeConsultarBtn"),
         embalajeTrasladarBtn: $("embalajeTrasladarBtn"),
         embalajeRefreshBtn: $("embalajeRefreshBtn"),
+        embalajeNav: $("embalajeNav"),
         // Modal carnet
         carnetModal: $("carnetModal"),
         btnCloseCarnet: $("btnCloseCarnet"),
